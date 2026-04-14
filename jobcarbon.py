@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import email.utils
 import json
 import re
 import socket
@@ -44,12 +45,16 @@ SOURCE_PRIORITY = {
     "smartrecruiters.api": 1,
     "workable.embedded": 1,
     "bamboohr.api": 1,
+    "brassring.html": 1,
+    "successfactors.rss": 1,
     "rippling.embedded": 1,
     "icims.api": 1,
     "dover.api": 1,
     "workday.cxs": 1,
     "oracle_hcm.api": 1,
     "jobvite.xml": 1,
+    "avature.feed": 1,
+    "avature.sitemap": 1,
     "open_graph": 2,
     "embedded.json": 3,
     "html.visible": 4,
@@ -118,9 +123,9 @@ PLATFORM_CAPABILITIES = {
     "brassring": {
         "display_name": "Brassring",
         "supported": True,
-        "integration": "generic",
+        "integration": "direct",
         "detection": ["*.brassring.com", "jobid query param"],
-        "notes": "Platform detection with generic extraction, sitemap, and archive fallbacks.",
+        "notes": "Public Brassring job pages expose durable `DC.Date` metadata on the job-details HTML.",
     },
     "paycor": {
         "display_name": "Paycor / Newton",
@@ -132,9 +137,9 @@ PLATFORM_CAPABILITIES = {
     "successfactors": {
         "display_name": "SAP SuccessFactors",
         "supported": True,
-        "integration": "generic",
-        "detection": ["successfactors in host or path"],
-        "notes": "Platform detection with generic extraction, sitemap, render, and archive fallbacks.",
+        "integration": "direct",
+        "detection": ["successfactors in host or path", "j2w.init", "rmkcdn.successfactors.com", "ssoCompanyId"],
+        "notes": "SuccessFactors-powered boards expose RSS search feeds at `/services/rss/job/` and often embed durable `itemprop=datePosted` metadata on the page.",
     },
     "workday": {
         "display_name": "Workday",
@@ -188,9 +193,9 @@ PLATFORM_CAPABILITIES = {
     "avature": {
         "display_name": "Avature",
         "supported": True,
-        "integration": "generic",
-        "detection": ["*.avature.net"],
-        "notes": "Platform detection with generic extraction, sitemap, render, and archive fallbacks.",
+        "integration": "direct",
+        "detection": ["*.avature.net", "avature.portal.id", "avacdn.net"],
+        "notes": "Avature portals expose feed and sitemap data under `/{portal}/SearchJobs/feed/` and `/{portal}/sitemap_index.xml`.",
     },
     "indeed": {
         "display_name": "Indeed",
@@ -565,7 +570,13 @@ def detect_platform(url: str) -> URLMetadata:
     if query.get("gnk") == ["job"]:
         return URLMetadata(platform="paycor", job_id=query.get("gni", [None])[0])
     if "successfactors" in host or "successfactors" in parsed.path.lower():
-        return URLMetadata(platform="successfactors")
+        extra: dict[str, Any] = {}
+        if segments and segments[0] == "job":
+            if len(segments) > 1:
+                extra["slug"] = segments[1]
+            if len(segments) > 2:
+                return URLMetadata(platform="successfactors", job_id=segments[2], extra=extra)
+        return URLMetadata(platform="successfactors", extra=extra)
     if host == "workforcenow.adp.com":
         extra: dict[str, Any] = {}
         cid = query.get("cid", [None])[0]
@@ -590,7 +601,14 @@ def detect_platform(url: str) -> URLMetadata:
                 job_id = segments[jobs_index + 1]
         return URLMetadata(platform="icims", job_id=job_id)
     if host.endswith(".avature.net"):
-        return URLMetadata(platform="avature")
+        extra: dict[str, Any] = {}
+        if segments:
+            extra["portal"] = segments[0]
+            if "JobDetail" in segments:
+                detail_index = segments.index("JobDetail")
+                if len(segments) > detail_index + 2:
+                    return URLMetadata(platform="avature", job_id=segments[detail_index + 2], extra=extra)
+        return URLMetadata(platform="avature", extra=extra)
     if host.endswith(".oraclecloud.com") and "/hcmUI/" in parsed.path:
         extra: dict[str, Any] = {}
         site = None
@@ -709,6 +727,17 @@ def normalize_date(value: Any) -> str | None:
             return datetime.strptime(cleaned, fmt).date().isoformat()
         except ValueError:
             continue
+
+    for fmt in ("%a %b %d %H:%M:%S %Z %Y", "%a, %d %b %Y %H:%M:%S %Z", "%a, %d %b %Y %H:%M:%S %z"):
+        try:
+            return datetime.strptime(cleaned, fmt).date().isoformat()
+        except ValueError:
+            continue
+
+    try:
+        return email.utils.parsedate_to_datetime(cleaned).date().isoformat()
+    except (TypeError, ValueError, IndexError, OverflowError):
+        pass
 
     try:
         return date.fromisoformat(cleaned[:10]).isoformat()
@@ -1684,6 +1713,203 @@ def extract_jobvite_xml(
     )
 
 
+def looks_like_successfactors(html: str) -> bool:
+    lower = html.lower()
+    return (
+        "j2w.init" in lower
+        or "rmkcdn.successfactors.com" in lower
+        or "sapsf/successfactors/ns2cloud" in lower
+        or "ssocompanyid" in lower
+    )
+
+
+def maybe_detect_html_platform(url: str, html: str, metadata: URLMetadata) -> URLMetadata:
+    if metadata.platform == "unknown" and looks_like_successfactors(html):
+        parsed = urlparse(url)
+        segments = [segment for segment in parsed.path.split("/") if segment]
+        extra: dict[str, Any] = {}
+        job_id = None
+        if segments and segments[0] == "job":
+            if len(segments) > 1:
+                extra["slug"] = segments[1]
+            if len(segments) > 2:
+                job_id = segments[2]
+        return URLMetadata(platform="successfactors", org=parsed.netloc.lower(), job_id=job_id, extra=extra)
+    return metadata
+
+
+def extract_brassring_html(
+    accumulator: AnalysisAccumulator,
+    html: str,
+) -> None:
+    meta = extract_meta_tags(html)
+    dc_date_match = re.search(
+        r'<meta[^>]+name=["\']DC\.Date["\'][^>]+content=["\']([^"\']+)',
+        html,
+        re.IGNORECASE,
+    )
+    if dc_date_match:
+        accumulator.add_date(
+            dc_date_match.group(1).strip(),
+            source="brassring.html",
+            field="DC.Date",
+            kind="posted",
+            reliability="high",
+        )
+
+    title = meta.get("og:title")
+    if title:
+        parts = [part.strip() for part in title.split(" - ") if part.strip()]
+        if parts:
+            accumulator.set_preferred("title", parts[0])
+        if len(parts) >= 2:
+            accumulator.set_preferred("company", parts[1])
+
+
+def html_lang_to_locale(html: str) -> str | None:
+    match = re.search(r"<html[^>]+lang=[\"']([A-Za-z_-]+)[\"']", html, re.IGNORECASE)
+    if not match:
+        return None
+    return match.group(1).replace("-", "_")
+
+
+def extract_successfactors_itemprop_date(accumulator: AnalysisAccumulator, html: str) -> None:
+    match = re.search(
+        r'<meta[^>]+itemprop=["\']datePosted["\'][^>]+content=["\']([^"\']+)',
+        html,
+        re.IGNORECASE,
+    )
+    if not match:
+        return
+    accumulator.add_date(
+        match.group(1).strip(),
+        source="successfactors.rss",
+        field="itemprop:datePosted",
+        kind="posted",
+        reliability="high",
+    )
+
+
+def extract_successfactors_rss(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
+    html: str,
+) -> None:
+    parsed = urlparse(original_url)
+    slug = metadata.extra.get("slug")
+    if not slug:
+        segments = [segment for segment in parsed.path.split("/") if segment]
+        if segments and segments[0] == "job" and len(segments) > 1:
+            slug = segments[1]
+
+    locale = html_lang_to_locale(html) or "en_US"
+    if slug:
+        rss_url = f"{parsed.scheme}://{parsed.netloc}/services/rss/job/?locale={quote(locale, safe='')}&keywords={quote(slug, safe='')}"
+        try:
+            xml_text = fetch_text(session, rss_url)
+        except HTTPRequestError as exc:
+            accumulator.add_warning(f"SuccessFactors RSS fallback failed: {exc}")
+        else:
+            try:
+                root = ET.fromstring(xml_text)
+            except ET.ParseError:
+                root = None
+            if root is not None:
+                channel = root.find("channel")
+                items = channel.findall("item") if channel is not None else []
+                for item in items:
+                    link = item.findtext("link") or ""
+                    if metadata.job_id and metadata.job_id not in link and slug not in link:
+                        continue
+                    accumulator.add_date(
+                        item.findtext("pubDate"),
+                        source="successfactors.rss",
+                        field="pubDate",
+                        kind="posted",
+                        reliability="high",
+                    )
+                    accumulator.set_preferred("title", item.findtext("title"))
+                    break
+
+    extract_successfactors_itemprop_date(accumulator, html)
+
+
+def extract_avature_feed_or_sitemap(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
+    html: str,
+) -> None:
+    parsed = urlparse(original_url)
+    portal = metadata.extra.get("portal")
+    if not portal:
+        segments = [segment for segment in parsed.path.split("/") if segment]
+        if segments:
+            portal = segments[0]
+    if not portal:
+        portal_match = re.search(r'avature\.portal\.id[^>]*content=["\']([^"\']+)', html, re.IGNORECASE)
+        if portal_match:
+            portal = portal_match.group(1).strip()
+    if not portal:
+        return
+
+    feed_url = f"{parsed.scheme}://{parsed.netloc}/{portal}/SearchJobs/feed/"
+    try:
+        xml_text = fetch_text(session, feed_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Avature feed fallback failed: {exc}")
+    else:
+        try:
+            root = ET.fromstring(xml_text)
+        except ET.ParseError:
+            root = None
+        if root is not None:
+            channel = root.find("channel")
+            items = channel.findall("item") if channel is not None else []
+            for item in items:
+                link = item.findtext("link") or ""
+                if not path_matches_sitemap(original_url, link, metadata):
+                    continue
+                accumulator.add_date(
+                    item.findtext("pubDate"),
+                    source="avature.feed",
+                    field="pubDate",
+                    kind="posted",
+                    reliability="high",
+                )
+                accumulator.set_preferred("title", item.findtext("title"))
+                break
+
+    sitemap_index_url = f"{parsed.scheme}://{parsed.netloc}/{portal}/sitemap_index.xml"
+    try:
+        xml_text = fetch_text(session, sitemap_index_url)
+    except HTTPRequestError:
+        return
+
+    nested_sitemaps, _ = parse_sitemap_documents(xml_text)
+    for nested in nested_sitemaps[:4]:
+        try:
+            nested_xml = fetch_text(session, nested)
+        except HTTPRequestError:
+            continue
+        _, entries = parse_sitemap_documents(nested_xml)
+        for loc, lastmod in entries:
+            if not path_matches_sitemap(original_url, loc, metadata):
+                continue
+            accumulator.add_date(
+                lastmod,
+                source="avature.sitemap",
+                field="lastmod",
+                kind="crawl",
+                reliability="low",
+                note="Avature sitemap lastmod reflects portal freshness, not always the original posting time.",
+            )
+            return
+
+
 def extract_workday_api(
     accumulator: AnalysisAccumulator,
     session: Any,
@@ -2099,10 +2325,12 @@ def analyze_url(
         )
 
     if html:
+        metadata = maybe_detect_html_platform(validated_url, html, metadata)
         extract_jsonld(accumulator, html)
         extract_meta_and_open_graph(accumulator, html)
         extract_regex_dates(accumulator, html)
         extract_embedded_json(accumulator, html)
+        accumulator.platform = metadata.platform
 
     if metadata.platform == "lever":
         extract_lever_api(accumulator, active_session, metadata)
@@ -2124,12 +2352,18 @@ def analyze_url(
         extract_dover_api(accumulator, active_session, metadata)
     elif metadata.platform == "bamboohr":
         extract_bamboohr_api(accumulator, active_session, metadata)
+    elif metadata.platform == "brassring" and html:
+        extract_brassring_html(accumulator, html)
+    elif metadata.platform == "successfactors" and html:
+        extract_successfactors_rss(accumulator, active_session, metadata, validated_url, html)
     elif metadata.platform == "workday":
         extract_workday_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "oracle_hcm":
         extract_oracle_hcm_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "jobvite" and html:
         extract_jobvite_xml(accumulator, active_session, metadata, html)
+    elif metadata.platform == "avature" and html:
+        extract_avature_feed_or_sitemap(accumulator, active_session, metadata, validated_url, html)
 
     if should_use_render_fallback(html, accumulator):
         extract_jina_render(accumulator, active_session)

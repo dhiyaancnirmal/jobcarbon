@@ -73,6 +73,9 @@ class JobcarbonUnitTests(unittest.TestCase):
         jobvite = jobcarbon.detect_platform(
             "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
         )
+        avature = jobcarbon.detect_platform(
+            "https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-BQuant/4661"
+        )
 
         self.assertEqual((lever.platform, lever.org, lever.job_id), ("lever", "skio", "bbdd5a7b-652a-43ad-b92e-58f4e970c694"))
         self.assertEqual((greenhouse.platform, greenhouse.org, greenhouse.job_id), ("greenhouse", "applytogreenspark", "4169702004"))
@@ -105,6 +108,10 @@ class JobcarbonUnitTests(unittest.TestCase):
             ("adp", "abc123", "500123", "19000101_000001"),
         )
         self.assertEqual((jobvite.platform, jobvite.org, jobvite.job_id), ("jobvite", "clinch", "oD2D4fw6"))
+        self.assertEqual(
+            (avature.platform, avature.job_id, avature.extra.get("portal")),
+            ("avature", "4661", "careers"),
+        )
 
     def test_detect_platform_supports_legacy_jobvite_query_urls(self) -> None:
         metadata = jobcarbon.detect_platform(
@@ -191,8 +198,8 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual(platforms["indeed"]["integration"], "blocked")
 
         summary = jobcarbon.summarize_platform_capabilities()
-        self.assertGreaterEqual(summary["direct"], 10)
-        self.assertGreaterEqual(summary["generic"], 6)
+        self.assertGreaterEqual(summary["direct"], 13)
+        self.assertGreaterEqual(summary["generic"], 3)
         self.assertEqual(summary["blocked"], 2)
         self.assertEqual(summary["unsupported"], 1)
         self.assertEqual(summary["supported"], summary["direct"] + summary["generic"])

@@ -400,6 +400,128 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["requisition_id"], "RE1234")
         self.assertEqual(result["hidden_insights"]["jobvite_company_eid"], "q0oaVfwd")
 
+    def test_brassring_html_returns_dc_date_and_company(self) -> None:
+        target_url = "https://sjobs.brassring.com/TGnewUI/Search/home/HomeWithPreLoad?PageType=JobDetails&jobid=2244127&partnerid=25633&siteid=5439"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<meta name='DC.Date' scheme='iso8601' content=' 2026-04-14' />"
+                        "<meta property='og:title' content='Java Developer - Infosys - Job Details' />"
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://sjobs.brassring.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fsjobs.brassring.com%2FTGnewUI%2FSearch%2Fhome%2FHomeWithPreLoad%3FPageType%3DJobDetails%26jobid%3D2244127%26partnerid%3D25633%26siteid%3D5439&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "brassring")
+        self.assertEqual(result["title"], "Java Developer")
+        self.assertEqual(result["company"], "Infosys")
+        self.assertEqual(result["likely_posted_date"], "2026-04-14")
+        self.assertEqual(result["chosen_source"]["source"], "brassring.html")
+
+    def test_successfactors_rss_promotes_unknown_page_by_html_fingerprint(self) -> None:
+        target_url = "https://jobs.sap.com/job/Bangalore-Senior-Developer/1380193433/"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html lang='en-US'><head>"
+                        "<meta itemprop='datePosted' content='Thu Apr 02 00:00:00 UTC 2026' />"
+                        "</head><body>"
+                        "<script>j2w.init({\"ssoCompanyId\":\"SAP\"});</script>"
+                        "<img src='https://rmkcdn.successfactors.com/example.jpg'/>"
+                        "</body></html>"
+                    )
+                ),
+                "https://jobs.sap.com/services/rss/job/?locale=en_US&keywords=Bangalore-Senior-Developer": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<rss version='2.0'><channel>"
+                        "<item>"
+                        "<title>Senior Developer</title>"
+                        "<link>https://jobs.sap.com/job/Bangalore-Senior-Developer/1380193433/?feedId=null</link>"
+                        "<pubDate>Thu, 02 Apr 2026 00:00:00 GMT</pubDate>"
+                        "</item>"
+                        "</channel></rss>"
+                    )
+                ),
+                "https://jobs.sap.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.sap.com%2Fjob%2FBangalore-Senior-Developer%2F1380193433&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "successfactors")
+        self.assertEqual(result["title"], "Senior Developer")
+        self.assertEqual(result["likely_posted_date"], "2026-04-02")
+        self.assertEqual(result["chosen_source"]["source"], "successfactors.rss")
+
+    def test_avature_feed_returns_pubdate_and_matches_job_detail_url(self) -> None:
+        target_url = "https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-BQuant/4661"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<meta property='og:title' content='Senior Software Engineer - BQuant' />"
+                        '<meta name="avature.portal.id" content="careers" />'
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://bloomberg.avature.net/careers/SearchJobs/feed/": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<rss version='2.0'><channel>"
+                        "<item>"
+                        "<title>Senior Software Engineer - BQuant</title>"
+                        "<link>https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-BQuant/4661</link>"
+                        "<pubDate>Mon, 05 Aug 2024 00:00:00 +0000</pubDate>"
+                        "</item>"
+                        "</channel></rss>"
+                    )
+                ),
+                "https://bloomberg.avature.net/careers/sitemap_index.xml": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<sitemapindex xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>"
+                        "<sitemap><loc>https://bloomberg.avature.net/careers/sitemap.xml</loc></sitemap>"
+                        "</sitemapindex>"
+                    )
+                ),
+                "https://bloomberg.avature.net/careers/sitemap.xml": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>"
+                        "<url><loc>https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-BQuant/4661</loc><lastmod>2025-10-14</lastmod></url>"
+                        "</urlset>"
+                    )
+                ),
+                "https://bloomberg.avature.net/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fbloomberg.avature.net%2Fcareers%2FJobDetail%2FSenior-Software-Engineer-BQuant%2F4661&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "avature")
+        self.assertEqual(result["title"], "Senior Software Engineer - BQuant")
+        self.assertEqual(result["likely_posted_date"], "2024-08-05")
+        self.assertEqual(result["chosen_source"]["source"], "avature.feed")
+        self.assertTrue(any(item["source"] == "avature.sitemap" for item in result["all_dates"]))
+
     def test_sitemap_and_wayback_remain_comparison_evidence(self) -> None:
         target_url = "https://example.com/jobs/123"
         session = FakeSession(
