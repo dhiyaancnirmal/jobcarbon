@@ -55,6 +55,11 @@ SOURCE_PRIORITY = {
     "jobvite.xml": 1,
     "avature.feed": 1,
     "avature.sitemap": 1,
+    "gem.api": 1,
+    "amazon_jobs.api": 1,
+    "stripe.greenhouse": 1,
+    "goldman_sachs.oracle": 1,
+    "bendingspoons.objectid": 1,
     "open_graph": 2,
     "embedded.json": 3,
     "html.visible": 4,
@@ -69,6 +74,7 @@ BLOCKED_PLATFORM_MESSAGES = {
 }
 UNSUPPORTED_PLATFORM_MESSAGES = {
     "google_careers": "Google Careers does not expose reliable posting dates.",
+    "clearcompany": "ClearCompany / HRMDirect career portals do not expose reliable posting dates.",
 }
 PLATFORM_CAPABILITIES = {
     "greenhouse": {
@@ -109,9 +115,9 @@ PLATFORM_CAPABILITIES = {
     "gem": {
         "display_name": "Gem",
         "supported": True,
-        "integration": "generic",
-        "detection": ["jobs.gem.com"],
-        "notes": "Platform detection with generic extraction and archive fallbacks.",
+        "integration": "direct",
+        "detection": ["jobs.gem.com/{board}/{extId}"],
+        "notes": "Public Gem Job Board API at `api.gem.com/job_board/v0/{board}/job_posts/` exposes `first_published_at`, location, departments, and employment metadata.",
     },
     "bamboohr": {
         "display_name": "BambooHR",
@@ -197,6 +203,34 @@ PLATFORM_CAPABILITIES = {
         "detection": ["*.avature.net", "avature.portal.id", "avacdn.net"],
         "notes": "Avature portals expose feed and sitemap data under `/{portal}/SearchJobs/feed/` and `/{portal}/sitemap_index.xml`.",
     },
+    "amazon_jobs": {
+        "display_name": "Amazon.jobs",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["www.amazon.jobs/en/jobs/{id}"],
+        "notes": "Amazon's public `search.json?base_query={jobId}` endpoint returns durable `posted_date` and job metadata.",
+    },
+    "stripe": {
+        "display_name": "Stripe Careers",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["stripe.com/jobs/listing/{slug}/{id}"],
+        "notes": "Stripe career pages map to Stripe's public Greenhouse board API by job id.",
+    },
+    "goldman_sachs": {
+        "display_name": "Goldman Sachs Careers",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["higher.gs.com/roles/{id}"],
+        "notes": "Goldman role pages map to a public Oracle HCM requisition search endpoint keyed by role id.",
+    },
+    "bending_spoons": {
+        "display_name": "Bending Spoons Jobs",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["jobs.bendingspoons.com/positions/{objectid}"],
+        "notes": "Position URLs embed a MongoDB ObjectID whose timestamp yields the posted date.",
+    },
     "indeed": {
         "display_name": "Indeed",
         "supported": False,
@@ -217,6 +251,13 @@ PLATFORM_CAPABILITIES = {
         "integration": "unsupported",
         "detection": ["careers.google.com"],
         "notes": UNSUPPORTED_PLATFORM_MESSAGES["google_careers"],
+    },
+    "clearcompany": {
+        "display_name": "ClearCompany / HRMDirect",
+        "supported": False,
+        "integration": "unsupported",
+        "detection": ["*.hrmdirect.com"],
+        "notes": UNSUPPORTED_PLATFORM_MESSAGES["clearcompany"],
     },
 }
 JSONLD_SCRIPT_RE = re.compile(
@@ -500,6 +541,20 @@ def detect_platform(url: str) -> URLMetadata:
         return URLMetadata(platform="linkedin")
     if host == "careers.google.com":
         return URLMetadata(platform="google_careers")
+    if host.endswith(".hrmdirect.com"):
+        return URLMetadata(platform="clearcompany")
+    if host == "www.amazon.jobs":
+        job_match = re.search(r"/jobs/(\d+)", parsed.path, re.IGNORECASE)
+        return URLMetadata(platform="amazon_jobs", job_id=job_match.group(1) if job_match else None)
+    if host == "stripe.com" and "/jobs/listing/" in parsed.path:
+        job_match = re.search(r"/jobs/listing/[^/]+/(\d+)", parsed.path, re.IGNORECASE)
+        return URLMetadata(platform="stripe", job_id=job_match.group(1) if job_match else None)
+    if host == "higher.gs.com" and "/roles/" in parsed.path:
+        job_match = re.search(r"/roles/(\d+)", parsed.path, re.IGNORECASE)
+        return URLMetadata(platform="goldman_sachs", job_id=job_match.group(1) if job_match else None)
+    if host == "jobs.bendingspoons.com":
+        job_match = re.search(r"/positions/([a-f0-9]{24})", parsed.path, re.IGNORECASE)
+        return URLMetadata(platform="bending_spoons", job_id=job_match.group(1) if job_match else None)
     if host == "app.dover.com" and len(segments) >= 3 and segments[0] == "apply":
         return URLMetadata(platform="dover", org=segments[1], job_id=segments[2])
     if host == "jobs.lever.co" and len(segments) >= 2:
@@ -592,7 +647,9 @@ def detect_platform(url: str) -> URLMetadata:
             extra=extra,
         )
     if host == "jobs.gem.com":
-        return URLMetadata(platform="gem")
+        board = segments[0] if segments else None
+        job_id = segments[1] if len(segments) > 1 else None
+        return URLMetadata(platform="gem", org=board, job_id=job_id)
     if host.endswith(".icims.com"):
         job_id = None
         if "jobs" in segments:
@@ -1910,6 +1967,227 @@ def extract_avature_feed_or_sitemap(
             return
 
 
+def extract_amazon_jobs_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+    if not metadata.job_id:
+        return
+
+    api_url = f"https://www.amazon.jobs/en/search.json?base_query={quote(metadata.job_id, safe='')}"
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Amazon.jobs API fallback failed: {exc}")
+        return
+
+    jobs = payload.get("jobs") if isinstance(payload, dict) else None
+    if not isinstance(jobs, list) or not jobs:
+        return
+
+    job = next((item for item in jobs if str(item.get("id_icims")) == metadata.job_id), jobs[0])
+    if not isinstance(job, dict):
+        return
+
+    accumulator.set_preferred("title", job.get("title"))
+    accumulator.set_preferred("company", "Amazon")
+    accumulator.set_preferred("location", job.get("normalized_location") or job.get("location"))
+    accumulator.set_preferred("employment_type", job.get("job_schedule_type"))
+    accumulator.add_hidden("job_category", job.get("job_category"))
+    accumulator.add_hidden("business_category", job.get("business_category"))
+    accumulator.add_hidden("job_family", job.get("job_family"))
+
+    accumulator.add_date(
+        job.get("posted_date"),
+        source="amazon_jobs.api",
+        field="posted_date",
+        kind="posted",
+        reliability="high",
+    )
+
+
+def extract_stripe_greenhouse(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+    if not metadata.job_id:
+        return
+
+    api_url = f"https://boards-api.greenhouse.io/v1/boards/stripe/jobs/{quote(metadata.job_id, safe='')}"
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Stripe Greenhouse fallback failed: {exc}")
+        return
+
+    accumulator.set_preferred("title", payload.get("title"))
+    accumulator.set_preferred("company", payload.get("company_name") or "Stripe")
+    if isinstance(payload.get("location"), dict):
+        accumulator.set_preferred("location", payload["location"].get("name"))
+    accumulator.add_hidden("requisition_id", payload.get("requisition_id"))
+    accumulator.add_hidden("internal_job_id", payload.get("internal_job_id"))
+    accumulator.add_date(
+        payload.get("first_published"),
+        source="stripe.greenhouse",
+        field="first_published",
+        kind="posted",
+        reliability="high",
+    )
+    accumulator.add_date(
+        payload.get("updated_at"),
+        source="stripe.greenhouse",
+        field="updated_at",
+        kind="refresh",
+        reliability="medium",
+        note="Greenhouse updated_at reflects edits or freshness, not original posting time.",
+    )
+
+
+def extract_goldman_sachs_oracle(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+) -> None:
+    if not metadata.job_id:
+        return
+
+    api_url = (
+        "https://hdpc.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions"
+        f"?onlyData=true&finder=findReqs;siteNumber=LateralHiring,keyword={quote(metadata.job_id, safe='')}&expand=requisitionList"
+    )
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Goldman Sachs Oracle fallback failed: {exc}")
+        return
+
+    items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(items, list) or not items:
+        return
+    requisitions = items[0].get("requisitionList") if isinstance(items[0], dict) else None
+    if not isinstance(requisitions, list) or not requisitions:
+        return
+    job = requisitions[0]
+    if not isinstance(job, dict):
+        return
+
+    accumulator.set_preferred("title", job.get("Title"))
+    accumulator.set_preferred("company", "Goldman Sachs")
+    accumulator.set_preferred("location", job.get("PrimaryLocation"))
+    accumulator.add_hidden("hot_job", job.get("HotJobFlag"))
+    accumulator.add_hidden("short_description", job.get("ShortDescriptionStr"))
+    accumulator.add_date(
+        job.get("PostedDate"),
+        source="goldman_sachs.oracle",
+        field="PostedDate",
+        kind="posted",
+        reliability="high",
+    )
+
+
+def extract_bendingspoons_objectid(accumulator: AnalysisAccumulator, metadata: URLMetadata) -> None:
+    if not metadata.job_id or not re.fullmatch(r"[a-f0-9]{24}", metadata.job_id, re.IGNORECASE):
+        return
+
+    timestamp = int(metadata.job_id[:8], 16)
+    parsed_date = datetime.fromtimestamp(timestamp, tz=timezone.utc).date()
+    if parsed_date < date(2020, 1, 1) or parsed_date > utc_today():
+        return
+
+    accumulator.set_preferred("company", "Bending Spoons")
+    accumulator.add_date(
+        parsed_date.isoformat(),
+        source="bendingspoons.objectid",
+        field="objectid_timestamp",
+        kind="posted",
+        reliability="high",
+        note="Derived from the MongoDB ObjectID embedded in the URL.",
+    )
+
+
+def extract_gem_job_board_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+    if not metadata.org:
+        return
+
+    api_url = f"https://api.gem.com/job_board/v0/{quote(metadata.org, safe='')}/job_posts/"
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Gem Job Board API fallback failed: {exc}")
+        return
+
+    if not isinstance(payload, list) or not payload:
+        return
+
+    target_url = accumulator.normalized_url.rstrip("/")
+
+    def matches_job(job: dict[str, Any]) -> bool:
+        absolute_url = str(job.get("absolute_url") or "").rstrip("/")
+        if absolute_url and absolute_url == target_url:
+            return True
+        if metadata.job_id and absolute_url.endswith("/" + metadata.job_id):
+            return True
+        return False
+
+    job = next((item for item in payload if isinstance(item, dict) and matches_job(item)), None)
+    if job is None:
+        job = next((item for item in payload if isinstance(item, dict)), None)
+    if not isinstance(job, dict):
+        return
+
+    accumulator.set_preferred("title", job.get("title"))
+    accumulator.set_if_missing("company", metadata.org.replace("-", " ").title() if metadata.org else None)
+    if isinstance(job.get("location"), dict):
+        accumulator.set_preferred("location", job["location"].get("name"))
+
+    employment_type = job.get("employment_type")
+    if isinstance(employment_type, str):
+        accumulator.set_preferred("employment_type", employment_type.replace("_", " ").title())
+
+    accumulator.add_hidden("internal_job_id", job.get("internal_job_id"))
+    accumulator.add_hidden("requisition_id", job.get("requisition_id"))
+
+    departments = job.get("departments")
+    if isinstance(departments, list) and departments:
+        first_department = departments[0]
+        if isinstance(first_department, dict):
+            accumulator.add_hidden("department", first_department.get("name"))
+
+    offices = job.get("offices")
+    if isinstance(offices, list) and offices:
+        office_names: list[str] = []
+        for office in offices:
+            if not isinstance(office, dict):
+                continue
+            location = office.get("location")
+            if isinstance(location, dict) and isinstance(location.get("name"), str):
+                office_names.append(location["name"])
+            elif isinstance(office.get("name"), str):
+                office_names.append(office["name"])
+        if office_names:
+            accumulator.add_hidden("offices", office_names)
+
+    first_published_at = job.get("first_published_at")
+    accumulator.add_date(
+        first_published_at,
+        source="gem.api",
+        field="first_published_at",
+        kind="posted",
+        reliability="high",
+    )
+    if not first_published_at:
+        accumulator.add_date(
+            job.get("created_at"),
+            source="gem.api",
+            field="created_at",
+            kind="posted",
+            reliability="medium",
+            note="Gem created_at reflects when the posting record was created; prefer first_published_at when available.",
+        )
+    accumulator.add_date(
+        job.get("updated_at"),
+        source="gem.api",
+        field="updated_at",
+        kind="refresh",
+        reliability="medium",
+        note="Gem updated_at reflects edits or freshness, not original posting time.",
+    )
+
+
 def extract_workday_api(
     accumulator: AnalysisAccumulator,
     session: Any,
@@ -2356,6 +2634,16 @@ def analyze_url(
         extract_brassring_html(accumulator, html)
     elif metadata.platform == "successfactors" and html:
         extract_successfactors_rss(accumulator, active_session, metadata, validated_url, html)
+    elif metadata.platform == "gem":
+        extract_gem_job_board_api(accumulator, active_session, metadata)
+    elif metadata.platform == "amazon_jobs":
+        extract_amazon_jobs_api(accumulator, active_session, metadata)
+    elif metadata.platform == "stripe":
+        extract_stripe_greenhouse(accumulator, active_session, metadata)
+    elif metadata.platform == "goldman_sachs":
+        extract_goldman_sachs_oracle(accumulator, active_session, metadata)
+    elif metadata.platform == "bending_spoons":
+        extract_bendingspoons_objectid(accumulator, metadata)
     elif metadata.platform == "workday":
         extract_workday_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "oracle_hcm":

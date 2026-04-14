@@ -522,6 +522,208 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["chosen_source"]["source"], "avature.feed")
         self.assertTrue(any(item["source"] == "avature.sitemap" for item in result["all_dates"]))
 
+    def test_amazon_jobs_search_json_returns_posted_date(self) -> None:
+        target_url = "https://www.amazon.jobs/en/jobs/3202233/software-engineer-amazon"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<meta property='og:title' content='Software Engineer, Amazon' />"
+                        "<meta property='og:site_name' content='Amazon.jobs' />"
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://www.amazon.jobs/en/search.json?base_query=3202233": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "jobs": [
+                                {
+                                    "id_icims": "3202233",
+                                    "title": "Software Engineer, Amazon",
+                                    "posted_date": "March 3, 2026",
+                                    "normalized_location": "Bengaluru, Karnataka, IND",
+                                    "location": "IN, KA, Bengaluru",
+                                    "job_schedule_type": "full-time",
+                                    "job_category": "Software Development",
+                                    "business_category": "aws",
+                                    "job_family": "Software Development",
+                                }
+                            ]
+                        }
+                    )
+                ),
+                "https://www.amazon.jobs/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fwww.amazon.jobs%2Fen%2Fjobs%2F3202233%2Fsoftware-engineer-amazon&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "amazon_jobs")
+        self.assertEqual(result["company"], "Amazon")
+        self.assertEqual(result["title"], "Software Engineer, Amazon")
+        self.assertEqual(result["location"], "Bengaluru, Karnataka, IND")
+        self.assertEqual(result["employment_type"], "full-time")
+        self.assertEqual(result["likely_posted_date"], "2026-03-03")
+        self.assertEqual(result["chosen_source"]["source"], "amazon_jobs.api")
+        self.assertEqual(result["hidden_insights"]["job_category"], "Software Development")
+
+    def test_stripe_greenhouse_lookup_returns_first_published(self) -> None:
+        target_url = "https://stripe.com/jobs/listing/account-executive-hunter-uk-enterprise-retail/7451366"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><body></body></html>"),
+                "https://boards-api.greenhouse.io/v1/boards/stripe/jobs/7451366": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "id": 7451366,
+                            "title": "Account Executive (Hunter) , UK Enterprise Retail",
+                            "company_name": "Stripe",
+                            "location": {"name": "London"},
+                            "internal_job_id": 3312107,
+                            "requisition_id": "See Opening ID",
+                            "first_published": "2025-12-15T04:21:20-05:00",
+                            "updated_at": "2026-04-13T11:24:15-04:00",
+                        }
+                    )
+                ),
+                "https://stripe.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fstripe.com%2Fjobs%2Flisting%2Faccount-executive-hunter-uk-enterprise-retail%2F7451366&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "stripe")
+        self.assertEqual(result["company"], "Stripe")
+        self.assertEqual(result["title"], "Account Executive (Hunter) , UK Enterprise Retail")
+        self.assertEqual(result["location"], "London")
+        self.assertEqual(result["likely_posted_date"], "2025-12-15")
+        self.assertEqual(result["chosen_source"]["source"], "stripe.greenhouse")
+
+    def test_goldman_sachs_oracle_lookup_returns_posted_date(self) -> None:
+        target_url = "https://higher.gs.com/roles/165686"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head><title>Engineering-L2-Bengaluru-Vice President-Software Engineering | Goldman Sachs</title></head>"
+                        "<body></body></html>"
+                    )
+                ),
+                "https://hdpc.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitions?onlyData=true&finder=findReqs;siteNumber=LateralHiring,keyword=165686&expand=requisitionList": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "items": [
+                                {
+                                    "requisitionList": [
+                                        {
+                                            "Id": "165686",
+                                            "Title": "Engineering-L2-Bengaluru-Vice President-Software Engineering",
+                                            "PostedDate": "2026-03-13",
+                                            "PrimaryLocation": "Bengaluru, Karnataka, India",
+                                            "HotJobFlag": False,
+                                            "ShortDescriptionStr": "We are seeking a Data Engineer...",
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    )
+                ),
+                "https://higher.gs.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fhigher.gs.com%2Froles%2F165686&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "goldman_sachs")
+        self.assertEqual(result["company"], "Goldman Sachs")
+        self.assertEqual(result["title"], "Engineering-L2-Bengaluru-Vice President-Software Engineering")
+        self.assertEqual(result["location"], "Bengaluru, Karnataka, India")
+        self.assertEqual(result["likely_posted_date"], "2026-03-13")
+        self.assertEqual(result["chosen_source"]["source"], "goldman_sachs.oracle")
+
+    def test_bending_spoons_objectid_derives_posted_date(self) -> None:
+        target_url = "https://jobs.bendingspoons.com/positions/6617c4b6b0f3c7a11f8d2a8e"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><body></body></html>"),
+                "https://jobs.bendingspoons.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.bendingspoons.com%2Fpositions%2F6617c4b6b0f3c7a11f8d2a8e&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "bending_spoons")
+        self.assertEqual(result["company"], "Bending Spoons")
+        self.assertEqual(result["likely_posted_date"], "2024-04-11")
+        self.assertEqual(result["chosen_source"]["source"], "bendingspoons.objectid")
+
+    def test_gem_job_board_api_returns_first_published_date(self) -> None:
+        target_url = "https://jobs.gem.com/gem/am9icG9zdDpN6-87TjRV1EFRX86qqvez"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head><title>AI/ML Engineer | Gem</title>"
+                        "<meta property='og:site_name' content='Gem' /></head><body></body></html>"
+                    )
+                ),
+                "https://api.gem.com/job_board/v0/gem/job_posts/": FakeResponse(
+                    text=json.dumps(
+                        [
+                            {
+                                "absolute_url": target_url,
+                                "title": "AI/ML Engineer",
+                                "first_published_at": "2026-02-21T17:11:33.000Z",
+                                "created_at": "2026-02-20T10:00:00.000Z",
+                                "updated_at": "2026-04-10T09:44:00.000Z",
+                                "employment_type": "full_time",
+                                "location": {"name": "San Francisco, United States"},
+                                "departments": [{"name": "Engineering"}],
+                                "offices": [
+                                    {
+                                        "name": "San Francisco",
+                                        "location": {"name": "San Francisco, United States"},
+                                    }
+                                ],
+                                "internal_job_id": "4029987002",
+                                "requisition_id": "REQ-123",
+                            }
+                        ]
+                    )
+                ),
+                "https://jobs.gem.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.gem.com%2Fgem%2Fam9icG9zdDpN6-87TjRV1EFRX86qqvez&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "gem")
+        self.assertEqual(result["company"], "Gem")
+        self.assertEqual(result["title"], "AI/ML Engineer")
+        self.assertEqual(result["location"], "San Francisco, United States")
+        self.assertEqual(result["employment_type"], "Full Time")
+        self.assertEqual(result["likely_posted_date"], "2026-02-21")
+        self.assertEqual(result["chosen_source"]["source"], "gem.api")
+        self.assertEqual(result["hidden_insights"]["department"], "Engineering")
+        self.assertEqual(result["hidden_insights"]["offices"], ["San Francisco, United States"])
+
     def test_sitemap_and_wayback_remain_comparison_evidence(self) -> None:
         target_url = "https://example.com/jobs/123"
         session = FakeSession(
@@ -757,6 +959,15 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["platform"], "indeed")
         self.assertEqual(result["status"], "blocked")
         self.assertIsNone(result["likely_posted_date"])
+        self.assertTrue(result["warnings"])
+
+    def test_clearcompany_returns_unsupported_status(self) -> None:
+        result = jobcarbon.analyze_url(
+            "https://recruiting.ultiprotest.hrmdirect.com/employment/job-opening.php?req=12345"
+        )
+
+        self.assertEqual(result["platform"], "clearcompany")
+        self.assertEqual(result["status"], "unsupported")
         self.assertTrue(result["warnings"])
 
 

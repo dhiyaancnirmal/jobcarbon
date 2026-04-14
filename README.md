@@ -8,8 +8,10 @@ Current backend layers:
 - page metadata and regex extraction
 - Open Graph / article metadata
 - embedded JSON / hydration payloads
-- Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SAP SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM (recruitingCEJobRequisitionDetails), Jobvite (CompanyJobs XML), and Avature
-- Platform detection with generic/archival fallbacks for ADP Workforce Now, Paycor/Newton, and Gem
+- Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SAP SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM (recruitingCEJobRequisitionDetails), Jobvite (CompanyJobs XML), Avature, and Gem
+- Direct domain-specific fallbacks for Amazon.jobs, Stripe careers, Goldman Sachs careers, and Bending Spoons
+- Platform detection with generic/archival fallbacks for ADP Workforce Now and Paycor/Newton
+- Unsupported / early-stop detection for ClearCompany / HRMDirect, Google Careers, Indeed, and LinkedIn
 - Jina render fallback for JS-heavy pages
 - sitemap `lastmod`
 - Wayback first-seen archive ceiling
@@ -134,6 +136,11 @@ The current suite covers:
 - Oracle HCM recruitingCEJobRequisitionDetails fallback
 - Jobvite `CompanyJobs/Xml.aspx` fallback
 - Avature `SearchJobs/feed/` + portal sitemap fallback
+- Gem `api.gem.com/job_board/v0/{board}/job_posts/` fallback
+- Amazon.jobs `search.json?base_query={jobId}` fallback
+- Stripe Greenhouse board fallback
+- Goldman Sachs Oracle requisition-search fallback
+- Bending Spoons MongoDB ObjectID timestamp fallback
 - `/api/v1/platforms` capability endpoint
 - Jina render fallback
 - sitemap and Wayback comparison evidence

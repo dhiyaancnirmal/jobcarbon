@@ -5,6 +5,7 @@ __pycache__/
 .env
 .env.*
 *.log
+.tmp/
 
 node_modules/
 .next/

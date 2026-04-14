@@ -11,7 +11,7 @@
 - Private GitHub repo at `dhiyaancnirmal/jobcarbon` on `main`.
 - Railway hobby plan active at `https://jobcarbon-production.up.railway.app`.
 - Custom domain `api.howoldisthisjob.com` attached to Railway (DNS verified).
-- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (42 tests, incl. Workable, BambooHR, Brassring, SuccessFactors, Jobvite, Avature, Workday CXS, Oracle HCM, and platform capability coverage).
+- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (48 tests, incl. Workable, BambooHR, Brassring, SuccessFactors, Jobvite, Avature, Gem, Amazon.jobs, Stripe, Goldman Sachs, Bending Spoons, Workday CXS, Oracle HCM, and platform capability coverage).
 
 ### Frontend
 - Next.js 16.2.3 website at `site/` with Tailwind v4 and shadcn, Linear/Raycast aesthetic.
@@ -42,7 +42,8 @@
 ### Backend parity status
 - Richer response schema: `status`, `likely_posted_date`, `chosen_source`, `all_dates`, `hidden_insights`, `warnings`
 - Generic extractors: JSON-LD, metadata/regex, Open Graph, embedded JSON, Jina render, sitemap `lastmod`, Wayback
-- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM, Jobvite, Avature
+- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM, Jobvite, Avature, Gem
+- Direct domain-specific fallbacks: Amazon.jobs, Stripe careers, Goldman Sachs careers, Bending Spoons
 - Workable fallback parses `window.jobBoard.initialState` → `data` with created/updated dates and department/workplace hidden insights
 - BambooHR fallback calls `GET https://{company}.bamboohr.com/careers/{jobId}/detail` and reads `result.jobOpening.datePosted`
 - Brassring fallback reads durable `<meta name="DC.Date">` plus `og:title` from the public job-details HTML
@@ -54,14 +55,22 @@
 - Oracle HCM fallback calls `GET /hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?...finder=ById;Id="{reqId}",siteNumber={site}` and reads `items[0].ExternalPostedStartDate`
 - Jobvite fallback scrapes `companyEId` from the public page config and calls `GET /CompanyJobs/Xml.aspx?c={companyEId}&j={jobId}`
 - Avature fallback reads portal-specific RSS (`/{portal}/SearchJobs/feed/`) and sitemap indexes (`/{portal}/sitemap_index.xml`)
+- Gem fallback calls `GET https://api.gem.com/job_board/v0/{board}/job_posts/` and reads `first_published_at`
+- Verified live on 2026-04-14: `python3 jobcarbon.py https://jobs.gem.com/gem/4965519002` returns `gem.api.first_published_at` as the chosen durable source and still flags repost likelihood via newer `updated_at`.
+- Amazon.jobs fallback calls `GET https://www.amazon.jobs/en/search.json?base_query={jobId}` and reads `jobs[].posted_date`
+- Stripe careers fallback maps `stripe.com/jobs/listing/.../{id}` to Stripe's public Greenhouse board API
+- Goldman Sachs fallback maps `higher.gs.com/roles/{id}` to the public Oracle requisition-search endpoint on `hdpc.fa.us2.oraclecloud.com`
+- Bending Spoons fallback derives the posted date from the MongoDB ObjectID embedded in `jobs.bendingspoons.com/positions/{objectid}`
 - Generic `createdAt` extraction was downgraded because it produced false positives on live iCIMS pages
 - ATS handlers now prefer their own title/company/location fields over weaker generic page-shell metadata
-- Blocked platforms: Indeed, LinkedIn; Unsupported: Google Careers
+- Blocked platforms: Indeed, LinkedIn; Unsupported: Google Careers, ClearCompany / HRMDirect
 - `PLATFORM_CAPABILITIES` registry powers the new `/api/v1/platforms` endpoint and exposes supported/direct/generic/blocked/unsupported counts.
 
 ## Next Steps
-- Remaining ATS platforms (ADP, Paycor, Gem) still rely on generic extraction and archive/sitemap/render fallbacks. ADP’s public requisition endpoint is real, but the live sample probed on 2026-04-14 did not expose `postDate` or title/location fields, so it should not be promoted until a second live sample confirms the durable payload shape.
+- Competitor parity audit on 2026-04-14 against `https://whenthisjobwasposted.com/about` is much closer now. Remaining product/backend gaps versus the competitor's current public claims are the genuinely unresolved public sources: ADP direct promotion and Paycor direct/title extraction path. Treat these as the active parity backlog before claiming full compatibility.
+- Remaining ATS platforms (ADP, Paycor) still rely on generic extraction and archive/sitemap/render fallbacks. ADP’s public requisition endpoint is real, but one live sample probed on 2026-04-14 returned a sparse payload without `postDate` or title/location fields, so it should not be promoted until a second live sample confirms the durable payload shape. Paycor still only gives us title-level HTML without a durable posted date.
 - Decide whether local development should target the live API domain or restart a local `jobcarbon-api` PM2 process and point the site at it consistently
 - Chrome extension: local JSON-LD detection first, then backend for ATS/archive fallbacks
+- Competitor reverse-engineering on 2026-04-14: downloaded `https://whenthisjobwasposted.com/script.js?v=47` to `.tmp/competitor-script-v47.js` and mapped their actual architecture. The site is a single-file browser app that runs ATS detection client-side, uses a generic `fetchWithProxy(...)` wrapper (`proxy.whenthisjobwasposted.com` -> `corsproxy.io` -> `allorigins.win`) for most cross-origin reads, and only uses dedicated first-party proxy endpoints for the cases their browser could not call directly: `/gem-api` and `/bamboohr-api/{company}/{jobId}`. Confirmed platform handlers in their JS for Greenhouse, Ashby, Workable, Oracle HCM, Gem, BambooHR, Paycor, SuccessFactors RSS, Workday CXS, SmartRecruiters, Brassring, Lever, ADP Workforce Now, Rippling, Jobvite XML, iCIMS, Avature, plus domain-specific lookups for Amazon.jobs, Stripe, Goldman Sachs, and Bending Spoons, and early blocking/warning detection for Indeed, LinkedIn, Google Careers, ClearCompany/HRMDirect, and YC Work at a Startup.
 - Add more gel button colors + carousel entries as new ATS platforms land
 - Commit and push the now-clean monorepo state, including the tracked `site/` frontend
