@@ -46,6 +46,8 @@ SOURCE_PRIORITY = {
     "rippling.embedded": 1,
     "icims.api": 1,
     "dover.api": 1,
+    "workday.cxs": 1,
+    "oracle_hcm.api": 1,
     "open_graph": 2,
     "embedded.json": 3,
     "html.visible": 4,
@@ -93,9 +95,9 @@ PLATFORM_CAPABILITIES = {
     "oracle_hcm": {
         "display_name": "Oracle HCM Cloud",
         "supported": True,
-        "integration": "generic",
+        "integration": "direct",
         "detection": ["*.oraclecloud.com/hcmUI"],
-        "notes": "Platform detection with generic extraction, sitemap, archive, and render fallbacks.",
+        "notes": "Public Oracle HCM `recruitingCEJobRequisitionDetails` REST endpoint with `ExternalPostedStartDate` as the posted date.",
     },
     "gem": {
         "display_name": "Gem",
@@ -109,7 +111,7 @@ PLATFORM_CAPABILITIES = {
         "supported": True,
         "integration": "generic",
         "detection": ["*.bamboohr.com/careers"],
-        "notes": "Platform detection with generic extraction, sitemap, and archive fallbacks.",
+        "notes": "Modern BambooHR boards render client-side with no embedded job JSON; relies on Jina render, sitemap, and archive fallbacks.",
     },
     "brassring": {
         "display_name": "Brassring",
@@ -135,9 +137,9 @@ PLATFORM_CAPABILITIES = {
     "workday": {
         "display_name": "Workday",
         "supported": True,
-        "integration": "generic",
+        "integration": "direct",
         "detection": ["*.myworkdayjobs.com"],
-        "notes": "Platform detection with generic JSON-LD and archive fallbacks.",
+        "notes": "Public Workday CXS endpoint `/wday/cxs/{tenant}/{site}/job/{path}` with `jobPostingInfo.startDate` as the posted date.",
     },
     "smartrecruiters": {
         "display_name": "SmartRecruiters",
@@ -524,8 +526,21 @@ def detect_platform(url: str) -> URLMetadata:
     if host == "ats.rippling.com" and len(segments) >= 3:
         return URLMetadata(platform="rippling", org=segments[0], job_id=segments[-1])
     if host.endswith(".myworkdayjobs.com"):
-        job_id = segments[-1].split("_")[-1] if segments else None
-        return URLMetadata(platform="workday", org=host.split(".")[0], job_id=job_id)
+        tenant = host.split(".")[0]
+        extra: dict[str, Any] = {}
+        job_path: str | None = None
+        site: str | None = None
+        if "job" in segments:
+            job_index = segments.index("job")
+            if job_index >= 1:
+                site = segments[job_index - 1]
+            if len(segments) > job_index + 1:
+                job_path = "/".join(segments[job_index + 1 :])
+        if site:
+            extra["site"] = site
+        if job_path:
+            extra["job_path"] = job_path
+        return URLMetadata(platform="workday", org=tenant, job_id=job_path, extra=extra)
     if host.endswith(".bamboohr.com") and "careers" in host:
         return URLMetadata(platform="bamboohr")
     if "brassring.com" in host:
@@ -548,7 +563,24 @@ def detect_platform(url: str) -> URLMetadata:
     if host.endswith(".avature.net"):
         return URLMetadata(platform="avature")
     if host.endswith(".oraclecloud.com") and "/hcmUI/" in parsed.path:
-        return URLMetadata(platform="oracle_hcm")
+        extra: dict[str, Any] = {}
+        site = None
+        req_id = None
+        if "sites" in segments:
+            sites_index = segments.index("sites")
+            if len(segments) > sites_index + 1:
+                site = segments[sites_index + 1]
+        if "job" in segments:
+            job_index = segments.index("job")
+            if len(segments) > job_index + 1:
+                req_id = segments[job_index + 1]
+        if "requisitions" in segments:
+            req_index = segments.index("requisitions")
+            if req_id is None and len(segments) > req_index + 1:
+                req_id = segments[req_index + 1]
+        if site:
+            extra["site"] = site
+        return URLMetadata(platform="oracle_hcm", org=host.split(".")[0], job_id=req_id, extra=extra)
     if "jobvite.com" in host:
         return URLMetadata(platform="jobvite")
     return URLMetadata(platform="unknown")
@@ -1496,6 +1528,129 @@ def extract_dover_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
     )
 
 
+def extract_workday_api(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
+) -> None:
+    site = metadata.extra.get("site")
+    job_path = metadata.extra.get("job_path") or metadata.job_id
+    if not metadata.org or not site or not job_path:
+        return
+
+    parsed = urlparse(original_url)
+    api_url = f"{parsed.scheme}://{parsed.netloc}/wday/cxs/{metadata.org}/{site}/job/{job_path}"
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Workday CXS fallback failed: {exc}")
+        return
+
+    info = payload.get("jobPostingInfo") if isinstance(payload, dict) else None
+    if not isinstance(info, dict):
+        return
+
+    accumulator.set_preferred("title", info.get("title"))
+
+    hiring_org = payload.get("hiringOrganization")
+    if isinstance(hiring_org, dict):
+        accumulator.set_preferred("company", hiring_org.get("name"))
+
+    location = info.get("location")
+    if isinstance(location, str):
+        accumulator.set_preferred("location", location)
+    requisition_location = info.get("jobRequisitionLocation")
+    if isinstance(requisition_location, dict):
+        accumulator.set_preferred("location", requisition_location.get("descriptor") or location)
+
+    accumulator.set_preferred("employment_type", info.get("timeType"))
+
+    if info.get("jobReqId"):
+        accumulator.add_hidden("job_req_id", info.get("jobReqId"))
+    if info.get("jobPostingSiteId"):
+        accumulator.add_hidden("workday_site", info.get("jobPostingSiteId"))
+    country = info.get("country")
+    if isinstance(country, dict) and country.get("descriptor"):
+        accumulator.add_hidden("country", country.get("descriptor"))
+
+    accumulator.add_date(
+        info.get("startDate"),
+        source="workday.cxs",
+        field="startDate",
+        kind="posted",
+        reliability="high",
+    )
+    end_date = info.get("endDate") or info.get("postingEndDate")
+    accumulator.add_date(
+        end_date,
+        source="workday.cxs",
+        field="endDate",
+        kind="expiry",
+        reliability="medium",
+    )
+
+
+def extract_oracle_hcm_api(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
+) -> None:
+    site = metadata.extra.get("site")
+    req_id = metadata.job_id
+    if not site or not req_id:
+        return
+
+    parsed = urlparse(original_url)
+    api_url = (
+        f"{parsed.scheme}://{parsed.netloc}/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails"
+        f"?onlyData=true&expand=all&finder=ById;Id=%22{quote(req_id, safe='')}%22,siteNumber={quote(site, safe='')}"
+    )
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Oracle HCM fallback failed: {exc}")
+        return
+
+    items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(items, list) or not items:
+        return
+    item = items[0]
+    if not isinstance(item, dict):
+        return
+
+    accumulator.set_preferred("title", item.get("Title"))
+    primary_location = item.get("PrimaryLocation")
+    if isinstance(primary_location, str):
+        accumulator.set_preferred("location", primary_location)
+    accumulator.set_preferred("employment_type", item.get("JobSchedule"))
+
+    if item.get("Category"):
+        accumulator.add_hidden("category", item.get("Category"))
+    if item.get("RequisitionType"):
+        accumulator.add_hidden("requisition_type", item.get("RequisitionType"))
+    if item.get("HotJobFlag"):
+        accumulator.add_hidden("hot_job", item.get("HotJobFlag"))
+    if item.get("WorkplaceType"):
+        accumulator.add_hidden("workplace_type", item.get("WorkplaceType"))
+
+    accumulator.add_date(
+        item.get("ExternalPostedStartDate"),
+        source="oracle_hcm.api",
+        field="ExternalPostedStartDate",
+        kind="posted",
+        reliability="high",
+    )
+    accumulator.add_date(
+        item.get("ExternalPostedEndDate"),
+        source="oracle_hcm.api",
+        field="ExternalPostedEndDate",
+        kind="expiry",
+        reliability="medium",
+    )
+
+
 def should_use_render_fallback(html: str, accumulator: AnalysisAccumulator) -> bool:
     if any(candidate.kind in {"posted", "published"} for candidate in accumulator.all_dates):
         return False
@@ -1811,6 +1966,10 @@ def analyze_url(
         extract_icims_api(accumulator, active_session, metadata, html, validated_url)
     elif metadata.platform == "dover":
         extract_dover_api(accumulator, active_session, metadata)
+    elif metadata.platform == "workday":
+        extract_workday_api(accumulator, active_session, metadata, validated_url)
+    elif metadata.platform == "oracle_hcm":
+        extract_oracle_hcm_api(accumulator, active_session, metadata, validated_url)
 
     if should_use_render_fallback(html, accumulator):
         extract_jina_render(accumulator, active_session)

@@ -8,8 +8,8 @@ Current backend layers:
 - page metadata and regex extraction
 - Open Graph / article metadata
 - embedded JSON / hydration payloads
-- Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, Rippling, iCIMS, and Dover
-- Platform detection with generic/archival fallbacks for Workday, BambooHR, Brassring, Paycor/Newton, SAP SuccessFactors, ADP Workforce Now, Gem, Jobvite, Avature, and Oracle HCM
+- Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, Rippling, iCIMS, Dover, Workday (CXS), and Oracle HCM (recruitingCEJobRequisitionDetails)
+- Platform detection with generic/archival fallbacks for BambooHR, Brassring, Paycor/Newton, SAP SuccessFactors, ADP Workforce Now, Gem, Jobvite, and Avature
 - Jina render fallback for JS-heavy pages
 - sitemap `lastmod`
 - Wayback first-seen archive ceiling
@@ -127,6 +127,8 @@ The current suite covers:
 - iCIMS public `/api/jobs` fallback derived from the page's internal base host
 - Dover application portal API fallback
 - Workable embedded `window.jobBoard` payload fallback
+- Workday CXS API fallback
+- Oracle HCM recruitingCEJobRequisitionDetails fallback
 - `/api/v1/platforms` capability endpoint
 - Jina render fallback
 - sitemap and Wayback comparison evidence

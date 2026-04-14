@@ -58,6 +58,9 @@ class JobcarbonUnitTests(unittest.TestCase):
         workday = jobcarbon.detect_platform(
             "https://walmart.wd5.myworkdayjobs.com/en-US/WalmartExternal/job/Staff--Software-Engineer_R-2403353"
         )
+        oracle = jobcarbon.detect_platform(
+            "https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/12345"
+        )
 
         self.assertEqual((lever.platform, lever.org, lever.job_id), ("lever", "skio", "bbdd5a7b-652a-43ad-b92e-58f4e970c694"))
         self.assertEqual((greenhouse.platform, greenhouse.org, greenhouse.job_id), ("greenhouse", "applytogreenspark", "4169702004"))
@@ -67,7 +70,14 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual((dover.platform, dover.org, dover.job_id), ("dover", "netnow", "2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff"))
         self.assertEqual((workable.platform, workable.org, workable.job_id), ("workable", None, "5Sz2Mnf9VdJsXnPCvoYudJ"))
         self.assertEqual((icims.platform, icims.job_id), ("icims", "6341"))
-        self.assertEqual(workday.platform, "workday")
+        self.assertEqual(
+            (workday.platform, workday.org, workday.job_id, workday.extra.get("site"), workday.extra.get("job_path")),
+            ("workday", "walmart", "Staff--Software-Engineer_R-2403353", "WalmartExternal", "Staff--Software-Engineer_R-2403353"),
+        )
+        self.assertEqual(
+            (oracle.platform, oracle.job_id, oracle.extra.get("site")),
+            ("oracle_hcm", "12345", "CX_1"),
+        )
 
     def test_extract_job_postings_handles_object_array_and_graph(self) -> None:
         html = """

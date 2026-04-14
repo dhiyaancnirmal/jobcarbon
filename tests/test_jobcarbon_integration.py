@@ -426,6 +426,97 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["workplace"], "on_site")
         self.assertTrue(any(item["field"] == "updated" and item["kind"] == "refresh" for item in result["all_dates"]))
 
+    def test_workday_cxs_api_returns_start_date_and_metadata(self) -> None:
+        target_url = "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Senior-Software-Engineer_JR1990000"
+        api_url = "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Senior-Software-Engineer_JR1990000"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><body><div id='root'></div></body></html>"),
+                api_url: FakeResponse(
+                    text=json.dumps(
+                        {
+                            "jobPostingInfo": {
+                                "title": "Senior Software Engineer",
+                                "location": "US-CA-Santa Clara",
+                                "jobRequisitionLocation": {"descriptor": "US, CA, Santa Clara"},
+                                "timeType": "Full time",
+                                "jobReqId": "JR1990000",
+                                "jobPostingSiteId": "NVIDIAExternalCareerSite",
+                                "country": {"descriptor": "United States of America"},
+                                "startDate": "2026-01-10",
+                                "endDate": "2026-06-10",
+                            },
+                            "hiringOrganization": {"name": "NVIDIA"},
+                        }
+                    )
+                ),
+                "https://nvidia.wd5.myworkdayjobs.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fnvidia.wd5.myworkdayjobs.com%2Fen-US%2FNVIDIAExternalCareerSite%2Fjob%2FUS-CA-Santa-Clara%2FSenior-Software-Engineer_JR1990000&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "workday")
+        self.assertEqual(result["company"], "NVIDIA")
+        self.assertEqual(result["title"], "Senior Software Engineer")
+        self.assertEqual(result["location"], "US, CA, Santa Clara")
+        self.assertEqual(result["employment_type"], "Full time")
+        self.assertEqual(result["likely_posted_date"], "2026-01-10")
+        self.assertEqual(result["chosen_source"]["source"], "workday.cxs")
+        self.assertEqual(result["hidden_insights"]["job_req_id"], "JR1990000")
+        self.assertEqual(result["hidden_insights"]["country"], "United States of America")
+        self.assertTrue(any(item["field"] == "endDate" and item["kind"] == "expiry" for item in result["all_dates"]))
+
+    def test_oracle_hcm_api_returns_posted_start_date_and_hidden_insights(self) -> None:
+        target_url = "https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/12345"
+        api_url = (
+            "https://eeho.fa.us2.oraclecloud.com/hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails"
+            "?onlyData=true&expand=all&finder=ById;Id=%2212345%22,siteNumber=CX_1"
+        )
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><body><div id='root'></div></body></html>"),
+                api_url: FakeResponse(
+                    text=json.dumps(
+                        {
+                            "items": [
+                                {
+                                    "Title": "Principal Backend Engineer",
+                                    "PrimaryLocation": "Austin, TX, United States",
+                                    "JobSchedule": "Full-time",
+                                    "Category": "Engineering",
+                                    "RequisitionType": "Standard",
+                                    "HotJobFlag": True,
+                                    "WorkplaceType": "Hybrid",
+                                    "ExternalPostedStartDate": "2025-11-03",
+                                    "ExternalPostedEndDate": "2026-05-03",
+                                }
+                            ]
+                        }
+                    )
+                ),
+                "https://eeho.fa.us2.oraclecloud.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Feeho.fa.us2.oraclecloud.com%2FhcmUI%2FCandidateExperience%2Fen%2Fsites%2FCX_1%2Fjob%2F12345&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "oracle_hcm")
+        self.assertEqual(result["title"], "Principal Backend Engineer")
+        self.assertEqual(result["location"], "Austin, TX, United States")
+        self.assertEqual(result["employment_type"], "Full-time")
+        self.assertEqual(result["likely_posted_date"], "2025-11-03")
+        self.assertEqual(result["chosen_source"]["source"], "oracle_hcm.api")
+        self.assertEqual(result["hidden_insights"]["category"], "Engineering")
+        self.assertEqual(result["hidden_insights"]["workplace_type"], "Hybrid")
+        self.assertTrue(any(item["field"] == "ExternalPostedEndDate" and item["kind"] == "expiry" for item in result["all_dates"]))
+
     def test_blocked_platform_returns_blocked_status(self) -> None:
         result = jobcarbon.analyze_url("https://www.indeed.com/viewjob?jk=123")
 
