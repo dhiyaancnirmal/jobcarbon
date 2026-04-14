@@ -1,6 +1,23 @@
 # jobcarbon
 
-`jobcarbon` estimates how old a job posting really is by checking structured data and ATS APIs.
+`jobcarbon` estimates how old a job posting really is by collecting multiple signals, classifying them, and choosing the oldest credible posted date.
+
+Current backend layers:
+
+- JSON-LD `JobPosting`
+- page metadata and regex extraction
+- Open Graph / article metadata
+- embedded JSON / hydration payloads
+- ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Rippling, iCIMS, and Dover
+- Jina render fallback for JS-heavy pages
+- sitemap `lastmod`
+- Wayback first-seen archive ceiling
+
+Blocked / limited handling:
+
+- Indeed -> blocked
+- LinkedIn -> blocked
+- Google Careers -> detected, but no reliable date exposed
 
 ## CLI
 
@@ -35,6 +52,36 @@ Endpoints:
 - `GET /api/v1/estimate?url=<job-url>`
 - `POST /api/v1/estimate` with JSON body `{"url": "<job-url>"}`
 
+Response shape:
+
+```json
+{
+  "url": "https://jobs.lever.co/acme/123",
+  "normalized_url": "https://jobs.lever.co/acme/123",
+  "platform": "lever",
+  "status": "success",
+  "title": "Software Engineer",
+  "company": "Acme",
+  "location": "Remote",
+  "employment_type": "Full-time",
+  "likely_posted_date": "2024-01-01",
+  "likely_age_days": 10,
+  "confidence": "high",
+  "reposted_likely": false,
+  "summary": "Oldest credible posted date is 2024-01-01 from jsonld.jobposting.datePosted.",
+  "chosen_source": {
+    "date": "2024-01-01",
+    "source": "jsonld.jobposting",
+    "field": "datePosted",
+    "kind": "posted",
+    "reliability": "high"
+  },
+  "all_dates": [],
+  "hidden_insights": {},
+  "warnings": []
+}
+```
+
 ## Railway
 
 This repo is set up for Railway with config-as-code in `railway.json`.
@@ -63,3 +110,20 @@ Suggested Railway flow:
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+The current suite covers:
+
+- platform detection
+- JSON-LD extraction
+- retry behavior
+- date normalization
+- evidence ranking / repost detection
+- rich result contract
+- Greenhouse API fallback
+- SmartRecruiters API fallback
+- Rippling embedded `__NEXT_DATA__` fallback
+- iCIMS public `/api/jobs` fallback derived from the page's internal base host
+- Dover application portal API fallback
+- Jina render fallback
+- sitemap and Wayback comparison evidence
+- blocked-platform behavior

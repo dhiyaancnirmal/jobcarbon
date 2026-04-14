@@ -7,60 +7,65 @@ import jobcarbon
 import jobcarbon_api
 
 
+def sample_result(url: str, platform: str = "lever") -> dict:
+    return {
+        "url": url,
+        "normalized_url": url,
+        "platform": platform,
+        "status": "success",
+        "title": "Example Job",
+        "company": "Example Co",
+        "location": "Remote",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2024-01-01",
+        "likely_age_days": 10,
+        "confidence": "high",
+        "reposted_likely": False,
+        "summary": "Oldest credible posted date is 2024-01-01 from jsonld.jobposting.datePosted.",
+        "chosen_source": {
+            "date": "2024-01-01",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high",
+        },
+        "all_dates": [],
+        "hidden_insights": {},
+        "warnings": [],
+    }
+
+
 class JobcarbonAPITests(unittest.TestCase):
     def test_healthz(self) -> None:
-        status, headers, body = jobcarbon_api.handle_api_request(
-            method="GET",
-            path="/healthz",
-        )
+        status, headers, body = jobcarbon_api.handle_api_request(method="GET", path="/healthz")
 
         self.assertEqual(status, 200)
         self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
         self.assertEqual(json.loads(body), {"ok": True, "service": "jobcarbon-api"})
 
     def test_estimate_get_success(self) -> None:
-        def analyzer(url: str) -> dict:
-            return {
-                "url": url,
-                "ats": "lever",
-                "estimated_posted": "2024-01-01",
-                "confidence": "high",
-                "method": "jsonld.jobposting.datePosted",
-                "age_days": 10,
-                "evidence": [],
-            }
-
         status, _, body = jobcarbon_api.handle_api_request(
             method="GET",
             path="/api/v1/estimate",
             query_string="url=https%3A%2F%2Fjobs.lever.co%2Facme%2F123",
-            analyzer=analyzer,
+            analyzer=lambda url: sample_result(url, "lever"),
         )
 
         self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body)["ats"], "lever")
+        payload = json.loads(body)
+        self.assertEqual(payload["platform"], "lever")
+        self.assertEqual(payload["chosen_source"]["field"], "datePosted")
 
     def test_estimate_post_success(self) -> None:
-        def analyzer(url: str) -> dict:
-            return {
-                "url": url,
-                "ats": "greenhouse",
-                "estimated_posted": "2024-02-02",
-                "confidence": "high",
-                "method": "greenhouse.api.first_published",
-                "age_days": 5,
-                "evidence": [],
-            }
-
         status, _, body = jobcarbon_api.handle_api_request(
             method="POST",
             path="/api/v1/estimate",
             body=b'{"url": "https://job-boards.greenhouse.io/acme/jobs/123"}',
-            analyzer=analyzer,
+            analyzer=lambda url: sample_result(url, "greenhouse"),
         )
 
         self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body)["method"], "greenhouse.api.first_published")
+        self.assertEqual(json.loads(body)["platform"], "greenhouse")
 
     def test_missing_url_is_bad_request(self) -> None:
         status, _, body = jobcarbon_api.handle_api_request(
@@ -123,3 +128,7 @@ class JobcarbonAPITests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=True):
             self.assertEqual(jobcarbon_api.default_host(), "127.0.0.1")
             self.assertEqual(jobcarbon_api.default_port(), 8000)
+
+
+if __name__ == "__main__":
+    unittest.main()

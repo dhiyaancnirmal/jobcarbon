@@ -28,7 +28,9 @@ class FakeResponse:
             raise jobcarbon.HTTPRequestError(f"HTTP {self.status_code}")
 
     def json(self) -> Any:
-        return self._json_data
+        if self._json_data is not None:
+            return self._json_data
+        return json.loads(self.text)
 
 
 class FakeSession:
@@ -36,29 +38,24 @@ class FakeSession:
         self.responses = responses
 
     def get(self, url: str, timeout: int) -> FakeResponse:
-        try:
-            return self.responses[url]
-        except KeyError as exc:
-            raise AssertionError(f"Unexpected URL requested in test: {url}") from exc
+        return self.responses.get(url, FakeResponse(status_code=404))
 
 
 class JobcarbonIntegrationTests(unittest.TestCase):
-    def test_jsonld_primary_path_returns_high_confidence(self) -> None:
+    def test_jsonld_primary_path_returns_rich_success_result(self) -> None:
         target_url = "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694"
-        session = FakeSession(
-            {
-                target_url: FakeResponse(text=load_text("lever_job_page.html")),
-            }
-        )
+        session = FakeSession({target_url: FakeResponse(text=load_text("lever_job_page.html"))})
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 1))
 
-        self.assertEqual(result["ats"], "lever")
-        self.assertEqual(result["estimated_posted"], "2021-10-21")
+        self.assertEqual(result["platform"], "lever")
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["likely_posted_date"], "2021-10-21")
         self.assertEqual(result["confidence"], "high")
-        self.assertEqual(result["method"], "jsonld.jobposting.datePosted")
+        self.assertEqual(result["chosen_source"]["source"], "jsonld.jobposting")
+        self.assertTrue(any(item["field"] == "datePosted" for item in result["all_dates"]))
 
-    def test_greenhouse_fallback_uses_first_published(self) -> None:
+    def test_greenhouse_api_beats_refresh_and_archive_signals(self) -> None:
         target_url = "https://job-boards.greenhouse.io/applytogreenspark/jobs/4169702004"
         session = FakeSession(
             {
@@ -66,7 +63,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                 "https://boards-api.greenhouse.io/v1/boards/applytogreenspark/jobs/4169702004": FakeResponse(
                     json_data=load_json("greenhouse_job_api.json")
                 ),
-                "https://web.archive.org/cdx/search/cdx?url=https://job-boards.greenhouse.io/applytogreenspark/jobs/4169702004&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjob-boards.greenhouse.io%2Fapplytogreenspark%2Fjobs%2F4169702004&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=load_json("wayback_first_snapshot.json")
                 ),
             }
@@ -74,90 +71,321 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 1))
 
-        self.assertEqual(result["estimated_posted"], "2021-11-03")
-        self.assertEqual(result["confidence"], "high")
-        self.assertEqual(result["method"], "greenhouse.api.first_published")
-        evidence_fields = [item["field"] for item in result["evidence"]]
-        self.assertIn("first_published", evidence_fields)
-        self.assertIn("updated_at", evidence_fields)
+        self.assertEqual(result["likely_posted_date"], "2021-11-03")
+        self.assertEqual(result["chosen_source"]["source"], "greenhouse.api")
+        self.assertTrue(any(item["field"] == "updated_at" for item in result["all_dates"]))
+        self.assertTrue(any(item["kind"] == "archive" for item in result["all_dates"]))
 
-    def test_ashby_fallback_uses_published_at(self) -> None:
-        target_url = "https://jobs.ashbyhq.com/glimpse/767a3a59-53d6-4306-afae-6b05a265ba82"
+    def test_smartrecruiters_api_handles_js_blocked_page(self) -> None:
+        target_url = "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer"
         session = FakeSession(
             {
-                target_url: FakeResponse(text=load_text("no_jsonld_page.html")),
-                "https://api.ashbyhq.com/posting-api/job-board/glimpse": FakeResponse(
-                    json_data=load_json("ashby_job_board_api.json")
+                target_url: FakeResponse(text="<html><body>Please enable JS and disable any ad blocker</body></html>"),
+                "https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000103790775": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "name": "Software Engineer",
+                            "company": {"name": "ServiceNow"},
+                            "location": {"fullLocation": "San Diego, California, United States"},
+                            "typeOfEmployment": {"label": "Full-time"},
+                            "releasedDate": "2026-02-13T18:34:40.956Z",
+                            "department": {"label": "Customer Outcomes"},
+                        }
+                    )
                 ),
-                "https://web.archive.org/cdx/search/cdx?url=https://jobs.ashbyhq.com/glimpse/767a3a59-53d6-4306-afae-6b05a265ba82&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
-                    json_data=load_json("wayback_first_snapshot.json")
+                "https://r.jina.ai/http://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer": FakeResponse(
+                    text="No visible date"
                 ),
-            }
-        )
-
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 3, 1))
-
-        self.assertEqual(result["estimated_posted"], "2026-02-19")
-        self.assertEqual(result["confidence"], "high")
-        self.assertEqual(result["method"], "ashby.api.publishedAt")
-
-    def test_wayback_ceiling_is_used_last(self) -> None:
-        target_url = "https://example.com/jobs/123"
-        session = FakeSession(
-            {
-                target_url: FakeResponse(text=load_text("no_jsonld_page.html")),
-                "https://web.archive.org/cdx/search/cdx?url=https://example.com/jobs/123&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
-                    json_data=load_json("wayback_first_snapshot.json")
-                ),
-            }
-        )
-
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 1))
-
-        self.assertEqual(result["ats"], "unknown")
-        self.assertEqual(result["estimated_posted"], "2021-04-05")
-        self.assertEqual(result["confidence"], "low")
-        self.assertEqual(result["method"], "wayback.first_snapshot_ceiling")
-
-    def test_greenhouse_html_fallback_uses_embedded_published_at(self) -> None:
-        target_url = "https://job-boards.greenhouse.io/speechify/jobs/5058944004"
-        session = FakeSession(
-            {
-                target_url: FakeResponse(text=load_text("greenhouse_board_page.html")),
-                "https://boards-api.greenhouse.io/v1/boards/speechify/jobs/5058944004": FakeResponse(
-                    status_code=404
-                ),
-                "https://web.archive.org/cdx/search/cdx?url=https://job-boards.greenhouse.io/speechify/jobs/5058944004&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
-                    json_data=load_json("wayback_first_snapshot.json")
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.smartrecruiters.com%2FServiceNow%2F744000103790775-software-engineer&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
 
-        self.assertEqual(result["estimated_posted"], "2024-01-24")
-        self.assertEqual(result["confidence"], "high")
-        self.assertEqual(result["method"], "greenhouse.html.published_at")
-        evidence_sources = [item["source"] for item in result["evidence"]]
-        self.assertIn("greenhouse.api", evidence_sources)
-        self.assertIn("greenhouse.html", evidence_sources)
+        self.assertEqual(result["platform"], "smartrecruiters")
+        self.assertEqual(result["company"], "ServiceNow")
+        self.assertEqual(result["employment_type"], "Full-time")
+        self.assertEqual(result["likely_posted_date"], "2026-02-13")
+        self.assertEqual(result["chosen_source"]["source"], "smartrecruiters.api")
 
-    def test_unknown_page_returns_structured_unknown_result(self) -> None:
-        target_url = "https://example.com/jobs/456"
+    def test_jina_render_supplies_visible_date_when_static_page_is_thin(self) -> None:
+        target_url = "https://apply.workable.com/remote/j/8D1C44BDF7/"
         session = FakeSession(
             {
-                target_url: FakeResponse(text=load_text("no_jsonld_page.html")),
-                "https://web.archive.org/cdx/search/cdx?url=https://example.com/jobs/456&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                target_url: FakeResponse(text="<html><body><div id='app'></div></body></html>"),
+                "https://r.jina.ai/http://apply.workable.com/remote/j/8D1C44BDF7": FakeResponse(
+                    text="Senior Engineer\nDate Posted: March 3, 2024\nRemote"
+                ),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fapply.workable.com%2Fremote%2Fj%2F8D1C44BDF7%2F&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 1))
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 10))
 
-        self.assertIsNone(result["estimated_posted"])
-        self.assertEqual(result["confidence"], "unknown")
-        self.assertEqual(result["method"], "unknown")
+        self.assertEqual(result["platform"], "workable")
+        self.assertEqual(result["likely_posted_date"], "2024-03-03")
+        self.assertEqual(result["chosen_source"]["source"], "jina.render")
+
+    def test_rippling_embedded_next_data_supplies_created_on_and_hidden_metadata(self) -> None:
+        target_url = "https://ats.rippling.com/rippling/jobs/bda12f6a-6afc-45af-8e6a-b0056facf15c"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        '<html><head><script id="__NEXT_DATA__" type="application/json">'
+                        + json.dumps(
+                            {
+                                "props": {
+                                    "pageProps": {
+                                        "apiData": {
+                                            "jobPost": {
+                                                "uuid": "bda12f6a-6afc-45af-8e6a-b0056facf15c",
+                                                "name": "Business Operations Manager",
+                                                "companyName": "Rippling",
+                                                "createdOn": "2022-12-16T10:56:58.858000-08:00",
+                                                "employmentType": {
+                                                    "label": "SALARIED_FT",
+                                                    "id": "Salaried, full-time",
+                                                },
+                                                "workLocations": ["San Francisco, CA"],
+                                                "department": {"name": "Bizops"},
+                                                "hasAIEvaluationsEnabled": True,
+                                                "payRangeDetails": [
+                                                    {
+                                                        "location": "Tier 1",
+                                                        "currency": "USD",
+                                                        "frequency": "YEAR",
+                                                        "rangeStart": 180000,
+                                                        "rangeEnd": 245000,
+                                                        "isRemote": False,
+                                                    }
+                                                ],
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                        + "</script></head><body></body></html>"
+                    )
+                ),
+                "https://ats.rippling.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fats.rippling.com%2Frippling%2Fjobs%2Fbda12f6a-6afc-45af-8e6a-b0056facf15c&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "rippling")
+        self.assertEqual(result["company"], "Rippling")
+        self.assertEqual(result["location"], "San Francisco, CA")
+        self.assertEqual(result["employment_type"], "Salaried, full-time")
+        self.assertEqual(result["likely_posted_date"], "2022-12-16")
+        self.assertEqual(result["chosen_source"]["source"], "rippling.embedded")
+        self.assertEqual(result["hidden_insights"]["department"], "Bizops")
+        self.assertTrue(result["hidden_insights"]["ai_evaluations_enabled"])
+        self.assertEqual(result["hidden_insights"]["pay_range_details"][0]["currency"], "USD")
+
+    def test_icims_api_uses_base_href_host_and_prefers_posted_date(self) -> None:
+        target_url = "https://globalcareers-customer0.icims.com/jobs/6341/login"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        '<html><head><base href="https://c-12326-20260303-careers-icims-com.i.icims.com/careers-home" />'
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://c-12326-20260303-careers-icims-com.i.icims.com/api/jobs?limit=100&page=1": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "jobs": [
+                                {
+                                    "data": {
+                                        "req_id": "6341",
+                                        "slug": "6341",
+                                        "title": "Sr. Customer Success Manager",
+                                        "hiring_organization": "iCIMS",
+                                        "full_location": "Mexico",
+                                        "employment_type": "Full-time",
+                                        "posted_date": "2026-04-09T15:58:00+0000",
+                                        "update_date": "2026-04-14T16:04:24+0000",
+                                        "apply_url": "https://globalcareers-customer0.icims.com/jobs/6341/login",
+                                        "category": "Customer Success",
+                                        "location_type": "remote",
+                                    }
+                                }
+                            ]
+                        }
+                    )
+                ),
+                "https://globalcareers-customer0.icims.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fglobalcareers-customer0.icims.com%2Fjobs%2F6341%2Flogin&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "icims")
+        self.assertEqual(result["company"], "iCIMS")
+        self.assertEqual(result["location"], "Mexico")
+        self.assertEqual(result["employment_type"], "Full-time")
+        self.assertEqual(result["likely_posted_date"], "2026-04-09")
+        self.assertEqual(result["chosen_source"]["source"], "icims.api")
+        self.assertEqual(result["hidden_insights"]["category"], "Customer Success")
+        self.assertEqual(result["hidden_insights"]["location_type"], "remote")
+        self.assertTrue(any(item["field"] == "update_date" for item in result["all_dates"]))
+
+    def test_dover_api_returns_created_date_and_metadata(self) -> None:
+        target_url = "https://app.dover.com/apply/netnow/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><body><div id='root'></div></body></html>"),
+                "https://app.dover.com/api/v1/inbound/application-portal-job/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "id": "2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff",
+                            "client_name": "Netnow",
+                            "title": "Front-end Engineer",
+                            "created": "2025-07-16T16:23:18.435814Z",
+                            "locations": [
+                                {"name": "Canada", "location_type": "REMOTE"},
+                                {"name": "United States", "location_type": "REMOTE"},
+                                {"name": "New York, NY", "location_type": "HYBRID"},
+                            ],
+                            "compensation": {
+                                "currency_code": "CAD",
+                                "salary_range_type": "YEARLY",
+                                "employment_type": "FULL_TIME",
+                            },
+                            "visa_support": False,
+                            "active": True,
+                        }
+                    )
+                ),
+                "https://app.dover.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fapp.dover.com%2Fapply%2Fnetnow%2F2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "dover")
+        self.assertEqual(result["company"], "Netnow")
+        self.assertEqual(result["employment_type"], "FULL_TIME")
+        self.assertEqual(result["likely_posted_date"], "2025-07-16")
+        self.assertEqual(result["chosen_source"]["source"], "dover.api")
+        self.assertEqual(result["hidden_insights"]["workplace_types"], ["hybrid", "remote"])
+        self.assertEqual(result["hidden_insights"]["compensation"]["currency_code"], "CAD")
+
+    def test_sitemap_and_wayback_remain_comparison_evidence(self) -> None:
+        target_url = "https://example.com/jobs/123"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<meta property='article:published_time' content='2024-03-01T10:00:00Z'>"
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://example.com/sitemap.xml": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>"
+                        "<url><loc>https://example.com/jobs/123</loc><lastmod>2023-12-01</lastmod></url>"
+                        "</urlset>"
+                    )
+                ),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fexample.com%2Fjobs%2F123&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=load_json("wayback_first_snapshot.json")
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 10))
+
+        self.assertEqual(result["likely_posted_date"], "2024-03-01")
+        self.assertEqual(result["chosen_source"]["field"], "article:published_time")
+        self.assertTrue(any(item["source"] == "sitemap" for item in result["all_dates"]))
+        self.assertTrue(any(item["source"] == "wayback.cdx" for item in result["all_dates"]))
+
+    def test_repost_conflict_is_flagged_when_refresh_date_is_much_newer(self) -> None:
+        target_url = "https://example.com/jobs/reposted"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<script type='application/ld+json'>"
+                        '{"@type":"JobPosting","title":"Engineer","datePosted":"2024-01-01"}'
+                        "</script>"
+                        "<meta property='article:published_time' content='2024-03-15T10:00:00Z'>"
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://example.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fexample.com%2Fjobs%2Freposted&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 4, 1))
+
+        self.assertEqual(result["likely_posted_date"], "2024-01-01")
+        self.assertTrue(result["reposted_likely"])
+        self.assertIn("reposting or refreshing is likely", result["summary"])
+
+    def test_hidden_insights_collect_platform_metadata(self) -> None:
+        target_url = "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><body>Please enable JS and disable any ad blocker</body></html>"),
+                "https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000103790775": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "name": "Software Engineer",
+                            "company": {"name": "ServiceNow"},
+                            "releasedDate": "2026-02-13T18:34:40.956Z",
+                            "department": {"label": "Customer Outcomes"},
+                            "customField": [
+                                {"fieldLabel": "Work Persona", "valueLabel": "Flexible"},
+                                {"fieldLabel": "Region", "valueLabel": "AMS - North America and Canada"},
+                            ],
+                        }
+                    )
+                ),
+                "https://r.jina.ai/http://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer": FakeResponse(text="No visible date"),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.smartrecruiters.com%2FServiceNow%2F744000103790775-software-engineer&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["hidden_insights"]["department"], "Customer Outcomes")
+        self.assertEqual(result["hidden_insights"]["work_persona"], "Flexible")
+        self.assertEqual(result["hidden_insights"]["region"], "AMS - North America and Canada")
+
+    def test_blocked_platform_returns_blocked_status(self) -> None:
+        result = jobcarbon.analyze_url("https://www.indeed.com/viewjob?jk=123")
+
+        self.assertEqual(result["platform"], "indeed")
+        self.assertEqual(result["status"], "blocked")
+        self.assertIsNone(result["likely_posted_date"])
+        self.assertTrue(result["warnings"])
 
 
 if __name__ == "__main__":

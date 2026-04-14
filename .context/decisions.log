@@ -9,4 +9,39 @@
 2026-04-14: Chose hosted Python backend for the website demo to avoid logic drift, with the future extension using local JSON-LD detection and backend fallback for heavier cases.
 2026-04-14: Added Railway config-as-code and Railway-aware host/port defaults so the current API can deploy without framework changes.
 2026-04-14: Added minimal GitHub Actions CI for pushes and pull requests, limited to py_compile and unittest to match current repo scope.
+2026-04-14: Initialized git locally, created the private GitHub repo `dhiyaancnirmal/jobcarbon`, and pushed `main`.
+2026-04-14: Fixed the Codex shell PATH mismatch by moving common binary paths into `~/.zshenv`, which made `gh` and `railway` visible inside the app shell.
 2026-04-14: Wayback fallback is treated as a first-snapshot ceiling, not the true posted date.
+2026-04-14: Railway CLI auth recovered after restart; linked this checkout to Railway project `selfless-vibrancy` and service `jobcarbon`.
+2026-04-14: Generated Railway public domain `https://jobcarbon-production.up.railway.app` and verified live `/healthz` plus a live Lever `/api/v1/estimate` request against production.
+2026-04-14: Created Railway custom-domain attachment for `api.howoldisthisjob.com`; DNS is still pending with required CNAME to `paig7uuj.up.railway.app` and TXT ownership verification at `_railway-verify.api`.
+2026-04-14: Chose Next.js (App Router, 16.2.3) + Tailwind v4 + shadcn for the website, kept in-repo under `site/` for a monorepo layout. Vercel will host the site while Railway continues to host the API.
+2026-04-14: Built a custom `GelButton` component reusing the gel-button CSS from `/Users/dhiyaan/Code/repolearn/gel-buttons` rather than using shadcn's default Button, because the desired aesthetic is minimal white page + colorful gel buttons.
+2026-04-14: Website uses a client component (`JobChecker`) that calls the hosted Railway API directly from the browser, relying on the API's existing CORS headers; no Next.js route handler proxy for now.
+2026-04-14: Redesigned site from editorial/newspaper aesthetic to clean Linear/Raycast style. Removed Fraunces, Instrument Serif, gel buttons, stamp verdicts, paper grain, dossier styling. Switched to Inter + JetBrains Mono. Uses plain HTML elements with Tailwind instead of custom components.
+2026-04-14: Linked `site/` to Vercel project `jobcarbon-web` under scope `dhiyaancnirmals-projects` and deployed production (`dpl_DVfhQYNBQoxbP3oBCnWqqpF9dCu2`).
+2026-04-14: Set `NEXT_PUBLIC_JOBCARBON_API=https://api.howoldisthisjob.com` in Vercel `Production` and `Development`; preview env setup is blocked until project has a connected Git repository.
+2026-04-14: Added `howoldisthisjob.com` and `www.howoldisthisjob.com` to Vercel project; because DNS stays on Spaceship, required records are `A @ -> 76.76.21.21` and `A www -> 76.76.21.21`, while keeping Railway `api` subdomain records unchanged.
+2026-04-14: Fixed Vercel public access issue by patching project framework to `nextjs` and clearing project SSO protection (`ssoProtection: null`) via Vercel API, then redeploying production (`dpl_FSC6TasBnxQq2K4e1vPDbun5YaBw`).
+2026-04-14: Railway trial expired; switched to running API locally (`jobcarbon-api` on PM2 port 8000). Default API URL in site changed to `http://localhost:8000`.
+2026-04-14: Fixed hydration mismatch on submit button by removing `!url.trim()` from disabled prop (client-only state caused SSR/client mismatch). Added `suppressHydrationWarning` on the input.
+2026-04-14: Gel button CSS must live inside `@layer components {}` in globals.css — Tailwind v4 strips unlayered custom CSS during reset.
+2026-04-14: Added gel save-style button (blue gradient) from `/Users/dhiyaan/Code/repolearn/gel-buttons` for the Check button. Removed old gel-button.tsx component.
+2026-04-14: Added typing/deleting placeholder animation on the URL input cycling through Lever/Greenhouse/Ashby example URLs.
+2026-04-14: Added infinite-scroll carousel (`PlatformCarousel`) with gel buttons in platform brand colors: Lever (blue `#0066ff`), Greenhouse (green `#1a9a3e`), Ashby (purple `#6366f1`). Supports `withLogos` prop.
+2026-04-14: Result card redesigned: age in words, date in long format, confidence as pill (sentence case, not uppercase), ATS badge, collapsible evidence.
+2026-04-14: Replaced the old first-hit detector with a typed evidence engine that collects all candidate dates, chooses the oldest credible posted date, and exposes comparison evidence through `all_dates`.
+2026-04-14: Expanded generic backend extraction to include page metadata/regex, Open Graph, embedded JSON payloads, Jina render fallback, sitemap `lastmod`, and Wayback archive ceilings.
+2026-04-14: Added SmartRecruiters as a direct ATS API fallback in the new engine; broader platform detection now explicitly marks Indeed and LinkedIn as blocked and Google Careers as unsupported for dates.
+2026-04-14: Broke backward compatibility on the API response intentionally because the product is not yet in production; the richer contract is now the source of truth and clients should adapt to it.
+2026-04-14: Chose not to invent unsupported ATS endpoints; direct fallbacks should only be added when the signal is verified from real payloads or stable public feeds.
+2026-04-14: Added explicit parity-hardening coverage for repost conflicts and hidden metadata extraction before extending more ATS handlers.
+2026-04-14: Added Rippling support only after verifying a real public signal on live pages: `__NEXT_DATA__ -> props.pageProps.apiData.jobPost.createdOn`. Kept this as a platform-specific handler instead of broad generic `__NEXT_DATA__` walking to avoid noisy title/company extraction from large Next.js payloads.
+2026-04-14: Added iCIMS support by deriving the internal API host from `<base href>` and querying `/api/jobs`, because the visible public host often does not serve the JSON feed directly. Matching uses `req_id`, `slug`, and `apply_url`, with `posted_date` treated as durable and `update_date` as refresh evidence.
+2026-04-14: Added Dover support only after verifying the live public endpoint `GET /api/v1/inbound/application-portal-job/{jobId}` on `app.dover.com`. Use `created` as the durable posted date and keep location/compensation metadata as hidden insights.
+2026-04-14: Downgraded generic `createdAt` extraction from high-confidence to low-confidence after a live iCIMS false positive. ATS handlers now override weaker generic title/company/location values when they have platform-native data.
+40: 2026-04-14: Fully redesigned frontend ResultCard to consume the richer backend schema. Added distinct UI for non-success statuses (blocked/amber, unsupported/neutral, no_date/info). Surfaces title/company/location/employment_type, repost banner, summary, chosen source with reliability dot, collapsible hidden insights, and warnings. Used inline SVGs to avoid new dependencies.
+41: 2026-04-14: Added SmartRecruiters to platform carousel with red/pink gel button gradient. Updated placeholder URL rotation to include SmartRecruiters examples.
+2026-04-14: Removed an accidental nested git repo inside `site/` so the frontend can be tracked from the main repository as a normal monorepo directory.
+2026-04-14: Expanded the root `.gitignore` for monorepo hygiene to ignore frontend install/build artifacts (`node_modules`, `.next`, `.vercel`, logs, build outputs) while allowing the `site/` source and lockfile to be committed.
+2026-04-14: Replaced the boilerplate `site/README.md` with a repo-specific note and removed a mount-only React effect in `PlatformCarousel` so frontend lint passes cleanly.
