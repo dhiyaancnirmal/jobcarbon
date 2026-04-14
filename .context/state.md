@@ -11,7 +11,7 @@
 - Private GitHub repo at `dhiyaancnirmal/jobcarbon` on `main`.
 - Railway hobby plan active at `https://jobcarbon-production.up.railway.app`.
 - Custom domain `api.howoldisthisjob.com` attached to Railway (DNS verified).
-- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (36 tests, incl. Workable extractor, Workday CXS, Oracle HCM, and platform capability coverage).
+- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (39 tests, incl. Workable, BambooHR, Jobvite, Workday CXS, Oracle HCM, and platform capability coverage).
 
 ### Frontend
 - Next.js 16.2.3 website at `site/` with Tailwind v4 and shadcn, Linear/Raycast aesthetic.
@@ -42,20 +42,22 @@
 ### Backend parity status
 - Richer response schema: `status`, `likely_posted_date`, `chosen_source`, `all_dates`, `hidden_insights`, `warnings`
 - Generic extractors: JSON-LD, metadata/regex, Open Graph, embedded JSON, Jina render, sitemap `lastmod`, Wayback
-- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM
+- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM, Jobvite
 - Workable fallback parses `window.jobBoard.initialState` → `data` with created/updated dates and department/workplace hidden insights
+- BambooHR fallback calls `GET https://{company}.bamboohr.com/careers/{jobId}/detail` and reads `result.jobOpening.datePosted`
 - Rippling fallback uses live-verified `__NEXT_DATA__` payloads
 - iCIMS fallback derives the internal API host from `<base href>` and queries `/api/jobs`
 - Dover fallback calls `GET /api/v1/inbound/application-portal-job/{jobId}`
 - Workday fallback calls `GET /wday/cxs/{tenant}/{site}/job/{jobPath}` and reads `jobPostingInfo.startDate`
 - Oracle HCM fallback calls `GET /hcmRestApi/resources/latest/recruitingCEJobRequisitionDetails?...finder=ById;Id="{reqId}",siteNumber={site}` and reads `items[0].ExternalPostedStartDate`
+- Jobvite fallback scrapes `companyEId` from the public page config and calls `GET /CompanyJobs/Xml.aspx?c={companyEId}&j={jobId}`
 - Generic `createdAt` extraction was downgraded because it produced false positives on live iCIMS pages
 - ATS handlers now prefer their own title/company/location fields over weaker generic page-shell metadata
 - Blocked platforms: Indeed, LinkedIn; Unsupported: Google Careers
 - `PLATFORM_CAPABILITIES` registry powers the new `/api/v1/platforms` endpoint and exposes supported/direct/generic/blocked/unsupported counts.
 
 ## Next Steps
-- Remaining ATS platforms (Jobvite, BambooHR, SuccessFactors, ADP, Brassring, Paycor, Avature) stay detection-only: no stable public payload was found on live pages during probing, and the repo rule is to avoid inventing endpoints
+- Remaining ATS platforms (SuccessFactors, ADP, Brassring, Paycor, Avature, Gem) still rely on generic extraction and archive/sitemap/render fallbacks; direct handlers should only be added after live payload verification
 - Decide whether local development should target the live API domain or restart a local `jobcarbon-api` PM2 process and point the site at it consistently
 - Chrome extension: local JSON-LD detection first, then backend for ATS/archive fallbacks
 - Add more gel button colors + carousel entries as new ATS platforms land

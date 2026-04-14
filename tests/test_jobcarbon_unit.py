@@ -61,6 +61,18 @@ class JobcarbonUnitTests(unittest.TestCase):
         oracle = jobcarbon.detect_platform(
             "https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/12345"
         )
+        bamboohr = jobcarbon.detect_platform(
+            "https://signal1.bamboohr.com/careers/39"
+        )
+        brassring = jobcarbon.detect_platform(
+            "https://sjobs.brassring.com/TGnewUI/Search/home/HomeWithPreLoad?PageType=JobDetails&jobid=3328041&partnerid=16030&siteid=6091"
+        )
+        adp = jobcarbon.detect_platform(
+            "https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?cid=abc123&ccId=19000101_000001&type=JS&lang=en_US&jobId=500123"
+        )
+        jobvite = jobcarbon.detect_platform(
+            "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
+        )
 
         self.assertEqual((lever.platform, lever.org, lever.job_id), ("lever", "skio", "bbdd5a7b-652a-43ad-b92e-58f4e970c694"))
         self.assertEqual((greenhouse.platform, greenhouse.org, greenhouse.job_id), ("greenhouse", "applytogreenspark", "4169702004"))
@@ -78,6 +90,30 @@ class JobcarbonUnitTests(unittest.TestCase):
             (oracle.platform, oracle.job_id, oracle.extra.get("site")),
             ("oracle_hcm", "12345", "CX_1"),
         )
+        self.assertEqual((bamboohr.platform, bamboohr.org, bamboohr.job_id), ("bamboohr", "signal1", "39"))
+        self.assertEqual(
+            (
+                brassring.platform,
+                brassring.job_id,
+                brassring.extra.get("partner_id"),
+                brassring.extra.get("site_id"),
+            ),
+            ("brassring", "3328041", "16030", "6091"),
+        )
+        self.assertEqual(
+            (adp.platform, adp.org, adp.job_id, adp.extra.get("cc_id")),
+            ("adp", "abc123", "500123", "19000101_000001"),
+        )
+        self.assertEqual((jobvite.platform, jobvite.org, jobvite.job_id), ("jobvite", "clinch", "oD2D4fw6"))
+
+    def test_detect_platform_supports_legacy_jobvite_query_urls(self) -> None:
+        metadata = jobcarbon.detect_platform(
+            "https://jobs.jobvite.com/CompanyJobs/Xml.aspx?c=q0oaVfwd&j=oD2D4fw6"
+        )
+
+        self.assertEqual(metadata.platform, "jobvite")
+        self.assertEqual(metadata.job_id, "oD2D4fw6")
+        self.assertEqual(metadata.extra.get("company_eid"), "q0oaVfwd")
 
     def test_extract_job_postings_handles_object_array_and_graph(self) -> None:
         html = """
@@ -155,8 +191,8 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual(platforms["indeed"]["integration"], "blocked")
 
         summary = jobcarbon.summarize_platform_capabilities()
-        self.assertGreaterEqual(summary["direct"], 8)
-        self.assertGreaterEqual(summary["generic"], 8)
+        self.assertGreaterEqual(summary["direct"], 10)
+        self.assertGreaterEqual(summary["generic"], 6)
         self.assertEqual(summary["blocked"], 2)
         self.assertEqual(summary["unsupported"], 1)
         self.assertEqual(summary["supported"], summary["direct"] + summary["generic"])

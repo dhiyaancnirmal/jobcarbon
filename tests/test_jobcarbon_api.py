@@ -126,7 +126,7 @@ class JobcarbonAPITests(unittest.TestCase):
         self.assertEqual(platforms["indeed"]["integration"], "blocked")
         summary = payload["summary"]
         self.assertEqual(summary["supported"], summary["direct"] + summary["generic"])
-        self.assertGreaterEqual(summary["direct"], 8)
+        self.assertGreaterEqual(summary["direct"], 10)
 
     def test_platforms_endpoint_rejects_post(self) -> None:
         status, _, body = jobcarbon_api.handle_api_request(

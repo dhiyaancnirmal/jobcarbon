@@ -288,6 +288,118 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["workplace_types"], ["hybrid", "remote"])
         self.assertEqual(result["hidden_insights"]["compensation"]["currency_code"], "CAD")
 
+    def test_bamboohr_api_returns_date_posted_and_metadata(self) -> None:
+        target_url = "https://signal1.bamboohr.com/careers/39"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<meta property='og:site_name' content='Signal 1'/>"
+                        "<meta property='og:title' content='Current Openings'/>"
+                        "</head><body><div id='poRoot'></div></body></html>"
+                    )
+                ),
+                "https://signal1.bamboohr.com/careers/39/detail": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "result": {
+                                "jobOpening": {
+                                    "jobOpeningShareUrl": "https://signal1.bamboohr.com/careers/39",
+                                    "jobOpeningName": "Senior Full Stack Software Engineer",
+                                    "jobOpeningStatus": "Open",
+                                    "departmentLabel": "Application Engineering",
+                                    "employmentStatusLabel": "Full-Time",
+                                    "location": {
+                                        "city": "Toronto",
+                                        "state": "Ontario",
+                                        "postalCode": "M5R 2E3",
+                                        "addressCountry": "Canada",
+                                    },
+                                    "locationType": "Hybrid",
+                                    "minimumExperience": "Senior",
+                                    "seekPromoted": False,
+                                    "compensation": {
+                                        "payType": "Salary",
+                                        "min": 180000,
+                                        "max": 220000,
+                                        "currency": "CAD",
+                                    },
+                                    "datePosted": "2026-02-24",
+                                }
+                            }
+                        }
+                    )
+                ),
+                "https://signal1.bamboohr.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fsignal1.bamboohr.com%2Fcareers%2F39&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "bamboohr")
+        self.assertEqual(result["company"], "Signal 1")
+        self.assertEqual(result["title"], "Senior Full Stack Software Engineer")
+        self.assertEqual(result["location"], "Toronto, Ontario, Canada")
+        self.assertEqual(result["employment_type"], "Full-Time")
+        self.assertEqual(result["likely_posted_date"], "2026-02-24")
+        self.assertEqual(result["chosen_source"]["source"], "bamboohr.api")
+        self.assertEqual(result["hidden_insights"]["department"], "Application Engineering")
+        self.assertEqual(result["hidden_insights"]["location_type"], "Hybrid")
+        self.assertEqual(result["hidden_insights"]["compensation"]["currency"], "CAD")
+
+    def test_jobvite_xml_feed_returns_posted_date_and_metadata(self) -> None:
+        target_url = "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<title>Clinch Careers - Rails Engineer (Jobvite)</title>"
+                        "<meta property='og:title' content='Clinch is looking for Rails Engineer (Jobvite).'/>"
+                        "</head><body><script>"
+                        "window.jobviteSettings = { companyEId: 'q0oaVfwd', jobId: 'oD2D4fw6' };"
+                        "</script></body></html>"
+                    )
+                ),
+                "https://jobs.jobvite.com/CompanyJobs/Xml.aspx?c=q0oaVfwd&j=oD2D4fw6": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<result>"
+                        "<id>oD2D4fw6</id>"
+                        "<title>Rails Engineer (Jobvite)</title>"
+                        "<requisitionId>RE1234</requisitionId>"
+                        "<category>Computers/Software</category>"
+                        "<jobtype>Full-Time</jobtype>"
+                        "<location>New York, NY, United States</location>"
+                        "<date>10/5/2017</date>"
+                        "<detail-url>https://jobs.jobvite.com/clinch/job/oD2D4fw6</detail-url>"
+                        "</result>"
+                    )
+                ),
+                "https://jobs.jobvite.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.jobvite.com%2Fclinch%2Fjob%2FoD2D4fw6&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "jobvite")
+        self.assertEqual(result["company"], "Clinch")
+        self.assertEqual(result["title"], "Rails Engineer (Jobvite)")
+        self.assertEqual(result["location"], "New York, NY, United States")
+        self.assertEqual(result["employment_type"], "Full-Time")
+        self.assertEqual(result["likely_posted_date"], "2017-10-05")
+        self.assertEqual(result["chosen_source"]["source"], "jobvite.xml")
+        self.assertEqual(result["hidden_insights"]["category"], "Computers/Software")
+        self.assertEqual(result["hidden_insights"]["requisition_id"], "RE1234")
+        self.assertEqual(result["hidden_insights"]["jobvite_company_eid"], "q0oaVfwd")
+
     def test_sitemap_and_wayback_remain_comparison_evidence(self) -> None:
         target_url = "https://example.com/jobs/123"
         session = FakeSession(

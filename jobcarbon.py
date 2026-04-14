@@ -43,11 +43,13 @@ SOURCE_PRIORITY = {
     "ashby.api": 1,
     "smartrecruiters.api": 1,
     "workable.embedded": 1,
+    "bamboohr.api": 1,
     "rippling.embedded": 1,
     "icims.api": 1,
     "dover.api": 1,
     "workday.cxs": 1,
     "oracle_hcm.api": 1,
+    "jobvite.xml": 1,
     "open_graph": 2,
     "embedded.json": 3,
     "html.visible": 4,
@@ -109,9 +111,9 @@ PLATFORM_CAPABILITIES = {
     "bamboohr": {
         "display_name": "BambooHR",
         "supported": True,
-        "integration": "generic",
+        "integration": "direct",
         "detection": ["*.bamboohr.com/careers"],
-        "notes": "Modern BambooHR boards render client-side with no embedded job JSON; relies on Jina render, sitemap, and archive fallbacks.",
+        "notes": "Public BambooHR `GET /careers/{jobId}/detail` JSON endpoint with `result.jobOpening.datePosted` as the posted date.",
     },
     "brassring": {
         "display_name": "Brassring",
@@ -165,9 +167,9 @@ PLATFORM_CAPABILITIES = {
     "jobvite": {
         "display_name": "Jobvite",
         "supported": True,
-        "integration": "generic",
-        "detection": ["jobs.jobvite.com"],
-        "notes": "Platform detection with generic JSON-LD and archive fallbacks.",
+        "integration": "direct",
+        "detection": ["jobs.jobvite.com", "CompanyJobs/Xml.aspx", "companyEId in page config"],
+        "notes": "Public Jobvite XML feed `CompanyJobs/Xml.aspx?c={companyEId}&j={jobId}` with durable posting dates.",
     },
     "icims": {
         "display_name": "iCIMS",
@@ -541,16 +543,43 @@ def detect_platform(url: str) -> URLMetadata:
         if job_path:
             extra["job_path"] = job_path
         return URLMetadata(platform="workday", org=tenant, job_id=job_path, extra=extra)
-    if host.endswith(".bamboohr.com") and "careers" in host:
-        return URLMetadata(platform="bamboohr")
+    if host.endswith(".bamboohr.com") and "careers" in segments:
+        company = host.split(".")[0]
+        careers_index = segments.index("careers")
+        job_id = segments[careers_index + 1] if len(segments) > careers_index + 1 else None
+        return URLMetadata(platform="bamboohr", org=company, job_id=job_id)
     if "brassring.com" in host:
-        return URLMetadata(platform="brassring", job_id=query.get("jobid", [None])[0])
+        job_id = query.get("jobid", [None])[0] or query.get("JobId", [None])[0]
+        if not job_id and parsed.fragment:
+            fragment_match = re.search(r"jobDetails=(\d+)", parsed.fragment, re.IGNORECASE)
+            if fragment_match:
+                job_id = fragment_match.group(1)
+        extra: dict[str, Any] = {}
+        partner_id = query.get("partnerid", [None])[0]
+        site_id = query.get("siteid", [None])[0]
+        if partner_id:
+            extra["partner_id"] = partner_id
+        if site_id:
+            extra["site_id"] = site_id
+        return URLMetadata(platform="brassring", job_id=job_id, extra=extra)
     if query.get("gnk") == ["job"]:
         return URLMetadata(platform="paycor", job_id=query.get("gni", [None])[0])
     if "successfactors" in host or "successfactors" in parsed.path.lower():
         return URLMetadata(platform="successfactors")
     if host == "workforcenow.adp.com":
-        return URLMetadata(platform="adp")
+        extra: dict[str, Any] = {}
+        cid = query.get("cid", [None])[0]
+        cc_id = query.get("ccId", [None])[0]
+        if cid:
+            extra["cid"] = cid
+        if cc_id:
+            extra["cc_id"] = cc_id
+        return URLMetadata(
+            platform="adp",
+            org=cid,
+            job_id=query.get("jobId", [None])[0],
+            extra=extra,
+        )
     if host == "jobs.gem.com":
         return URLMetadata(platform="gem")
     if host.endswith(".icims.com"):
@@ -582,7 +611,16 @@ def detect_platform(url: str) -> URLMetadata:
             extra["site"] = site
         return URLMetadata(platform="oracle_hcm", org=host.split(".")[0], job_id=req_id, extra=extra)
     if "jobvite.com" in host:
-        return URLMetadata(platform="jobvite")
+        job_id = query.get("j", [None])[0]
+        extra: dict[str, Any] = {}
+        org = None
+        if len(segments) >= 3 and segments[1] == "job":
+            org = segments[0]
+            job_id = job_id or segments[2]
+        company_eid = query.get("c", [None])[0]
+        if company_eid:
+            extra["company_eid"] = company_eid
+        return URLMetadata(platform="jobvite", org=org, job_id=job_id, extra=extra)
     return URLMetadata(platform="unknown")
 
 
@@ -1528,6 +1566,124 @@ def extract_dover_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
     )
 
 
+def extract_bamboohr_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+    if not metadata.org or not metadata.job_id:
+        return
+
+    api_url = f"https://{metadata.org}.bamboohr.com/careers/{metadata.job_id}/detail"
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"BambooHR API fallback failed: {exc}")
+        return
+
+    result = payload.get("result") if isinstance(payload, dict) else None
+    job = result.get("jobOpening") if isinstance(result, dict) else None
+    if not isinstance(job, dict):
+        return
+
+    accumulator.set_preferred("title", job.get("jobOpeningName"))
+    accumulator.set_preferred("employment_type", job.get("employmentStatusLabel"))
+
+    location = job.get("location")
+    if isinstance(location, dict):
+        parts = [location.get("city"), location.get("state"), location.get("addressCountry")]
+        rendered = ", ".join(str(part).strip() for part in parts if part)
+        accumulator.set_preferred("location", rendered)
+
+    accumulator.add_hidden("department", job.get("departmentLabel"))
+    accumulator.add_hidden("location_type", job.get("locationType"))
+    accumulator.add_hidden("minimum_experience", job.get("minimumExperience"))
+    accumulator.add_hidden("seek_promoted", job.get("seekPromoted"))
+    accumulator.add_hidden("job_opening_status", job.get("jobOpeningStatus"))
+    accumulator.add_hidden("compensation", job.get("compensation"))
+
+    accumulator.add_date(
+        job.get("datePosted"),
+        source="bamboohr.api",
+        field="datePosted",
+        kind="posted",
+        reliability="high",
+    )
+
+
+def extract_jobvite_company_eid(html: str) -> str | None:
+    match = re.search(r"companyEId\s*:\s*['\"]([^'\"]+)['\"]", html)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def extract_jobvite_company_name(html: str) -> str | None:
+    meta = extract_meta_tags(html)
+    for candidate in (meta.get("og:site_name"), meta.get("og:title")):
+        if not candidate:
+            continue
+        looking_match = re.match(r"(.+?)\s+is looking for\s+", candidate, re.IGNORECASE)
+        if looking_match:
+            return looking_match.group(1).strip()
+        if "Careers - " not in candidate and " - Careers" not in candidate:
+            return candidate.strip()
+
+    title_match = re.search(r"<title>([^<]+)</title>", html, re.IGNORECASE)
+    if not title_match:
+        return None
+    title = unescape(title_match.group(1)).strip()
+    for separator in (" Careers - ", " - Careers"):
+        if separator in title:
+            return title.split(separator, 1)[0].strip()
+    return None
+
+
+def extract_jobvite_xml(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    html: str,
+) -> None:
+    if not metadata.job_id:
+        return
+
+    company_eid = metadata.extra.get("company_eid")
+    if not company_eid and html:
+        company_eid = extract_jobvite_company_eid(html)
+    if not company_eid:
+        return
+
+    api_url = (
+        "https://jobs.jobvite.com/CompanyJobs/Xml.aspx"
+        f"?c={quote(company_eid, safe='')}&j={quote(metadata.job_id, safe='')}"
+    )
+    try:
+        xml_text = fetch_text(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Jobvite XML fallback failed: {exc}")
+        return
+
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return
+
+    accumulator.set_preferred("title", root.findtext("title"))
+    accumulator.set_preferred("company", extract_jobvite_company_name(html))
+    accumulator.set_preferred("location", root.findtext("location"))
+    accumulator.set_preferred("employment_type", root.findtext("jobtype"))
+
+    accumulator.add_hidden("category", root.findtext("category"))
+    accumulator.add_hidden("requisition_id", root.findtext("requisitionId"))
+    accumulator.add_hidden("jobvite_company_eid", company_eid)
+    accumulator.add_hidden("detail_url", root.findtext("detail-url"))
+
+    accumulator.add_date(
+        root.findtext("date"),
+        source="jobvite.xml",
+        field="date",
+        kind="posted",
+        reliability="high",
+    )
+
+
 def extract_workday_api(
     accumulator: AnalysisAccumulator,
     session: Any,
@@ -1966,10 +2122,14 @@ def analyze_url(
         extract_icims_api(accumulator, active_session, metadata, html, validated_url)
     elif metadata.platform == "dover":
         extract_dover_api(accumulator, active_session, metadata)
+    elif metadata.platform == "bamboohr":
+        extract_bamboohr_api(accumulator, active_session, metadata)
     elif metadata.platform == "workday":
         extract_workday_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "oracle_hcm":
         extract_oracle_hcm_api(accumulator, active_session, metadata, validated_url)
+    elif metadata.platform == "jobvite" and html:
+        extract_jobvite_xml(accumulator, active_session, metadata, html)
 
     if should_use_render_fallback(html, accumulator):
         extract_jina_render(accumulator, active_session)
