@@ -79,6 +79,21 @@ class JobcarbonUnitTests(unittest.TestCase):
         amazon = jobcarbon.detect_platform(
             "https://www.amazon.jobs/en/jobs/3202233/software-engineer-amazon"
         )
+        teamtailor = jobcarbon.detect_platform(
+            "https://career.teamtailor.com/jobs/7217456-head-of-group-accounting"
+        )
+        recruitee = jobcarbon.detect_platform(
+            "https://mcdugaldsteele.recruitee.com/o/start-your-career-with-mcdugald-steele"
+        )
+        personio = jobcarbon.detect_platform(
+            "https://contabo.jobs.personio.de/job/2563171?language=en"
+        )
+        breezy = jobcarbon.detect_platform(
+            "https://jobs.breezy.hr/p/865698971aa0-customer-success-agent/apply"
+        )
+        jazzhr = jobcarbon.detect_platform(
+            "https://publiccitizen.applytojob.com/apply/VZj90FMXn0/Democracy-Team-Manager"
+        )
         stripe = jobcarbon.detect_platform(
             "https://stripe.com/jobs/listing/account-executive-hunter-uk-enterprise-retail/7451366"
         )
@@ -131,6 +146,11 @@ class JobcarbonUnitTests(unittest.TestCase):
             ("avature", "4661", "careers"),
         )
         self.assertEqual((amazon.platform, amazon.job_id), ("amazon_jobs", "3202233"))
+        self.assertEqual((teamtailor.platform, teamtailor.job_id), ("teamtailor", "7217456-head-of-group-accounting"))
+        self.assertEqual((recruitee.platform, recruitee.org, recruitee.job_id), ("recruitee", "mcdugaldsteele", "start-your-career-with-mcdugald-steele"))
+        self.assertEqual((personio.platform, personio.org, personio.job_id), ("personio", "contabo", "2563171"))
+        self.assertEqual((breezy.platform, breezy.job_id), ("breezy", "865698971aa0-customer-success-agent"))
+        self.assertEqual((jazzhr.platform, jazzhr.org, jazzhr.job_id), ("jazzhr", "publiccitizen", "VZj90FMXn0"))
         self.assertEqual((stripe.platform, stripe.job_id), ("stripe", "7451366"))
         self.assertEqual((goldman.platform, goldman.job_id), ("goldman_sachs", "165686"))
         self.assertEqual((bending_spoons.platform, bending_spoons.job_id), ("bending_spoons", "6617c4b6b0f3c7a11f8d2a8e"))

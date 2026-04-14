@@ -123,8 +123,10 @@ class JobcarbonAPITests(unittest.TestCase):
         self.assertIn("lever", platforms)
         self.assertIn("indeed", platforms)
         self.assertIn("gem", platforms)
+        self.assertIn("recruitee", platforms)
         self.assertEqual(platforms["workable"]["integration"], "direct")
         self.assertEqual(platforms["gem"]["integration"], "direct")
+        self.assertEqual(platforms["recruitee"]["integration"], "direct")
         self.assertEqual(platforms["indeed"]["integration"], "blocked")
         summary = payload["summary"]
         self.assertEqual(summary["supported"], summary["direct"] + summary["generic"])

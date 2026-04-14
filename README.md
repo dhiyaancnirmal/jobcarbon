@@ -8,7 +8,7 @@ Current backend layers:
 - page metadata and regex extraction
 - Open Graph / article metadata
 - embedded JSON / hydration payloads
-- Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SAP SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM (recruitingCEJobRequisitionDetails), Jobvite (CompanyJobs XML), Avature, and Gem
+- Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SAP SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM (recruitingCEJobRequisitionDetails), Jobvite (CompanyJobs XML), Avature, Gem, Teamtailor, Recruitee, Personio, Breezy HR, and JazzHR / applytojob
 - Direct domain-specific fallbacks for Amazon.jobs, Stripe careers, Goldman Sachs careers, and Bending Spoons
 - Platform detection with generic/archival fallbacks for ADP Workforce Now and Paycor/Newton
 - Unsupported / early-stop detection for ClearCompany / HRMDirect, Google Careers, Indeed, and LinkedIn
@@ -137,6 +137,11 @@ The current suite covers:
 - Jobvite `CompanyJobs/Xml.aspx` fallback
 - Avature `SearchJobs/feed/` + portal sitemap fallback
 - Gem `api.gem.com/job_board/v0/{board}/job_posts/` fallback
+- Teamtailor public page metadata / JSON-LD fallback
+- Recruitee `/api/offers/{slug}` fallback
+- Personio page JSON-LD + `/xml?language=...` fallback
+- Breezy HR `data-position` payload fallback
+- JazzHR / applytojob JobPosting JSON-LD support
 - Amazon.jobs `search.json?base_query={jobId}` fallback
 - Stripe Greenhouse board fallback
 - Goldman Sachs Oracle requisition-search fallback

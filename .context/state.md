@@ -11,7 +11,7 @@
 - Private GitHub repo at `dhiyaancnirmal/jobcarbon` on `main`.
 - Railway hobby plan active at `https://jobcarbon-production.up.railway.app`.
 - Custom domain `api.howoldisthisjob.com` attached to Railway (DNS verified).
-- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (48 tests, incl. Workable, BambooHR, Brassring, SuccessFactors, Jobvite, Avature, Gem, Amazon.jobs, Stripe, Goldman Sachs, Bending Spoons, Workday CXS, Oracle HCM, and platform capability coverage).
+- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (53 tests, incl. Workable, BambooHR, Brassring, SuccessFactors, Jobvite, Avature, Gem, Teamtailor, Recruitee, Personio XML fallback, Breezy HR, JazzHR, Amazon.jobs, Stripe, Goldman Sachs, Bending Spoons, Workday CXS, Oracle HCM, and platform capability coverage).
 
 ### Frontend
 - Next.js 16.2.3 website at `site/` with Tailwind v4 and shadcn, Linear/Raycast aesthetic.
@@ -42,7 +42,7 @@
 ### Backend parity status
 - Richer response schema: `status`, `likely_posted_date`, `chosen_source`, `all_dates`, `hidden_insights`, `warnings`
 - Generic extractors: JSON-LD, metadata/regex, Open Graph, embedded JSON, Jina render, sitemap `lastmod`, Wayback
-- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM, Jobvite, Avature, Gem
+- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM, Jobvite, Avature, Gem, Teamtailor, Recruitee, Personio, Breezy HR, JazzHR / applytojob
 - Direct domain-specific fallbacks: Amazon.jobs, Stripe careers, Goldman Sachs careers, Bending Spoons
 - Workable fallback parses `window.jobBoard.initialState` → `data` with created/updated dates and department/workplace hidden insights
 - BambooHR fallback calls `GET https://{company}.bamboohr.com/careers/{jobId}/detail` and reads `result.jobOpening.datePosted`
@@ -57,6 +57,11 @@
 - Avature fallback reads portal-specific RSS (`/{portal}/SearchJobs/feed/`) and sitemap indexes (`/{portal}/sitemap_index.xml`)
 - Gem fallback calls `GET https://api.gem.com/job_board/v0/{board}/job_posts/` and reads `first_published_at`
 - Verified live on 2026-04-14: `python3 jobcarbon.py https://jobs.gem.com/gem/4965519002` returns `gem.api.first_published_at` as the chosen durable source and still flags repost likelihood via newer `updated_at`.
+- Teamtailor support relies on public page metadata (`article:published_time`) and JobPosting schema on `*.teamtailor.com/jobs/...` pages.
+- Recruitee fallback calls `GET https://{company}.recruitee.com/api/offers/{slug}` and prefers `published_at`, with `updated_at` as refresh evidence.
+- Personio support uses page JobPosting schema first and falls back to the public XML feed at `/xml?language=...` for `createdAt` when page dates are absent.
+- Breezy HR fallback parses the public `data-position` payload and prefers `first_publish_date`, with `last_publish_date` as refresh evidence.
+- JazzHR / applytojob support relies on public JobPosting JSON-LD on detail pages under `*.applytojob.com/apply/...`.
 - Amazon.jobs fallback calls `GET https://www.amazon.jobs/en/search.json?base_query={jobId}` and reads `jobs[].posted_date`
 - Stripe careers fallback maps `stripe.com/jobs/listing/.../{id}` to Stripe's public Greenhouse board API
 - Goldman Sachs fallback maps `higher.gs.com/roles/{id}` to the public Oracle requisition-search endpoint on `hdpc.fa.us2.oraclecloud.com`
@@ -68,7 +73,7 @@
 
 ## Next Steps
 - Competitor parity audit on 2026-04-14 against `https://whenthisjobwasposted.com/about` is much closer now. Remaining product/backend gaps versus the competitor's current public claims are the genuinely unresolved public sources: ADP direct promotion and Paycor direct/title extraction path. Treat these as the active parity backlog before claiming full compatibility.
-- Remaining ATS platforms (ADP, Paycor) still rely on generic extraction and archive/sitemap/render fallbacks. ADP’s public requisition endpoint is real, but one live sample probed on 2026-04-14 returned a sparse payload without `postDate` or title/location fields, so it should not be promoted until a second live sample confirms the durable payload shape. Paycor still only gives us title-level HTML without a durable posted date.
+- Remaining ATS platforms (ADP, Paycor) still rely on generic extraction and archive/sitemap/render fallbacks. ADP’s public requisition endpoint is real, but one live sample probed on 2026-04-14 returned a sparse payload without `postDate` or title/location fields, so it should not be promoted until a second live sample confirms the durable payload shape. Paycor still only gives us title-level HTML without a durable posted date. Comeet remains a metadata-only candidate for later: the public careers page / script exposes canonical identifiers and freshness-style timestamps like `time_updated`, but not a durable original posting date.
 - Decide whether local development should target the live API domain or restart a local `jobcarbon-api` PM2 process and point the site at it consistently
 - Chrome extension: local JSON-LD detection first, then backend for ATS/archive fallbacks
 - Competitor reverse-engineering on 2026-04-14: downloaded `https://whenthisjobwasposted.com/script.js?v=47` to `.tmp/competitor-script-v47.js` and mapped their actual architecture. The site is a single-file browser app that runs ATS detection client-side, uses a generic `fetchWithProxy(...)` wrapper (`proxy.whenthisjobwasposted.com` -> `corsproxy.io` -> `allorigins.win`) for most cross-origin reads, and only uses dedicated first-party proxy endpoints for the cases their browser could not call directly: `/gem-api` and `/bamboohr-api/{company}/{jobId}`. Confirmed platform handlers in their JS for Greenhouse, Ashby, Workable, Oracle HCM, Gem, BambooHR, Paycor, SuccessFactors RSS, Workday CXS, SmartRecruiters, Brassring, Lever, ADP Workforce Now, Rippling, Jobvite XML, iCIMS, Avature, plus domain-specific lookups for Amazon.jobs, Stripe, Goldman Sachs, and Bending Spoons, and early blocking/warning detection for Indeed, LinkedIn, Google Careers, ClearCompany/HRMDirect, and YC Work at a Startup.

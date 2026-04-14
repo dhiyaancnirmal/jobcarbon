@@ -56,6 +56,9 @@ SOURCE_PRIORITY = {
     "avature.feed": 1,
     "avature.sitemap": 1,
     "gem.api": 1,
+    "recruitee.api": 1,
+    "breezy.embedded": 1,
+    "personio.xml": 1,
     "amazon_jobs.api": 1,
     "stripe.greenhouse": 1,
     "goldman_sachs.oracle": 1,
@@ -104,6 +107,41 @@ PLATFORM_CAPABILITIES = {
         "integration": "direct",
         "detection": ["apply.workable.com", "jobs.workable.com/view"],
         "notes": "Embedded Workable jobBoard payload plus JSON-LD and generic fallbacks.",
+    },
+    "teamtailor": {
+        "display_name": "Teamtailor",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["*.teamtailor.com/jobs/{id}-{slug}"],
+        "notes": "Public Teamtailor job pages expose `article:published_time` plus JobPosting schema on the page HTML.",
+    },
+    "recruitee": {
+        "display_name": "Recruitee",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["*.recruitee.com/o/{slug}"],
+        "notes": "Public `/api/offers/{slug}` endpoint exposes `published_at`, `created_at`, and `updated_at`.",
+    },
+    "personio": {
+        "display_name": "Personio",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["*.jobs.personio.de/job/{id}"],
+        "notes": "Public Personio pages expose JobPosting schema and the XML feed at `/xml?language=...` exposes `createdAt`.",
+    },
+    "breezy": {
+        "display_name": "Breezy HR",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["jobs.breezy.hr/p/{friendly_id}"],
+        "notes": "Public Breezy pages embed a `data-position` payload with `first_publish_date` and `last_publish_date`.",
+    },
+    "jazzhr": {
+        "display_name": "JazzHR / applytojob",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["*.applytojob.com/apply/{jobCode}"],
+        "notes": "Public JazzHR detail pages expose JobPosting JSON-LD with `datePosted`.",
     },
     "oracle_hcm": {
         "display_name": "Oracle HCM Cloud",
@@ -543,6 +581,18 @@ def detect_platform(url: str) -> URLMetadata:
         return URLMetadata(platform="google_careers")
     if host.endswith(".hrmdirect.com"):
         return URLMetadata(platform="clearcompany")
+    if host.endswith(".teamtailor.com") and segments and segments[0] == "jobs":
+        return URLMetadata(platform="teamtailor", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
+    if host.endswith(".recruitee.com") and segments and segments[0] == "o":
+        return URLMetadata(platform="recruitee", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
+    if host.endswith(".jobs.personio.de") and segments and segments[0] == "job":
+        return URLMetadata(platform="personio", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
+    if host == "jobs.breezy.hr" and segments and segments[0] == "p":
+        return URLMetadata(platform="breezy", job_id=segments[1] if len(segments) > 1 else None)
+    if host.endswith(".applytojob.com") and segments and segments[0] == "apply":
+        if len(segments) >= 3 and segments[1] == "jobs" and segments[2] == "details":
+            return URLMetadata(platform="jazzhr", org=host.split(".")[0], job_id=segments[3] if len(segments) > 3 else None)
+        return URLMetadata(platform="jazzhr", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
     if host == "www.amazon.jobs":
         job_match = re.search(r"/jobs/(\d+)", parsed.path, re.IGNORECASE)
         return URLMetadata(platform="amazon_jobs", job_id=job_match.group(1) if job_match else None)
@@ -779,7 +829,7 @@ def normalize_date(value: Any) -> str | None:
     except ValueError:
         pass
 
-    for fmt in ("%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%Y/%m/%d"):
+    for fmt in ("%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%Y/%m/%d", "%Y-%m-%d %H:%M:%S %Z"):
         try:
             return datetime.strptime(cleaned, fmt).date().isoformat()
         except ValueError:
@@ -2188,6 +2238,156 @@ def extract_gem_job_board_api(accumulator: AnalysisAccumulator, session: Any, me
     )
 
 
+def extract_recruitee_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+    if not metadata.org or not metadata.job_id:
+        return
+
+    api_url = f"https://{metadata.org}.recruitee.com/api/offers/{quote(metadata.job_id, safe='')}"
+    try:
+        payload = fetch_json(session, api_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Recruitee API fallback failed: {exc}")
+        return
+
+    offer = payload.get("offer") if isinstance(payload, dict) else None
+    if not isinstance(offer, dict):
+        return
+
+    accumulator.set_preferred("title", offer.get("title"))
+    accumulator.set_preferred("company", offer.get("company_name"))
+    accumulator.set_preferred("location", offer.get("location"))
+
+    if offer.get("remote"):
+        accumulator.set_preferred("employment_type", "Remote")
+    elif offer.get("hybrid"):
+        accumulator.set_preferred("employment_type", "Hybrid")
+    elif offer.get("on_site"):
+        accumulator.set_preferred("employment_type", "On-site")
+
+    accumulator.add_hidden("recruitee_offer_id", offer.get("id"))
+    accumulator.add_hidden("department", offer.get("department"))
+    accumulator.add_hidden("employment_type_code", offer.get("employment_type_code"))
+    accumulator.add_hidden("experience_code", offer.get("experience_code"))
+    accumulator.add_hidden("category_code", offer.get("category_code"))
+    accumulator.add_hidden("guid", offer.get("guid"))
+
+    accumulator.add_date(
+        offer.get("published_at"),
+        source="recruitee.api",
+        field="published_at",
+        kind="posted",
+        reliability="high",
+    )
+    if not offer.get("published_at"):
+        accumulator.add_date(
+            offer.get("created_at"),
+            source="recruitee.api",
+            field="created_at",
+            kind="posted",
+            reliability="medium",
+            note="Recruitee created_at reflects when the offer record was created; prefer published_at when available.",
+        )
+    accumulator.add_date(
+        offer.get("updated_at"),
+        source="recruitee.api",
+        field="updated_at",
+        kind="refresh",
+        reliability="medium",
+        note="Recruitee updated_at reflects edits or freshness, not original posting time.",
+    )
+
+
+def extract_personio_xml_fallback(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
+) -> None:
+    if not metadata.job_id:
+        return
+    if any(candidate.kind in {"posted", "published"} for candidate in accumulator.all_dates):
+        return
+
+    parsed = urlparse(original_url)
+    language = parse_qs(parsed.query).get("language", [None])[0] or "en"
+    xml_url = f"{parsed.scheme}://{parsed.netloc}/xml?language={quote(language, safe='')}"
+    try:
+        xml_text = fetch_text(session, xml_url)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"Personio XML fallback failed: {exc}")
+        return
+
+    try:
+        root = ET.fromstring(xml_text)
+    except ET.ParseError:
+        return
+
+    for position in root.findall("position"):
+        if (position.findtext("id") or "").strip() != metadata.job_id:
+            continue
+        accumulator.set_preferred("title", position.findtext("name"))
+        accumulator.set_if_missing("company", position.findtext("subcompany"))
+        accumulator.set_if_missing("location", position.findtext("office"))
+        accumulator.add_hidden("department", position.findtext("department"))
+        accumulator.add_hidden("recruiting_category", position.findtext("recruitingCategory"))
+        accumulator.add_date(
+            position.findtext("createdAt"),
+            source="personio.xml",
+            field="createdAt",
+            kind="posted",
+            reliability="high",
+        )
+        return
+
+
+def extract_breezy_data_position(accumulator: AnalysisAccumulator, html: str) -> None:
+    match = re.search(r'data-position="([^"]+)"', html, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return
+
+    payload = parse_jsonish(unescape(match.group(1)))
+    if not isinstance(payload, dict):
+        return
+
+    accumulator.set_preferred("title", payload.get("name"))
+
+    company = payload.get("company")
+    if isinstance(company, dict):
+        accumulator.set_preferred("company", company.get("name"))
+
+    location = payload.get("location")
+    if isinstance(location, dict):
+        if location.get("is_remote"):
+            accumulator.set_preferred("location", location.get("name") or "Remote")
+        else:
+            accumulator.set_preferred("location", location.get("name"))
+
+    job_type = payload.get("type")
+    if isinstance(job_type, dict):
+        accumulator.set_preferred("employment_type", job_type.get("name"))
+
+    accumulator.add_hidden("department", payload.get("department"))
+    category = payload.get("category")
+    if isinstance(category, dict):
+        accumulator.add_hidden("category", category.get("name"))
+
+    accumulator.add_date(
+        payload.get("first_publish_date"),
+        source="breezy.embedded",
+        field="first_publish_date",
+        kind="posted",
+        reliability="high",
+    )
+    accumulator.add_date(
+        payload.get("last_publish_date"),
+        source="breezy.embedded",
+        field="last_publish_date",
+        kind="refresh",
+        reliability="medium",
+        note="Breezy last_publish_date reflects the latest refresh or reposting event.",
+    )
+
+
 def extract_workday_api(
     accumulator: AnalysisAccumulator,
     session: Any,
@@ -2618,10 +2818,16 @@ def analyze_url(
             detect_from_greenhouse_html(accumulator, html, validated_url, metadata)
     elif metadata.platform == "ashby":
         extract_ashby_api(accumulator, active_session, metadata, validated_url)
+    elif metadata.platform == "recruitee":
+        extract_recruitee_api(accumulator, active_session, metadata)
     elif metadata.platform == "smartrecruiters":
         extract_smartrecruiters_api(accumulator, active_session, metadata)
+    elif metadata.platform == "personio":
+        extract_personio_xml_fallback(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "rippling" and html:
         extract_rippling_embedded(accumulator, html)
+    elif metadata.platform == "breezy" and html:
+        extract_breezy_data_position(accumulator, html)
     elif metadata.platform == "workable" and html:
         extract_workable_embedded(accumulator, html, metadata)
     elif metadata.platform == "icims" and html:

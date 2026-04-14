@@ -671,6 +671,181 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["likely_posted_date"], "2024-04-11")
         self.assertEqual(result["chosen_source"]["source"], "bendingspoons.objectid")
 
+    def test_teamtailor_page_metadata_supports_platform_and_posted_date(self) -> None:
+        target_url = "https://career.teamtailor.com/jobs/7217456-head-of-group-accounting"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        "<meta property='og:title' content='Head of Group Accounting - Teamtailor' />"
+                        "<meta property='article:published_time' content='2026-02-12T09:25:19+01:00' />"
+                        "<meta property='article:modified_time' content='2026-04-09T11:37:48+02:00' />"
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://career.teamtailor.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fcareer.teamtailor.com%2Fjobs%2F7217456-head-of-group-accounting&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "teamtailor")
+        self.assertEqual(result["likely_posted_date"], "2026-02-12")
+        self.assertEqual(result["chosen_source"]["field"], "article:published_time")
+
+    def test_recruitee_api_returns_published_at(self) -> None:
+        target_url = "https://mcdugaldsteele.recruitee.com/o/start-your-career-with-mcdugald-steele"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><head><title>Start your Career with McDugald Steele!</title></head><body></body></html>"),
+                "https://mcdugaldsteele.recruitee.com/api/offers/start-your-career-with-mcdugald-steele": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "offer": {
+                                "id": 769154,
+                                "title": "Start your Career with McDugald Steele!",
+                                "company_name": "McDugald Steele",
+                                "location": "Houston, Texas, United States",
+                                "guid": "ts23s",
+                                "department": "Operations",
+                                "employment_type_code": "part_time",
+                                "experience_code": "internship",
+                                "category_code": "other",
+                                "created_at": "2021-09-22 14:34:26 UTC",
+                                "published_at": "2021-09-22 14:35:23 UTC",
+                                "updated_at": "2026-03-24 05:22:27 UTC",
+                                "remote": False,
+                                "hybrid": False,
+                                "on_site": True,
+                            }
+                        }
+                    )
+                ),
+                "https://mcdugaldsteele.recruitee.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fmcdugaldsteele.recruitee.com%2Fo%2Fstart-your-career-with-mcdugald-steele&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "recruitee")
+        self.assertEqual(result["company"], "McDugald Steele")
+        self.assertEqual(result["location"], "Houston, Texas, United States")
+        self.assertEqual(result["employment_type"], "On-site")
+        self.assertEqual(result["likely_posted_date"], "2021-09-22")
+        self.assertEqual(result["chosen_source"]["source"], "recruitee.api")
+        self.assertEqual(result["hidden_insights"]["department"], "Operations")
+
+    def test_personio_xml_fallback_returns_created_at(self) -> None:
+        target_url = "https://contabo.jobs.personio.de/job/2563171?language=en"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text="<html><head><title>Lead Software Developer</title></head><body></body></html>"),
+                "https://contabo.jobs.personio.de/xml?language=en": FakeResponse(
+                    text=(
+                        "<?xml version='1.0' encoding='UTF-8'?>"
+                        "<workzag-jobs>"
+                        "<position>"
+                        "<id>2563171</id>"
+                        "<subcompany>Contabo GmbH</subcompany>"
+                        "<office>München, Bayern, DE</office>"
+                        "<department>Engineering</department>"
+                        "<recruitingCategory>Professionals</recruitingCategory>"
+                        "<name>Lead Software Developer (all genders)</name>"
+                        "<createdAt>2026-03-10T10:30:31+00:00</createdAt>"
+                        "</position>"
+                        "</workzag-jobs>"
+                    )
+                ),
+                "https://contabo.jobs.personio.de/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fcontabo.jobs.personio.de%2Fjob%2F2563171%3Flanguage%3Den&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "personio")
+        self.assertEqual(result["company"], "Contabo GmbH")
+        self.assertEqual(result["location"], "München, Bayern, DE")
+        self.assertEqual(result["likely_posted_date"], "2026-03-10")
+        self.assertEqual(result["chosen_source"]["source"], "personio.xml")
+        self.assertEqual(result["hidden_insights"]["department"], "Engineering")
+
+    def test_breezy_embedded_payload_returns_first_publish_date(self) -> None:
+        target_url = "https://jobs.breezy.hr/p/865698971aa0-customer-success-agent/apply"
+        payload = {
+            "_id": "865698971aa0",
+            "name": "Customer Success Agent",
+            "friendly_id": "865698971aa0-customer-success-agent",
+            "state": "published",
+            "type": {"id": "fullTime", "name": "Full-Time"},
+            "location": {"name": "United States", "is_remote": True},
+            "department": "Customer Success",
+            "category": {"id": "custserv", "name": "Customer Service"},
+            "company": {"name": "Breezy HR"},
+            "first_publish_date": "2025-01-07T15:19:24.898Z",
+            "last_publish_date": "2026-04-03T21:23:42.197Z",
+        }
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head></head><body>"
+                        f'<div data-position="{json.dumps(payload).replace(chr(34), "&quot;")}"></div>'
+                        "</body></html>"
+                    )
+                ),
+                "https://jobs.breezy.hr/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.breezy.hr%2Fp%2F865698971aa0-customer-success-agent%2Fapply&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "breezy")
+        self.assertEqual(result["company"], "Breezy HR")
+        self.assertEqual(result["employment_type"], "Full-Time")
+        self.assertEqual(result["location"], "United States")
+        self.assertEqual(result["likely_posted_date"], "2025-01-07")
+        self.assertEqual(result["chosen_source"]["source"], "breezy.embedded")
+        self.assertEqual(result["hidden_insights"]["department"], "Customer Success")
+
+    def test_jazzhr_jobposting_jsonld_supports_platform(self) -> None:
+        target_url = "https://publiccitizen.applytojob.com/apply/VZj90FMXn0/Democracy-Team-Manager"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        '<script type="application/ld+json">{"@type":"Organization","name":"Public Citizen","url":"http://www.citizen.org"}</script>'
+                        '<script type="application/ld+json">{"@context":"http://schema.org/","@type":"JobPosting","url":"https://publiccitizen.applytojob.com/apply/VZj90FMXn0/Democracy-Team-Manager","title":"Democracy Team Manager","datePosted":"2026-04-07","validThrough":"2026-07-06","employmentType":"FULL_TIME","jobLocation":{"@type":"Place","address":{"@type":"PostalAddress","addressLocality":"Washington","addressRegion":"DC","postalCode":"20009"}},"hiringOrganization":{"@type":"Organization","name":"Public Citizen","sameAs":"http://www.citizen.org"}}</script>'
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://publiccitizen.applytojob.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fpubliccitizen.applytojob.com%2Fapply%2FVZj90FMXn0%2FDemocracy-Team-Manager&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "jazzhr")
+        self.assertEqual(result["company"], "Public Citizen")
+        self.assertEqual(result["likely_posted_date"], "2026-04-07")
+        self.assertEqual(result["chosen_source"]["source"], "jsonld.jobposting")
+
     def test_gem_job_board_api_returns_first_published_date(self) -> None:
         target_url = "https://jobs.gem.com/gem/am9icG9zdDpN6-87TjRV1EFRX86qqvez"
         session = FakeSession(
