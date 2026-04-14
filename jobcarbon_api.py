@@ -52,6 +52,24 @@ def handle_api_request(
             json_bytes({"ok": True, "service": "jobcarbon-api"}),
         )
 
+    if path == "/api/v1/platforms":
+        if method != "GET":
+            return (
+                HTTPStatus.METHOD_NOT_ALLOWED,
+                dict(JSON_HEADERS),
+                json_bytes(error_payload("method_not_allowed", "Use GET or OPTIONS.")),
+            )
+        return (
+            HTTPStatus.OK,
+            dict(JSON_HEADERS),
+            json_bytes(
+                {
+                    "platforms": jobcarbon.list_platform_capabilities(),
+                    "summary": jobcarbon.summarize_platform_capabilities(),
+                }
+            ),
+        )
+
     if path != "/api/v1/estimate":
         return (
             HTTPStatus.NOT_FOUND,

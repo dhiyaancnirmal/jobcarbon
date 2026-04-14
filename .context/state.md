@@ -11,7 +11,7 @@
 - Private GitHub repo at `dhiyaancnirmal/jobcarbon` on `main`.
 - Railway hobby plan active at `https://jobcarbon-production.up.railway.app`.
 - Custom domain `api.howoldisthisjob.com` attached to Railway (DNS verified).
-- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (28 tests).
+- Verified locally on 2026-04-14: `python3 -m unittest discover -s tests` passes (34 tests, incl. Workable extractor + platform capability coverage).
 
 ### Frontend
 - Next.js 16.2.3 website at `site/` with Tailwind v4 and shadcn, Linear/Raycast aesthetic.
@@ -42,16 +42,18 @@
 ### Backend parity status
 - Richer response schema: `status`, `likely_posted_date`, `chosen_source`, `all_dates`, `hidden_insights`, `warnings`
 - Generic extractors: JSON-LD, metadata/regex, Open Graph, embedded JSON, Jina render, sitemap `lastmod`, Wayback
-- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Rippling, iCIMS, Dover
+- Direct ATS fallbacks: Lever, Greenhouse, Ashby, SmartRecruiters, Workable, Rippling, iCIMS, Dover
+- Workable fallback parses `window.jobBoard.initialState` → `data` with created/updated dates and department/workplace hidden insights
 - Rippling fallback uses live-verified `__NEXT_DATA__` payloads
 - iCIMS fallback derives the internal API host from `<base href>` and queries `/api/jobs`
 - Dover fallback calls `GET /api/v1/inbound/application-portal-job/{jobId}`
 - Generic `createdAt` extraction was downgraded because it produced false positives on live iCIMS pages
 - ATS handlers now prefer their own title/company/location fields over weaker generic page-shell metadata
 - Blocked platforms: Indeed, LinkedIn; Unsupported: Google Careers
+- `PLATFORM_CAPABILITIES` registry powers the new `/api/v1/platforms` endpoint and exposes supported/direct/generic/blocked/unsupported counts.
 
 ## Next Steps
-- Add more ATS fallbacks: Workable, Jobvite, BambooHR, SuccessFactors, Oracle HCM, ADP, Brassring, Paycor, Avature
+- Add more direct ATS fallbacks: Jobvite, BambooHR, SuccessFactors, Oracle HCM, ADP, Brassring, Paycor, Avature
 - Decide whether local development should target the live API domain or restart a local `jobcarbon-api` PM2 process and point the site at it consistently
 - Chrome extension: local JSON-LD detection first, then backend for ATS/archive fallbacks
 - Add more gel button colors + carousel entries as new ATS platforms land

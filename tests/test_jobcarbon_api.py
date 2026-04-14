@@ -109,6 +109,35 @@ class JobcarbonAPITests(unittest.TestCase):
         self.assertEqual(status, 502)
         self.assertEqual(json.loads(body)["error"]["code"], "upstream_fetch_failed")
 
+    def test_platforms_endpoint_returns_capability_matrix(self) -> None:
+        status, headers, body = jobcarbon_api.handle_api_request(
+            method="GET",
+            path="/api/v1/platforms",
+        )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(headers["Access-Control-Allow-Origin"], "*")
+        payload = json.loads(body)
+        platforms = {item["platform"]: item for item in payload["platforms"]}
+        self.assertIn("workable", platforms)
+        self.assertIn("lever", platforms)
+        self.assertIn("indeed", platforms)
+        self.assertEqual(platforms["workable"]["integration"], "direct")
+        self.assertEqual(platforms["indeed"]["integration"], "blocked")
+        summary = payload["summary"]
+        self.assertEqual(summary["supported"], summary["direct"] + summary["generic"])
+        self.assertGreaterEqual(summary["direct"], 8)
+
+    def test_platforms_endpoint_rejects_post(self) -> None:
+        status, _, body = jobcarbon_api.handle_api_request(
+            method="POST",
+            path="/api/v1/platforms",
+            body=b"{}",
+        )
+
+        self.assertEqual(status, 405)
+        self.assertEqual(json.loads(body)["error"]["code"], "method_not_allowed")
+
     def test_options_returns_cors_headers(self) -> None:
         status, headers, body = jobcarbon_api.handle_api_request(
             method="OPTIONS",

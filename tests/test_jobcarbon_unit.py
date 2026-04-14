@@ -1,3 +1,4 @@
+import json
 import socket
 import unittest
 import warnings
@@ -133,6 +134,75 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual(response.json(), {"ok": True})
         self.assertEqual(calls["count"], 3)
         self.assertEqual(sleep_calls, [0.5, 1.0])
+
+    def test_platform_capabilities_expose_workable_and_integration_summary(self) -> None:
+        capabilities = jobcarbon.list_platform_capabilities()
+        platforms = {item["platform"]: item for item in capabilities}
+
+        self.assertEqual(platforms["workable"]["integration"], "direct")
+        self.assertTrue(platforms["workable"]["supported"])
+        self.assertFalse(platforms["indeed"]["supported"])
+        self.assertEqual(platforms["indeed"]["integration"], "blocked")
+
+        summary = jobcarbon.summarize_platform_capabilities()
+        self.assertGreaterEqual(summary["direct"], 8)
+        self.assertGreaterEqual(summary["generic"], 8)
+        self.assertEqual(summary["blocked"], 2)
+        self.assertEqual(summary["unsupported"], 1)
+        self.assertEqual(summary["supported"], summary["direct"] + summary["generic"])
+
+    def test_unknown_platform_defaults_to_generic_capability(self) -> None:
+        capability = jobcarbon.get_platform_capability("something_new")
+        self.assertEqual(capability["integration"], "generic")
+        self.assertTrue(capability["supported"])
+        self.assertEqual(capability["detection"], [])
+
+    def test_workable_embedded_extractor_reads_initial_state(self) -> None:
+        payload = {
+            "initialState": {
+                "api/v1/jobs/5Sz2Mnf9VdJsXnPCvoYudJ": {
+                    "data": {
+                        "shortcode": "5Sz2Mnf9VdJsXnPCvoYudJ",
+                        "title": "Captain",
+                        "company": {"name": "Harbor Co"},
+                        "location": {
+                            "city": "Piraeus",
+                            "region": "Attica",
+                            "country": "Greece",
+                        },
+                        "employmentType": "FULL_TIME",
+                        "department": {"name": "Operations"},
+                        "workplace": "on_site",
+                        "created": "2026-01-15T10:00:00Z",
+                        "updated": "2026-02-03T12:00:00Z",
+                    }
+                }
+            }
+        }
+        html = "<html><body><script>window.jobBoard = " + json.dumps(payload) + ";</script></body></html>"
+
+        accumulator = jobcarbon.AnalysisAccumulator(
+            url="https://jobs.workable.com/view/5Sz2Mnf9VdJsXnPCvoYudJ/captain",
+            normalized_url="https://jobs.workable.com/view/5Sz2Mnf9VdJsXnPCvoYudJ/captain",
+            platform="workable",
+        )
+        metadata = jobcarbon.URLMetadata(platform="workable", job_id="5Sz2Mnf9VdJsXnPCvoYudJ")
+
+        jobcarbon.extract_workable_embedded(accumulator, html, metadata)
+
+        self.assertEqual(accumulator.title, "Captain")
+        self.assertEqual(accumulator.company, "Harbor Co")
+        self.assertEqual(accumulator.location, "Piraeus, Attica, Greece")
+        self.assertEqual(accumulator.employment_type, "FULL_TIME")
+        self.assertEqual(accumulator.hidden_insights["department"], "Operations")
+        self.assertEqual(accumulator.hidden_insights["workplace"], "on_site")
+        self.assertEqual(accumulator.hidden_insights["shortcode"], "5Sz2Mnf9VdJsXnPCvoYudJ")
+        posted = [d for d in accumulator.all_dates if d.source == "workable.embedded" and d.kind == "posted"]
+        refresh = [d for d in accumulator.all_dates if d.source == "workable.embedded" and d.kind == "refresh"]
+        self.assertEqual(len(posted), 1)
+        self.assertEqual(posted[0].date, "2026-01-15")
+        self.assertEqual(len(refresh), 1)
+        self.assertEqual(refresh[0].date, "2026-02-03")
 
     def test_http_session_does_not_retry_non_retryable_http_errors(self) -> None:
         calls = {"count": 0}

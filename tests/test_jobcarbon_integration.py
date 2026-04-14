@@ -379,6 +379,53 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["work_persona"], "Flexible")
         self.assertEqual(result["hidden_insights"]["region"], "AMS - North America and Canada")
 
+    def test_workable_embedded_payload_supplies_posted_date_and_metadata(self) -> None:
+        target_url = "https://jobs.workable.com/view/5Sz2Mnf9VdJsXnPCvoYudJ/captain"
+        workable_payload = {
+            "initialState": {
+                "api/v1/jobs/5Sz2Mnf9VdJsXnPCvoYudJ": {
+                    "data": {
+                        "shortcode": "5Sz2Mnf9VdJsXnPCvoYudJ",
+                        "title": "Captain",
+                        "company": {"name": "Harbor Co"},
+                        "location": {"city": "Piraeus", "region": "Attica", "country": "Greece"},
+                        "employmentType": "FULL_TIME",
+                        "department": {"name": "Operations"},
+                        "workplace": "on_site",
+                        "created": "2026-01-15T10:00:00Z",
+                        "updated": "2026-02-03T12:00:00Z",
+                    }
+                }
+            }
+        }
+        html = (
+            "<html><body><script>window.jobBoard = "
+            + json.dumps(workable_payload)
+            + ";</script></body></html>"
+        )
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text=html),
+                "https://jobs.workable.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.workable.com%2Fview%2F5Sz2Mnf9VdJsXnPCvoYudJ%2Fcaptain&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "workable")
+        self.assertEqual(result["title"], "Captain")
+        self.assertEqual(result["company"], "Harbor Co")
+        self.assertEqual(result["location"], "Piraeus, Attica, Greece")
+        self.assertEqual(result["employment_type"], "FULL_TIME")
+        self.assertEqual(result["likely_posted_date"], "2026-01-15")
+        self.assertEqual(result["chosen_source"]["source"], "workable.embedded")
+        self.assertEqual(result["hidden_insights"]["department"], "Operations")
+        self.assertEqual(result["hidden_insights"]["workplace"], "on_site")
+        self.assertTrue(any(item["field"] == "updated" and item["kind"] == "refresh" for item in result["all_dates"]))
+
     def test_blocked_platform_returns_blocked_status(self) -> None:
         result = jobcarbon.analyze_url("https://www.indeed.com/viewjob?jk=123")
 

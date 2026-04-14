@@ -42,6 +42,7 @@ SOURCE_PRIORITY = {
     "greenhouse.html": 1,
     "ashby.api": 1,
     "smartrecruiters.api": 1,
+    "workable.embedded": 1,
     "rippling.embedded": 1,
     "icims.api": 1,
     "dover.api": 1,
@@ -59,6 +60,155 @@ BLOCKED_PLATFORM_MESSAGES = {
 }
 UNSUPPORTED_PLATFORM_MESSAGES = {
     "google_careers": "Google Careers does not expose reliable posting dates.",
+}
+PLATFORM_CAPABILITIES = {
+    "greenhouse": {
+        "display_name": "Greenhouse",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["boards.greenhouse.io", "job-boards.greenhouse.io", "gh_jid"],
+        "notes": "Public Greenhouse boards API plus embedded-board HTML fallback.",
+    },
+    "lever": {
+        "display_name": "Lever",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["jobs.lever.co"],
+        "notes": "Public Lever postings API.",
+    },
+    "ashby": {
+        "display_name": "Ashby",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["jobs.ashbyhq.com", "ashby_jid"],
+        "notes": "Ashby posting API lookup by board and job URL.",
+    },
+    "workable": {
+        "display_name": "Workable",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["apply.workable.com", "jobs.workable.com/view"],
+        "notes": "Embedded Workable jobBoard payload plus JSON-LD and generic fallbacks.",
+    },
+    "oracle_hcm": {
+        "display_name": "Oracle HCM Cloud",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["*.oraclecloud.com/hcmUI"],
+        "notes": "Platform detection with generic extraction, sitemap, archive, and render fallbacks.",
+    },
+    "gem": {
+        "display_name": "Gem",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["jobs.gem.com"],
+        "notes": "Platform detection with generic extraction and archive fallbacks.",
+    },
+    "bamboohr": {
+        "display_name": "BambooHR",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["*.bamboohr.com/careers"],
+        "notes": "Platform detection with generic extraction, sitemap, and archive fallbacks.",
+    },
+    "brassring": {
+        "display_name": "Brassring",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["*.brassring.com", "jobid query param"],
+        "notes": "Platform detection with generic extraction, sitemap, and archive fallbacks.",
+    },
+    "paycor": {
+        "display_name": "Paycor / Newton",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["gnk=job", "gni query param", "newton.newtonsoftware.com", "recruitingbypaycor.com"],
+        "notes": "Platform detection with generic extraction, sitemap, and archive fallbacks.",
+    },
+    "successfactors": {
+        "display_name": "SAP SuccessFactors",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["successfactors in host or path"],
+        "notes": "Platform detection with generic extraction, sitemap, render, and archive fallbacks.",
+    },
+    "workday": {
+        "display_name": "Workday",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["*.myworkdayjobs.com"],
+        "notes": "Platform detection with generic JSON-LD and archive fallbacks.",
+    },
+    "smartrecruiters": {
+        "display_name": "SmartRecruiters",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["jobs.smartrecruiters.com"],
+        "notes": "Public SmartRecruiters posting API.",
+    },
+    "adp": {
+        "display_name": "ADP Workforce Now",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["workforcenow.adp.com"],
+        "notes": "Platform detection with generic extraction, sitemap, render, and archive fallbacks.",
+    },
+    "rippling": {
+        "display_name": "Rippling",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["ats.rippling.com"],
+        "notes": "Embedded __NEXT_DATA__ payload extraction.",
+    },
+    "jobvite": {
+        "display_name": "Jobvite",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["jobs.jobvite.com"],
+        "notes": "Platform detection with generic JSON-LD and archive fallbacks.",
+    },
+    "icims": {
+        "display_name": "iCIMS",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["*.icims.com"],
+        "notes": "Derived iCIMS API host plus /api/jobs pagination.",
+    },
+    "dover": {
+        "display_name": "Dover",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["app.dover.com/apply"],
+        "notes": "Public Dover application-portal job API.",
+    },
+    "avature": {
+        "display_name": "Avature",
+        "supported": True,
+        "integration": "generic",
+        "detection": ["*.avature.net"],
+        "notes": "Platform detection with generic extraction, sitemap, render, and archive fallbacks.",
+    },
+    "indeed": {
+        "display_name": "Indeed",
+        "supported": False,
+        "integration": "blocked",
+        "detection": ["indeed.com"],
+        "notes": BLOCKED_PLATFORM_MESSAGES["indeed"],
+    },
+    "linkedin": {
+        "display_name": "LinkedIn",
+        "supported": False,
+        "integration": "blocked",
+        "detection": ["linkedin.com/jobs"],
+        "notes": BLOCKED_PLATFORM_MESSAGES["linkedin"],
+    },
+    "google_careers": {
+        "display_name": "Google Careers",
+        "supported": False,
+        "integration": "unsupported",
+        "detection": ["careers.google.com"],
+        "notes": UNSUPPORTED_PLATFORM_MESSAGES["google_careers"],
+    },
 }
 JSONLD_SCRIPT_RE = re.compile(
     r"<script[^>]+type=[\"']application/ld\+json[\"'][^>]*>(.*?)</script>",
@@ -402,6 +552,49 @@ def detect_platform(url: str) -> URLMetadata:
     if "jobvite.com" in host:
         return URLMetadata(platform="jobvite")
     return URLMetadata(platform="unknown")
+
+
+def get_platform_capability(platform: str) -> dict[str, Any]:
+    capability = PLATFORM_CAPABILITIES.get(platform)
+    if capability is None:
+        return {
+            "platform": platform,
+            "display_name": platform.replace("_", " ").title(),
+            "supported": True,
+            "integration": "generic",
+            "detection": [],
+            "notes": "No platform-specific wiring; generic extraction, render, sitemap, and archive fallbacks still run.",
+        }
+
+    return {
+        "platform": platform,
+        "display_name": capability["display_name"],
+        "supported": capability["supported"],
+        "integration": capability["integration"],
+        "detection": list(capability["detection"]),
+        "notes": capability["notes"],
+    }
+
+
+def list_platform_capabilities() -> list[dict[str, Any]]:
+    return [get_platform_capability(platform) for platform in PLATFORM_CAPABILITIES]
+
+
+def summarize_platform_capabilities() -> dict[str, int]:
+    summary = {
+        "supported": 0,
+        "direct": 0,
+        "generic": 0,
+        "blocked": 0,
+        "unsupported": 0,
+    }
+    for item in list_platform_capabilities():
+        if item["supported"]:
+            summary["supported"] += 1
+        integration = item["integration"]
+        if integration in summary:
+            summary[integration] += 1
+    return summary
 
 
 def utc_today() -> date:
@@ -1016,6 +1209,150 @@ def extract_rippling_embedded(accumulator: AnalysisAccumulator, html: str) -> No
     )
 
 
+def iter_workable_job_nodes(node: Any) -> list[dict[str, Any]]:
+    jobs: list[dict[str, Any]] = []
+
+    if isinstance(node, list):
+        for item in node:
+            jobs.extend(iter_workable_job_nodes(item))
+        return jobs
+
+    if not isinstance(node, dict):
+        return jobs
+
+    if any(key in node for key in ("created", "createdAt", "published_on", "publishedOn")) and (
+        node.get("title") or node.get("name") or node.get("shortcode")
+    ):
+        jobs.append(node)
+
+    for value in node.values():
+        jobs.extend(iter_workable_job_nodes(value))
+
+    return jobs
+
+
+def select_workable_job(jobs: list[dict[str, Any]], metadata: URLMetadata) -> dict[str, Any] | None:
+    if not jobs:
+        return None
+    if metadata.job_id:
+        for job in jobs:
+            candidates = {
+                str(job.get("shortcode")) if job.get("shortcode") else None,
+                str(job.get("id")) if job.get("id") is not None else None,
+                str(job.get("code")) if job.get("code") else None,
+                str(job.get("slug")) if job.get("slug") else None,
+            }
+            if metadata.job_id in candidates:
+                return job
+    return jobs[0]
+
+
+def extract_workable_embedded(
+    accumulator: AnalysisAccumulator,
+    html: str,
+    metadata: URLMetadata,
+) -> None:
+    raw_object = extract_json_object_after_marker(html, "window.jobBoard")
+    if raw_object is None:
+        raw_object = extract_json_object_after_marker(html, "__INITIAL_STATE__")
+    if raw_object is None:
+        return
+
+    parsed = parse_jsonish(raw_object)
+    if parsed is None:
+        return
+
+    initial_state = parsed.get("initialState") if isinstance(parsed, dict) else None
+    search_root: Any = initial_state if initial_state is not None else parsed
+
+    job = select_workable_job(iter_workable_job_nodes(search_root), metadata)
+    if not isinstance(job, dict):
+        return
+
+    accumulator.set_preferred("title", job.get("title") or job.get("name"))
+
+    company = job.get("company")
+    if isinstance(company, dict):
+        accumulator.set_preferred("company", company.get("name") or company.get("title"))
+    elif isinstance(company, str):
+        accumulator.set_preferred("company", company)
+    else:
+        account = job.get("account")
+        account_name = account.get("name") if isinstance(account, dict) else None
+        accumulator.set_preferred("company", job.get("companyName") or account_name)
+
+    location_value = job.get("location")
+    if isinstance(location_value, dict):
+        parts = [location_value.get(key) for key in ("city", "region", "country")]
+        rendered = ", ".join(str(part).strip() for part in parts if part)
+        if rendered:
+            accumulator.set_preferred("location", rendered)
+        else:
+            accumulator.set_preferred("location", location_value.get("fullLocation") or location_value.get("name"))
+    elif isinstance(location_value, str):
+        accumulator.set_preferred("location", location_value)
+    elif isinstance(job.get("locations"), list) and job["locations"]:
+        first = job["locations"][0]
+        if isinstance(first, dict):
+            parts = [first.get(key) for key in ("city", "region", "country")]
+            rendered = ", ".join(str(part).strip() for part in parts if part)
+            if rendered:
+                accumulator.set_preferred("location", rendered)
+
+    employment_type = job.get("employmentType") or job.get("employment_type") or job.get("type")
+    if isinstance(employment_type, dict):
+        accumulator.set_preferred("employment_type", employment_type.get("label") or employment_type.get("name"))
+    elif isinstance(employment_type, str):
+        accumulator.set_preferred("employment_type", employment_type)
+
+    department = job.get("department")
+    if isinstance(department, dict):
+        accumulator.add_hidden("department", department.get("name") or department.get("label"))
+    elif isinstance(department, str):
+        accumulator.add_hidden("department", department)
+
+    function = job.get("function")
+    if isinstance(function, dict):
+        accumulator.add_hidden("function", function.get("name") or function.get("label"))
+    elif isinstance(function, str):
+        accumulator.add_hidden("function", function)
+
+    workplace = job.get("workplace") or job.get("workplaceType") or job.get("remote")
+    if isinstance(workplace, str):
+        accumulator.add_hidden("workplace", workplace)
+    elif isinstance(workplace, bool):
+        accumulator.add_hidden("workplace", "remote" if workplace else "onsite")
+
+    shortcode = job.get("shortcode") or job.get("code")
+    if shortcode:
+        accumulator.add_hidden("shortcode", shortcode)
+
+    for key in ("application_url", "applicationUrl", "url"):
+        value = job.get(key)
+        if isinstance(value, str) and value:
+            accumulator.add_hidden("workable_url", value)
+            break
+
+    posted_value = job.get("created") or job.get("createdAt") or job.get("published_on") or job.get("publishedOn")
+    accumulator.add_date(
+        posted_value,
+        source="workable.embedded",
+        field="created",
+        kind="posted",
+        reliability="high",
+    )
+
+    updated_value = job.get("updated") or job.get("updatedAt") or job.get("updated_on") or job.get("updatedOn")
+    accumulator.add_date(
+        updated_value,
+        source="workable.embedded",
+        field="updated",
+        kind="refresh",
+        reliability="medium",
+        note="Workable updated reflects edits or freshness, not original posting time.",
+    )
+
+
 def iter_icims_api_candidates(html: str, original_url: str) -> list[str]:
     api_roots: list[str] = []
     base_href = extract_base_href(html)
@@ -1468,6 +1805,8 @@ def analyze_url(
         extract_smartrecruiters_api(accumulator, active_session, metadata)
     elif metadata.platform == "rippling" and html:
         extract_rippling_embedded(accumulator, html)
+    elif metadata.platform == "workable" and html:
+        extract_workable_embedded(accumulator, html, metadata)
     elif metadata.platform == "icims" and html:
         extract_icims_api(accumulator, active_session, metadata, html, validated_url)
     elif metadata.platform == "dover":
