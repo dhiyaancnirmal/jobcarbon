@@ -1,0 +1,11 @@
+2026-04-14: Initialized repo memory because the workspace started as an empty non-git folder.
+2026-04-14: Chose Python CLI as the V1 source of truth for job age detection.
+2026-04-14: Replaced requests + click with stdlib urllib + argparse because third-party packages were not available consistently across local Python interpreters.
+2026-04-14: Chose unittest fixtures over pytest so tests run without extra environment setup.
+2026-04-14: Greenhouse fallback uses first_published as the estimate and records updated_at as supporting freshness evidence.
+2026-04-14: Added a Greenhouse HTML fallback that reads embedded remix context when the public boards API does not expose the job.
+2026-04-14: Added bounded HTTP retries with exponential backoff for transient failures only; non-retryable client errors like 404 still fail immediately.
+2026-04-14: Added a dependency-free HTTP API wrapper so the website can use the Python detector as the single source of truth without adding framework drift.
+2026-04-14: Chose hosted Python backend for the website demo to avoid logic drift, with the future extension using local JSON-LD detection and backend fallback for heavier cases.
+2026-04-14: Added Railway config-as-code and Railway-aware host/port defaults so the current API can deploy without framework changes.
+2026-04-14: Wayback fallback is treated as a first-snapshot ceiling, not the true posted date.

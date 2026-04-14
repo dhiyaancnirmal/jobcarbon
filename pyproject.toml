@@ -1,0 +1,15 @@
+[project]
+name = "jobcarbon"
+version = "0.1.0"
+description = "Estimate how old a job posting really is."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+jobcarbon = "jobcarbon:main"
+jobcarbon-api = "jobcarbon_api:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
