@@ -32,6 +32,26 @@ export type EstimateResult = {
   warnings: string[]
 }
 
+export type PlatformCapability = {
+  platform: string
+  display_name: string
+  supported: boolean
+  integration: "direct" | "generic" | "blocked" | "unsupported"
+  detection: string[]
+  notes: string
+}
+
+export type PlatformsResponse = {
+  platforms: PlatformCapability[]
+  summary: {
+    supported: number
+    direct: number
+    generic: number
+    blocked: number
+    unsupported: number
+  }
+}
+
 export type ApiError = {
   error: {
     code: string
@@ -54,4 +74,17 @@ export async function estimateJobAge(url: string): Promise<EstimateResult> {
   }
 
   return payload as EstimateResult
+}
+
+export async function fetchPlatforms(): Promise<PlatformsResponse> {
+  const endpoint = `${API_BASE}/api/v1/platforms`
+  const response = await fetch(endpoint, { method: "GET" })
+  const payload = await response.json()
+
+  if (!response.ok) {
+    const err = payload as ApiError
+    throw new Error(err?.error?.message ?? `Request failed (${response.status})`)
+  }
+
+  return payload as PlatformsResponse
 }

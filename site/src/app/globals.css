@@ -200,9 +200,124 @@
     border-color: #ad1457;
   }
 
+  .gel-btn--workable {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #20c9a0, #0a8f6f);
+    border-color: #077a5e;
+  }
+
+  .gel-btn--bamboohr {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #5dc064, #3d9142);
+    border-color: #2f7a34;
+  }
+
+  .gel-btn--brassring {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #4a6fa5, #2d4a73);
+    border-color: #243d5e;
+  }
+
+  .gel-btn--successfactors {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #4da8da, #1a73a7);
+    border-color: #15608c;
+  }
+
+  .gel-btn--rippling {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #7c5cfc, #5a3ed6);
+    border-color: #4a32b8;
+  }
+
+  .gel-btn--icims {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #f28c28, #d4691a);
+    border-color: #b85916;
+  }
+
+  .gel-btn--dover {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #6c7bef, #4754c4);
+    border-color: #3b45a3;
+  }
+
+  .gel-btn--workday {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #f26b5b, #d44a3a);
+    border-color: #b83d2f;
+  }
+
+  .gel-btn--oracle-hcm {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #e84c3d, #c0392b);
+    border-color: #a33025;
+  }
+
+  .gel-btn--jobvite {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #5b9bd5, #3a7bbf);
+    border-color: #2f66a0;
+  }
+
+  .gel-btn--avature {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #26b5a0, #1a8a79);
+    border-color: #157466;
+  }
+
+  .gel-btn--gem {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #2dd4a0, #14a87a);
+    border-color: #109068;
+  }
+
+  .gel-btn--teamtailor {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #e879a8, #c74d80);
+    border-color: #ab3f6c;
+  }
+
+  .gel-btn--recruitee {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #3ac4d6, #2295a5);
+    border-color: #1c7f8d;
+  }
+
+  .gel-btn--personio {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #9b6dd7, #7644b8);
+    border-color: #63389c;
+  }
+
+  .gel-btn--breezy {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #6fcf60, #4aa83d);
+    border-color: #3e8f33;
+  }
+
+  .gel-btn--jazzhr {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #f5a623, #d4891a);
+    border-color: #b87416;
+  }
+
+  .gel-btn--adp {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #e04040, #b83030);
+    border-color: #9c2828;
+  }
+
+  .gel-btn--paycor {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #6b8acd, #4a6aab);
+    border-color: #3e5a90;
+  }
+
   .carousel-wrapper {
     width: 100%;
     overflow: hidden;
+    pointer-events: none;
     mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
     -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
   }
@@ -212,10 +327,11 @@
     gap: 10px;
     width: max-content;
     will-change: transform;
+    pointer-events: auto;
   }
 
   .carousel-track--animate {
-    animation: carousel-scroll 20s linear infinite;
+    animation: carousel-scroll 40s linear infinite;
   }
 
   .carousel-track:hover {

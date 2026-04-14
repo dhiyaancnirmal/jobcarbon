@@ -59,10 +59,14 @@ const kindLabel: Record<string, string> = {
 const EXAMPLE_URLS = [
   "https://jobs.lever.co/acme/abc-123-def",
   "https://boards.greenhouse.io/acme/jobs/123456",
-  "https://app.ashbyhq.com/acme/job/abc-123-def",
+  "https://jobs.ashbyhq.com/acme/abc-123-def",
   "https://jobs.smartrecruiters.com/ACME/123456",
-  "https://jobs.lever.co/company/senior-engineer-xyz",
-  "https://boards.greenhouse.io/company/jobs/654321",
+  "https://apply.workable.com/job/abc123",
+  "https://acme.wd1.myworkdayjobs.com/en-US/acme/job/senior-engineer",
+  "https://ats.rippling.com/acme/jobs/abc-123",
+  "https://careers.icims.com/jobs/12345/senior-engineer",
+  "https://signal1.bamboohr.com/careers/39",
+  "https://jobs.jobvite.com/acme/job/oD2D4fw6",
 ]
 
 export function JobChecker() {
@@ -124,7 +128,7 @@ export function JobChecker() {
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <form onSubmit={onSubmit} className="flex w-full gap-2">
+      <form onSubmit={onSubmit} noValidate className="flex w-full gap-2">
         <input
           type="url"
           required
