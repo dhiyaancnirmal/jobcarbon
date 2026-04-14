@@ -8,4 +8,5 @@
 2026-04-14: Added a dependency-free HTTP API wrapper so the website can use the Python detector as the single source of truth without adding framework drift.
 2026-04-14: Chose hosted Python backend for the website demo to avoid logic drift, with the future extension using local JSON-LD detection and backend fallback for heavier cases.
 2026-04-14: Added Railway config-as-code and Railway-aware host/port defaults so the current API can deploy without framework changes.
+2026-04-14: Added minimal GitHub Actions CI for pushes and pull requests, limited to py_compile and unittest to match current repo scope.
 2026-04-14: Wayback fallback is treated as a first-snapshot ceiling, not the true posted date.

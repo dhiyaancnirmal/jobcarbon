@@ -8,6 +8,7 @@
 - HTTP transport now retries transient failures with bounded exponential backoff for timeouts, connection issues, `429`, and `5xx`, while still failing fast on definitive errors like `404`.
 - A dependency-free HTTP API wrapper now exists with `GET /healthz`, `GET /api/v1/estimate`, and `POST /api/v1/estimate`, including CORS headers for website and extension use.
 - Railway deployment config is now present. The API auto-binds to `0.0.0.0` when Railway injects `PORT`, and `railway.json` declares the start command and healthcheck path.
+- GitHub Actions CI is now present and runs compile checks plus the full unittest suite on pushes and pull requests.
 - Local test suite and fixtures are present so default validation does not require network access.
 - Live smoke validation succeeded on current Lever, Greenhouse, and Ashby job URLs.
 
