@@ -143,6 +143,13 @@ PLATFORM_CAPABILITIES = {
         "detection": ["*.applytojob.com/apply/{jobCode}"],
         "notes": "Public JazzHR detail pages expose JobPosting JSON-LD with `datePosted`.",
     },
+    "custom_backend": {
+        "display_name": "Custom Employer Backend",
+        "supported": True,
+        "integration": "direct",
+        "detection": ["employer-specific public job backends"],
+        "notes": "Employer-hosted public job backends that are not general ATS products but still expose durable posting dates.",
+    },
     "oracle_hcm": {
         "display_name": "Oracle HCM Cloud",
         "supported": True,
@@ -240,34 +247,6 @@ PLATFORM_CAPABILITIES = {
         "integration": "direct",
         "detection": ["*.avature.net", "avature.portal.id", "avacdn.net"],
         "notes": "Avature portals expose feed and sitemap data under `/{portal}/SearchJobs/feed/` and `/{portal}/sitemap_index.xml`.",
-    },
-    "amazon_jobs": {
-        "display_name": "Amazon.jobs",
-        "supported": True,
-        "integration": "direct",
-        "detection": ["www.amazon.jobs/en/jobs/{id}"],
-        "notes": "Amazon's public `search.json?base_query={jobId}` endpoint returns durable `posted_date` and job metadata.",
-    },
-    "stripe": {
-        "display_name": "Stripe Careers",
-        "supported": True,
-        "integration": "direct",
-        "detection": ["stripe.com/jobs/listing/{slug}/{id}"],
-        "notes": "Stripe career pages map to Stripe's public Greenhouse board API by job id.",
-    },
-    "goldman_sachs": {
-        "display_name": "Goldman Sachs Careers",
-        "supported": True,
-        "integration": "direct",
-        "detection": ["higher.gs.com/roles/{id}"],
-        "notes": "Goldman role pages map to a public Oracle HCM requisition search endpoint keyed by role id.",
-    },
-    "bending_spoons": {
-        "display_name": "Bending Spoons Jobs",
-        "supported": True,
-        "integration": "direct",
-        "detection": ["jobs.bendingspoons.com/positions/{objectid}"],
-        "notes": "Position URLs embed a MongoDB ObjectID whose timestamp yields the posted date.",
     },
     "indeed": {
         "display_name": "Indeed",
@@ -595,16 +574,16 @@ def detect_platform(url: str) -> URLMetadata:
         return URLMetadata(platform="jazzhr", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
     if host == "www.amazon.jobs":
         job_match = re.search(r"/jobs/(\d+)", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="amazon_jobs", job_id=job_match.group(1) if job_match else None)
+        return URLMetadata(platform="custom_backend", job_id=job_match.group(1) if job_match else None, extra={"resolver": "amazon_jobs"})
     if host == "stripe.com" and "/jobs/listing/" in parsed.path:
         job_match = re.search(r"/jobs/listing/[^/]+/(\d+)", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="stripe", job_id=job_match.group(1) if job_match else None)
+        return URLMetadata(platform="greenhouse", job_id=job_match.group(1) if job_match else None, extra={"resolver": "stripe"})
     if host == "higher.gs.com" and "/roles/" in parsed.path:
         job_match = re.search(r"/roles/(\d+)", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="goldman_sachs", job_id=job_match.group(1) if job_match else None)
+        return URLMetadata(platform="oracle_hcm", job_id=job_match.group(1) if job_match else None, extra={"resolver": "goldman_sachs"})
     if host == "jobs.bendingspoons.com":
         job_match = re.search(r"/positions/([a-f0-9]{24})", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="bending_spoons", job_id=job_match.group(1) if job_match else None)
+        return URLMetadata(platform="custom_backend", job_id=job_match.group(1) if job_match else None, extra={"resolver": "bending_spoons"})
     if host == "app.dover.com" and len(segments) >= 3 and segments[0] == "apply":
         return URLMetadata(platform="dover", org=segments[1], job_id=segments[2])
     if host == "jobs.lever.co" and len(segments) >= 2:
@@ -2813,9 +2792,12 @@ def analyze_url(
     if metadata.platform == "lever":
         extract_lever_api(accumulator, active_session, metadata)
     elif metadata.platform == "greenhouse":
-        extract_greenhouse_api(accumulator, active_session, metadata)
-        if html:
-            detect_from_greenhouse_html(accumulator, html, validated_url, metadata)
+        if metadata.extra.get("resolver") == "stripe":
+            extract_stripe_greenhouse(accumulator, active_session, metadata)
+        else:
+            extract_greenhouse_api(accumulator, active_session, metadata)
+            if html:
+                detect_from_greenhouse_html(accumulator, html, validated_url, metadata)
     elif metadata.platform == "ashby":
         extract_ashby_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "recruitee":
@@ -2842,18 +2824,19 @@ def analyze_url(
         extract_successfactors_rss(accumulator, active_session, metadata, validated_url, html)
     elif metadata.platform == "gem":
         extract_gem_job_board_api(accumulator, active_session, metadata)
-    elif metadata.platform == "amazon_jobs":
-        extract_amazon_jobs_api(accumulator, active_session, metadata)
-    elif metadata.platform == "stripe":
-        extract_stripe_greenhouse(accumulator, active_session, metadata)
-    elif metadata.platform == "goldman_sachs":
-        extract_goldman_sachs_oracle(accumulator, active_session, metadata)
-    elif metadata.platform == "bending_spoons":
-        extract_bendingspoons_objectid(accumulator, metadata)
+    elif metadata.platform == "custom_backend":
+        resolver = metadata.extra.get("resolver")
+        if resolver == "amazon_jobs":
+            extract_amazon_jobs_api(accumulator, active_session, metadata)
+        elif resolver == "bending_spoons":
+            extract_bendingspoons_objectid(accumulator, metadata)
     elif metadata.platform == "workday":
         extract_workday_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "oracle_hcm":
-        extract_oracle_hcm_api(accumulator, active_session, metadata, validated_url)
+        if metadata.extra.get("resolver") == "goldman_sachs":
+            extract_goldman_sachs_oracle(accumulator, active_session, metadata)
+        else:
+            extract_oracle_hcm_api(accumulator, active_session, metadata, validated_url)
     elif metadata.platform == "jobvite" and html:
         extract_jobvite_xml(accumulator, active_session, metadata, html)
     elif metadata.platform == "avature" and html:

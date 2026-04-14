@@ -9,7 +9,7 @@ Current backend layers:
 - Open Graph / article metadata
 - embedded JSON / hydration payloads
 - Direct ATS fallbacks for Lever, Greenhouse, Ashby, SmartRecruiters, Workable, BambooHR, Brassring, SAP SuccessFactors, Rippling, iCIMS, Dover, Workday (CXS), Oracle HCM (recruitingCEJobRequisitionDetails), Jobvite (CompanyJobs XML), Avature, Gem, Teamtailor, Recruitee, Personio, Breezy HR, and JazzHR / applytojob
-- Direct domain-specific fallbacks for Amazon.jobs, Stripe careers, Goldman Sachs careers, and Bending Spoons
+- Employer-specific URL resolvers that map into underlying platforms or a generic `custom_backend` bucket
 - Platform detection with generic/archival fallbacks for ADP Workforce Now and Paycor/Newton
 - Unsupported / early-stop detection for ClearCompany / HRMDirect, Google Careers, Indeed, and LinkedIn
 - Jina render fallback for JS-heavy pages
@@ -142,10 +142,10 @@ The current suite covers:
 - Personio page JSON-LD + `/xml?language=...` fallback
 - Breezy HR `data-position` payload fallback
 - JazzHR / applytojob JobPosting JSON-LD support
-- Amazon.jobs `search.json?base_query={jobId}` fallback
-- Stripe Greenhouse board fallback
-- Goldman Sachs Oracle requisition-search fallback
-- Bending Spoons MongoDB ObjectID timestamp fallback
+- Custom employer backend `search.json?base_query={jobId}` fallback
+- Greenhouse resolver for employer-specific job URLs
+- Oracle HCM resolver for employer-specific role URLs
+- Custom employer backend ObjectID timestamp fallback
 - `/api/v1/platforms` capability endpoint
 - Jina render fallback
 - sitemap and Wayback comparison evidence

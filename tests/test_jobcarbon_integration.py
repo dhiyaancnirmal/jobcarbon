@@ -562,7 +562,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
 
-        self.assertEqual(result["platform"], "amazon_jobs")
+        self.assertEqual(result["platform"], "custom_backend")
         self.assertEqual(result["company"], "Amazon")
         self.assertEqual(result["title"], "Software Engineer, Amazon")
         self.assertEqual(result["location"], "Bengaluru, Karnataka, IND")
@@ -599,7 +599,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
 
-        self.assertEqual(result["platform"], "stripe")
+        self.assertEqual(result["platform"], "greenhouse")
         self.assertEqual(result["company"], "Stripe")
         self.assertEqual(result["title"], "Account Executive (Hunter) , UK Enterprise Retail")
         self.assertEqual(result["location"], "London")
@@ -645,7 +645,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
 
-        self.assertEqual(result["platform"], "goldman_sachs")
+        self.assertEqual(result["platform"], "oracle_hcm")
         self.assertEqual(result["company"], "Goldman Sachs")
         self.assertEqual(result["title"], "Engineering-L2-Bengaluru-Vice President-Software Engineering")
         self.assertEqual(result["location"], "Bengaluru, Karnataka, India")
@@ -666,7 +666,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
         result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
 
-        self.assertEqual(result["platform"], "bending_spoons")
+        self.assertEqual(result["platform"], "custom_backend")
         self.assertEqual(result["company"], "Bending Spoons")
         self.assertEqual(result["likely_posted_date"], "2024-04-11")
         self.assertEqual(result["chosen_source"]["source"], "bendingspoons.objectid")
