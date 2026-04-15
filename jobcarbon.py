@@ -15,6 +15,7 @@ from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 USER_AGENT = (
@@ -287,6 +288,7 @@ SCRIPT_JSON_BY_ID_RE = re.compile(
 )
 META_TAG_RE = re.compile(r"<meta\b([^>]+)>", re.IGNORECASE)
 BASE_HREF_RE = re.compile(r"<base[^>]+href=[\"']([^\"']+)[\"']", re.IGNORECASE)
+ASHBY_TIMEZONE_RE = re.compile(r'"timezone"\s*:\s*"([^"]+)"')
 HTML_ATTR_RE = re.compile(r"([A-Za-z_:][A-Za-z0-9_:\-]*)\s*=\s*[\"'](.*?)[\"']")
 VISIBLE_DATE_RE = re.compile(
     r"(?:(?:date\s+posted|posted|published|listing date|open date)\s*[:\-]?\s*)"
@@ -513,8 +515,9 @@ class AnalysisAccumulator:
         kind: str,
         reliability: str,
         note: str | None = None,
+        tz_name: str | None = None,
     ) -> None:
-        normalized = normalize_date(raw_value)
+        normalized = normalize_date(raw_value, tz_name=tz_name)
         if not normalized:
             return
         candidate = CandidateDate(
@@ -775,7 +778,15 @@ def utc_today() -> date:
     return datetime.now(timezone.utc).date()
 
 
-def normalize_date(value: Any) -> str | None:
+def extract_ashby_timezone(html: str) -> str | None:
+    match = ASHBY_TIMEZONE_RE.search(html)
+    if not match:
+        return None
+    timezone_name = match.group(1).strip()
+    return timezone_name or None
+
+
+def normalize_date(value: Any, *, tz_name: str | None = None) -> str | None:
     if value is None:
         return None
 
@@ -783,7 +794,13 @@ def normalize_date(value: Any) -> str | None:
         timestamp = float(value)
         if timestamp > 1_000_000_000_000:
             timestamp /= 1000.0
-        return datetime.fromtimestamp(timestamp, tz=timezone.utc).date().isoformat()
+        parsed = datetime.fromtimestamp(timestamp, tz=timezone.utc)
+        if tz_name:
+            try:
+                parsed = parsed.astimezone(ZoneInfo(tz_name))
+            except ZoneInfoNotFoundError:
+                pass
+        return parsed.date().isoformat()
 
     if not isinstance(value, str):
         return None
@@ -804,7 +821,13 @@ def normalize_date(value: Any) -> str | None:
         cleaned = cleaned[:-1] + "+00:00"
 
     try:
-        return datetime.fromisoformat(cleaned).date().isoformat()
+        parsed = datetime.fromisoformat(cleaned)
+        if tz_name and parsed.tzinfo is not None:
+            try:
+                parsed = parsed.astimezone(ZoneInfo(tz_name))
+            except ZoneInfoNotFoundError:
+                pass
+        return parsed.date().isoformat()
     except ValueError:
         pass
 
@@ -1287,7 +1310,13 @@ def extract_lever_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
     )
 
 
-def extract_ashby_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata, original_url: str) -> None:
+def extract_ashby_api(
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
+    html: str = "",
+) -> None:
     if not metadata.org or not metadata.job_id:
         return
     api_url = f"https://api.ashbyhq.com/posting-api/job-board/{metadata.org}"
@@ -1299,6 +1328,9 @@ def extract_ashby_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
 
     jobs = payload.get("jobs", [])
     target_path = normalized_url_path(original_url)
+    timezone_name = extract_ashby_timezone(html) if html else None
+    if timezone_name:
+        accumulator.add_hidden("posting_timezone", timezone_name)
     for job in jobs:
         job_url = (job.get("jobUrl") or "").strip()
         job_id_matches = job.get("id") == metadata.job_id
@@ -1311,12 +1343,19 @@ def extract_ashby_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
         accumulator.set_preferred("employment_type", job.get("employmentType"))
         accumulator.add_hidden("department", job.get("department"))
         accumulator.add_hidden("salary_range", job.get("salary"))
+        published_at = job.get("publishedAt") or job.get("publishedDate")
         accumulator.add_date(
-            job.get("publishedAt") or job.get("publishedDate"),
+            published_at,
             source="ashby.api",
             field="publishedAt",
             kind="posted",
             reliability="high",
+            note=(
+                f"Normalized from {published_at} using posting timezone {timezone_name}."
+                if timezone_name and isinstance(published_at, str)
+                else None
+            ),
+            tz_name=timezone_name,
         )
         return
 
@@ -2799,7 +2838,7 @@ def analyze_url(
             if html:
                 detect_from_greenhouse_html(accumulator, html, validated_url, metadata)
     elif metadata.platform == "ashby":
-        extract_ashby_api(accumulator, active_session, metadata, validated_url)
+        extract_ashby_api(accumulator, active_session, metadata, validated_url, html)
     elif metadata.platform == "recruitee":
         extract_recruitee_api(accumulator, active_session, metadata)
     elif metadata.platform == "smartrecruiters":

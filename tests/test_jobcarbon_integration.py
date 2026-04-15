@@ -130,6 +130,62 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["likely_posted_date"], "2024-03-03")
         self.assertEqual(result["chosen_source"]["source"], "jina.render")
 
+    def test_ashby_api_prefers_localized_published_timestamp_over_date_only_jsonld(self) -> None:
+        target_url = "https://jobs.ashbyhq.com/AfterQuery/489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3/application"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        '<script type="application/ld+json">'
+                        + json.dumps(
+                            {
+                                "@context": "https://schema.org",
+                                "@type": "JobPosting",
+                                "title": "Strategic Projects Intern",
+                                "datePosted": "2026-04-14",
+                                "employmentType": "INTERN",
+                                "hiringOrganization": {"@type": "Organization", "name": "AfterQuery"},
+                            }
+                        )
+                        + "</script>"
+                        "</head><body>"
+                        '<script>window.__ASHBY_JOB_POSTING__={"timezone":"America/Los_Angeles","posting":{"updatedAt":"2026-04-14T04:43:33.355Z"}};</script>'
+                        "</body></html>"
+                    )
+                ),
+                "https://api.ashbyhq.com/posting-api/job-board/AfterQuery": FakeResponse(
+                    text=json.dumps(
+                        {
+                            "jobs": [
+                                {
+                                    "id": "489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3",
+                                    "title": "Strategic Projects Intern",
+                                    "department": "Operations",
+                                    "employmentType": "Intern",
+                                    "location": "San Francisco",
+                                    "publishedAt": "2026-04-14T04:43:33.355+00:00",
+                                    "jobUrl": "https://jobs.ashbyhq.com/AfterQuery/489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3",
+                                }
+                            ]
+                        }
+                    )
+                ),
+                "https://jobs.ashbyhq.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.ashbyhq.com%2FAfterQuery%2F489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3%2Fapplication&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+
+        self.assertEqual(result["platform"], "ashby")
+        self.assertEqual(result["likely_posted_date"], "2026-04-13")
+        self.assertEqual(result["chosen_source"]["source"], "ashby.api")
+        self.assertEqual(result["hidden_insights"]["posting_timezone"], "America/Los_Angeles")
+        self.assertIn("America/Los_Angeles", result["chosen_source"]["note"])
+
     def test_rippling_embedded_next_data_supplies_created_on_and_hidden_metadata(self) -> None:
         target_url = "https://ats.rippling.com/rippling/jobs/bda12f6a-6afc-45af-8e6a-b0056facf15c"
         session = FakeSession(

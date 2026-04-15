@@ -191,6 +191,13 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual(jobcarbon.normalize_date("20210405112233"), "2021-04-05")
         self.assertEqual(jobcarbon.normalize_date("March 4, 2024"), "2024-03-04")
         self.assertEqual(jobcarbon.normalize_date("03/04/2024"), "2024-03-04")
+        self.assertEqual(
+            jobcarbon.normalize_date(
+                "2026-04-14T04:43:33.355+00:00",
+                tz_name="America/Los_Angeles",
+            ),
+            "2026-04-13",
+        )
 
     def test_choose_best_date_prefers_oldest_credible_posted_signal(self) -> None:
         dates = [
