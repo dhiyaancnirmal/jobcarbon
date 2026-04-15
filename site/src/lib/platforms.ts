@@ -42,9 +42,9 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
   },
   clearcompany: {
     id: "clearcompany",
-    title: "Unsupported ATS Detected",
+    title: "Unsupported Platform Detected",
     body:
-      "This job is hosted on ClearCompany, an applicant tracking system that does not include posting dates in their pages.\n\nTip: try searching for this job title on the company's main careers page — other ATS platforms often include dates.",
+      "This job is hosted on ClearCompany, a platform that does not include posting dates in their pages.\n\nTip: try searching for this job title on the company's main careers page — other platforms often include dates.",
     mode: "blocked",
     dismissLabel: "Got it",
   },

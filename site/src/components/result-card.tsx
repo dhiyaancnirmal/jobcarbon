@@ -160,7 +160,7 @@ function StatusMessage({ result }: { result: EstimateResult }) {
           <span className="text-sm font-medium text-neutral-700">No posting date found</span>
         </div>
         <p className="text-xs text-neutral-500 leading-relaxed">
-          We checked structured data, ATS APIs, and archives but couldn&apos;t find a reliable posting date for this listing.
+          We checked structured data, platform APIs, and archives but couldn&apos;t find a reliable posting date for this listing.
         </p>
         {(result.warnings?.length ?? 0) > 0 && (
           <div className="mt-1 flex flex-col gap-1">

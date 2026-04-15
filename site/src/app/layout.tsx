@@ -14,15 +14,15 @@ const mono = JetBrains_Mono({
 })
 
 const SITE_URL = "https://howoldisthisjob.com"
-const SITE_TITLE = "How old is this job? — Find the real posting date"
+const SITE_TITLE = "How Old Is This Job? — Find the real posting date"
 const SITE_DESCRIPTION =
-  "Paste any job posting URL and find out when it was really posted. Detect ghost jobs, reposts, and stale listings across Greenhouse, Lever, Ashby, Workday, and 20+ more ATS platforms."
+  "Paste any job posting URL and find out when it was really posted. Detect ghost jobs, reposts, and stale listings across Greenhouse, Lever, Ashby, Workday, and 20+ more platforms."
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: SITE_TITLE,
-    template: "%s · How old is this job?",
+    template: "%s · How Old Is This Job?",
   },
   description: SITE_DESCRIPTION,
   keywords: [
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     "lever",
     "ashby",
     "workday",
-    "ATS",
+    "hiring platform",
     "when was this job posted",
   ],
   openGraph: {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     url: SITE_URL,
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    siteName: "How old is this job?",
+    siteName: "How Old Is This Job?",
   },
   twitter: {
     card: "summary",
@@ -64,7 +64,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-svh flex-col bg-white">
         {children}
-        <footer className="mx-auto w-full max-w-xl px-6 pb-5 pt-2 text-[11px] text-neutral-400">
+        <footer className="mt-auto mx-auto w-full max-w-xl px-6 pb-5 pt-2 text-[11px] text-neutral-400">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
@@ -81,7 +81,12 @@ export default function RootLayout({
                 About
               </Link>
             </div>
-            <span>v0.2.0</span>
+            <Link
+              href="/changelog"
+              className="transition-colors hover:text-neutral-600"
+            >
+              v0.1.0
+            </Link>
           </div>
         </footer>
       </body>

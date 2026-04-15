@@ -8,7 +8,7 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <Logo size={40} />
             <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-              How old is this job?
+              How Old Is This Job?
             </h1>
           </div>
           <p className="text-[15px] leading-relaxed text-neutral-500">

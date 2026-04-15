@@ -51,7 +51,7 @@
 - `PlatformCarousel` + "23+ platforms supported" label appear only when `!hasHistory && !loading`; hidden after a result is saved.
 - `ResultCard` defensively reads `warnings`, `all_dates`, `hidden_insights` with `?.` since mock/legacy history items may lack them.
 - Layout includes footer with Home · About links + version `v0.2.0`; full OG/Twitter metadata + metadataBase in `layout.tsx`.
-- `/about` page was fully redesigned away from the old competitor-like table/docs layout. It now uses a manifesto-style hero, signal cards, a dark "signal ladder" section, grouped platform coverage blocks, and a two-column FAQ layout.
+- `/about` page is back to a straightforward explainer layout: short intro, source list for "How it works", full platform status table, and FAQ cards. The brief redesign experiment was discarded.
 - Backend history endpoints in `jobcarbon_api.py` are wired to the frontend history UI.
 
 ### Backend parity status
@@ -65,6 +65,6 @@
 - Deploy backend changes to Railway and verify CORS allowlist/env values in deployed environment (if history backend is kept).
 - Validate the deployed site against the deployed API to confirm cookie attributes and credentialed CORS behave correctly cross-origin, not just on localhost.
 - Decide whether to keep the URL in the input after successful submit permanently, or clear it only after the response renders. Current behavior keeps it.
-- If the about page needs another pass, tighten copy density in the hero and remove any remaining product-marketing pill language.
+- Decide whether to remove the footer version string or align it with `site/package.json`; it still shows `v0.2.0` while the package version is `0.1.0`.
 - Remaining parity backlog: ADP direct promotion, Paycor direct/title extraction. Keep employer-specific support as resolver logic, not as standalone platform taxonomy.
 - Chrome extension: local JSON-LD detection first, then backend for ATS/archive fallbacks.
