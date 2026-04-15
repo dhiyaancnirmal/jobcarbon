@@ -10,6 +10,23 @@ type State =
   | { status: "success"; result: EstimateResult }
   | { status: "error"; message: string }
 
+function localCalendarAgeDays(iso: string | null): number | null {
+  if (!iso) return null
+  const [year, month, day] = iso.split("-").map(Number)
+  if (!year || !month || !day) return null
+
+  const today = new Date()
+  const localToday = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+  )
+  const postedDay = new Date(year, month - 1, day)
+  const millisPerDay = 24 * 60 * 60 * 1000
+
+  return Math.floor((localToday.getTime() - postedDay.getTime()) / millisPerDay)
+}
+
 function formatAge(days: number | null): string {
   if (days === null) return "Unknown"
   if (days === 0) return "Today"
@@ -227,6 +244,8 @@ function ResultCard({ result }: { result: EstimateResult }) {
   }
 
   const dateStr = formatDate(result.likely_posted_date)
+  const displayAgeDays =
+    localCalendarAgeDays(result.likely_posted_date) ?? result.likely_age_days
   const hasMeta = result.title || result.company || result.location || result.employment_type
   const hasInsights = Object.keys(result.hidden_insights).length > 0
   const hasWarnings = result.warnings.length > 0
@@ -236,7 +255,7 @@ function ResultCard({ result }: { result: EstimateResult }) {
       <div className="flex items-start justify-between px-5 py-4">
         <div className="flex flex-col gap-1">
           <span className="text-xl font-semibold text-neutral-900">
-            {formatAge(result.likely_age_days)}
+            {formatAge(displayAgeDays)}
           </span>
           {dateStr && (
             <span className="text-xs text-neutral-400">Posted {dateStr}</span>
