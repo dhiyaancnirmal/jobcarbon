@@ -18,6 +18,7 @@
 - `site/` is tracked in main repo; `.gitignore` covers `node_modules`, `.next`, `.vercel`.
 - Vercel project `jobcarbon-web` is now Git-connected to `https://github.com/dhiyaancnirmal/jobcarbon.git` from the `site/` root, so pushes on the repo can auto-deploy the website.
 - Production alias `howoldisthisjob.com` was repointed from a stale early deployment to `dpl_Cw6CVKivvL5kx6CM54yLZ2pEzRrg` (`jobcarbon-2qe13elsi-dhiyaancnirmals-projects.vercel.app`), and the previous stale deployment was removed.
+- After Git connection, the first auto-deploy failed because the Vercel project still had `rootDirectory = null`; patching the project to `rootDirectory = "site"` fixed Git-based production builds. The repaired production deployment is `dpl_GAfNpCi98cxVrYyju7xv8g2Wnamr`.
 - Frontend age labels now derive from `likely_posted_date` in the browser's local calendar date instead of trusting the backend's UTC-based `likely_age_days`, which fixed "1 day old" appearing for same-day postings on April 14 local time.
 - `site/src/lib/api.ts` has:
   - `EstimateResult` type matching backend `build_result` schema
