@@ -1,7 +1,13 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 export function Logo({ size = 48 }: { size?: number }) {
-  const day = new Date().getDate()
+  const [day, setDay] = useState<number | null>(null)
+
+  useEffect(() => {
+    setDay(new Date().getDate())
+  }, [])
 
   return (
     <svg
@@ -43,9 +49,19 @@ export function Logo({ size = 48 }: { size?: number }) {
       <rect x="82" y="10" width="8" height="20" rx="4" ry="4" fill="#ffffff" stroke="#d1d1d1" strokeWidth="1" filter="url(#outerShadow)" />
       <path d="M 32 14 A 2 2 0 0 1 36 14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
       <path d="M 84 14 A 2 2 0 0 1 88 14" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-      <text x="60" y="85" fontFamily="system-ui, sans-serif" fontSize="34" fontWeight="500" fill="#333333" textAnchor="middle">
-        {day}
-      </text>
+      {day != null ? (
+        <text
+          x="60"
+          y="85"
+          fontFamily="system-ui, sans-serif"
+          fontSize="34"
+          fontWeight="500"
+          fill="#333333"
+          textAnchor="middle"
+        >
+          {day}
+        </text>
+      ) : null}
     </svg>
   )
 }

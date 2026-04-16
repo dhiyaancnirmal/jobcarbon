@@ -8,18 +8,17 @@ export function SearchHistory({
   items,
   expandedId,
   onToggleExpand,
-  onRecheck,
   onRemove,
   onClearAll,
 }: {
   items: HistoryItem[]
   expandedId: string | null
   onToggleExpand: (id: string | null) => void
-  onRecheck: (item: HistoryItem) => void
   onRemove: (id: string) => void
   onClearAll: () => void
 }) {
   const [filter, setFilter] = useState("")
+  const [confirmingClear, setConfirmingClear] = useState(false)
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -37,25 +36,51 @@ export function SearchHistory({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="text-xs text-neutral-500">
-            {items.length} {items.length === 1 ? "result" : "results"}
+            {filtered.length === items.length
+              ? `${items.length} ${items.length === 1 ? "result" : "results"}`
+              : `${filtered.length} of ${items.length} results`}
           </span>
-          <button
-            type="button"
-            onClick={onClearAll}
-            className="text-xs text-neutral-400 transition-colors hover:text-neutral-600"
-          >
-            Clear all
-          </button>
+          {confirmingClear ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-neutral-500">Clear all?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmingClear(false)
+                  onClearAll()
+                }}
+                className="gel-btn gel-btn--sm gel-btn--destructive h-6 px-2.5 text-[11px]"
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmingClear(false)}
+                className="gel-btn gel-btn--sm gel-btn--neutral h-6 px-2.5 text-[11px]"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmingClear(true)}
+              className="text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+            >
+              Clear all
+            </button>
+          )}
         </div>
         <input
           type="text"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter by title, company…"
-          className="h-8 w-56 rounded-md border border-neutral-200 bg-white px-3 text-xs text-neutral-700 outline-none transition-colors placeholder:text-neutral-400 focus:border-neutral-400"
+          aria-label="Filter results"
+          className="gel-input h-8 min-h-8 w-full min-w-0 rounded-md px-3 text-xs sm:w-56"
         />
       </div>
 
@@ -73,7 +98,6 @@ export function SearchHistory({
               onToggle={() =>
                 onToggleExpand(item.id === expandedId ? null : item.id)
               }
-              onRecheck={() => onRecheck(item)}
               onRemove={() => onRemove(item.id)}
             />
           ))}

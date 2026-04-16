@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-
 export const metadata: Metadata = {
   title: "Changelog",
   description: "Version history for How Old Is This Job?",
@@ -8,12 +7,9 @@ export const metadata: Metadata = {
 const ENTRIES = [
   {
     version: "v0.1.0",
-    date: "April 2025",
+    date: "April 2026",
     changes: [
-      "Launch — detect real posting dates across 23 platforms",
-      "Ghost job and repost detection",
-      "Anonymous session-based search history",
-      "About page with FAQ",
+      "Initial launch",
     ],
   },
 ]
@@ -28,7 +24,9 @@ export default function Changelog() {
         {ENTRIES.map((entry) => (
           <section key={entry.version} className="flex flex-col gap-2">
             <div className="flex items-baseline gap-2">
-              <span className="text-sm font-semibold text-neutral-900">{entry.version}</span>
+              <span className="text-sm font-semibold text-neutral-900">
+                {entry.version}
+              </span>
               <span className="text-xs text-neutral-400">{entry.date}</span>
             </div>
             <ul className="flex flex-col gap-1">

@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { Logo } from "@/components/logo"
 
 export const metadata: Metadata = {
@@ -45,7 +44,7 @@ const FAQ = [
   },
   {
     q: "Why are Indeed and LinkedIn blocked?",
-    a: "Because those public job pages do not reliably expose the direct data needed for this kind of check. If a listing links to the employer's careers page, use that source URL instead.",
+    a: "Because those public job pages do not reliably expose the posting signals needed for this check. If a listing links to the employer's careers page, use that source URL instead.",
   },
   {
     q: "How accurate are the dates?",
@@ -74,15 +73,12 @@ export default function About() {
             underlying opening is old, reposted, or quietly sitting in a platform.
           </p>
           <p>
-            The detector checks direct platform data first, then falls back to structured
+            The detector checks direct platform signals first, then falls back to structured
             page metadata, rendered content, sitemap dates, and archive history. The
-            goal is not to invent certainty where none exists — just to show the
+            goal is not to invent certainty where none exists, just to show the
             strongest date signal available and make stale listings easier to spot.
           </p>
         </div>
-        <Link href="/" className="gel-btn gel-btn--save w-fit">
-          Check a posting
-        </Link>
       </section>
 
       <section className="flex flex-col gap-3">

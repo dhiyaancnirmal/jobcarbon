@@ -35,16 +35,16 @@ function formatDate(iso: string | null): string | null {
 }
 
 const confidenceColors: Record<string, string> = {
-  high: "bg-emerald-50 text-emerald-700",
-  medium: "bg-amber-50 text-amber-700",
-  low: "bg-orange-50 text-orange-700",
-  unknown: "bg-neutral-100 text-neutral-500",
+  high: "gel-pill--high",
+  medium: "gel-pill--medium",
+  low: "gel-pill--low",
+  unknown: "gel-pill--unknown",
 }
 
 const reliabilityDot: Record<string, string> = {
-  high: "bg-emerald-500",
-  medium: "bg-amber-500",
-  low: "bg-orange-500",
+  high: "gel-dot--high",
+  medium: "gel-dot--medium",
+  low: "gel-dot--low",
 }
 
 const kindLabel: Record<string, string> = {
@@ -76,7 +76,7 @@ function buildCopyText(result: EstimateResult): string {
     lines.push("")
     lines.push("All detected dates:")
     for (const d of result.all_dates ?? []) {
-      lines.push(`  ${d.date} — ${kindLabel[d.kind] ?? d.kind} from ${d.source}${d.field ? "." + d.field : ""}`)
+      lines.push(`  ${d.date} - ${kindLabel[d.kind] ?? d.kind} from ${d.source}${d.field ? "." + d.field : ""}`)
     }
   }
   const insights = Object.entries(result.hidden_insights ?? {})
@@ -88,7 +88,7 @@ function buildCopyText(result: EstimateResult): string {
     }
   }
   lines.push("")
-  lines.push(`Checked via howoldisthisjob.com — ${result.url}`)
+  lines.push(`Checked via howoldisthisjob.com - ${result.url}`)
   return lines.join("\n")
 }
 
@@ -105,7 +105,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={onCopy}
-      className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
+      className="gel-btn gel-btn--sm gel-btn--neutral"
     >
       {copied ? "Copied" : "Copy"}
     </button>
@@ -180,37 +180,24 @@ function StatusMessage({ result }: { result: EstimateResult }) {
 
 export function ResultCard({
   result,
-  onRecheck,
   onRemove,
 }: {
   result: EstimateResult
-  onRecheck?: () => void
   onRemove?: () => void
 }) {
   if (result.status !== "success") {
     return (
       <div className="flex flex-col gap-2">
         <StatusMessage result={result} />
-        {(onRecheck || onRemove) && (
+        {onRemove && (
           <div className="flex items-center gap-2 px-1">
-            {onRecheck && (
-              <button
-                type="button"
-                onClick={onRecheck}
-                className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
-              >
-                Check again
-              </button>
-            )}
-            {onRemove && (
-              <button
-                type="button"
-                onClick={onRemove}
-                className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 transition-colors hover:bg-neutral-50"
-              >
-                Remove
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onRemove}
+              className="gel-btn gel-btn--sm gel-btn--neutral"
+            >
+              Remove
+            </button>
           </div>
         )}
       </div>
@@ -237,11 +224,7 @@ export function ResultCard({
             <span className="text-xs text-neutral-400">Posted {dateStr}</span>
           )}
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${confidenceColors[result.confidence]}`}
-        >
-          {result.confidence} confidence
-        </span>
+
       </div>
 
       {result.reposted_likely && (
@@ -252,7 +235,7 @@ export function ResultCard({
             <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
           </svg>
           <span className="text-[11px] font-medium text-amber-700">
-            Likely reposted — original listing may be older than shown
+            Likely reposted - original listing may be older than shown
           </span>
         </div>
       )}
@@ -276,14 +259,8 @@ export function ResultCard({
         </div>
       )}
 
-      {result.summary && (
-        <div className="border-t border-neutral-100 px-5 py-3">
-          <p className="text-xs text-neutral-500 leading-relaxed">{result.summary}</p>
-        </div>
-      )}
-
       <div className="flex items-center gap-2 border-t border-neutral-100 px-5 py-2.5">
-        <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[11px] font-medium text-neutral-500">
+        <span className="gel-pill gel-pill--neutral">
           {result.platform}
         </span>
         {result.chosen_source && (
@@ -293,7 +270,7 @@ export function ResultCard({
               {result.chosen_source.field && `.${result.chosen_source.field}`}
             </span>
             <span
-              className={`inline-block h-1.5 w-1.5 rounded-full ${reliabilityDot[result.chosen_source.reliability]}`}
+              className={`inline-block gel-dot ${reliabilityDot[result.chosen_source.reliability]}`}
             />
           </>
         )}
@@ -314,7 +291,7 @@ export function ResultCard({
                 >
                   <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
                     <span
-                      className={`inline-block h-1.5 w-1.5 rounded-full ${reliabilityDot[item.reliability]}`}
+                      className={`inline-block gel-dot ${reliabilityDot[item.reliability]}`}
                     />
                   </span>
                   <div className="flex flex-1 flex-col gap-0.5">
@@ -374,20 +351,11 @@ export function ResultCard({
 
       <div className="flex items-center justify-end gap-2 border-t border-neutral-100 bg-neutral-50/40 px-5 py-2.5">
         <CopyButton text={copyText} />
-        {onRecheck && (
-          <button
-            type="button"
-            onClick={onRecheck}
-            className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-600 transition-colors hover:bg-neutral-50"
-          >
-            Check again
-          </button>
-        )}
         {onRemove && (
           <button
             type="button"
             onClick={onRemove}
-            className="rounded-md border border-neutral-200 bg-white px-2 py-1 text-[11px] font-medium text-neutral-500 transition-colors hover:bg-neutral-50"
+            className="gel-btn gel-btn--sm gel-btn--neutral"
           >
             Remove
           </button>

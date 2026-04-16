@@ -1,6 +1,9 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export function ConfirmModal({
   open,
@@ -21,45 +24,122 @@ export function ConfirmModal({
   onConfirm: () => void
   onCancel: () => void
 }) {
+  const panelRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCancel()
+
+    const prevOverflow = document.body.style.overflow
+    const prevPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+
+    document.body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
     }
+
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.body.style.paddingRight = prevPaddingRight
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onCancel()
+        return
+      }
+
+      if (e.key !== "Tab") return
+
+      const panel = panelRef.current
+      if (!panel) return
+
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      )
+
+      if (focusable.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement as HTMLElement | null
+
+      if (e.shiftKey) {
+        if (active === first || active === panel) {
+          e.preventDefault()
+          last.focus()
+        }
+        return
+      }
+
+      if (active === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
   }, [open, onCancel])
+
+  useEffect(() => {
+    if (!open) return
+
+    const id = window.setTimeout(() => {
+      const panel = panelRef.current
+      if (!panel) return
+      const first = panel.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      if (first) {
+        first.focus()
+      } else {
+        panel.focus()
+      }
+    }, 0)
+
+    return () => window.clearTimeout(id)
+  }, [open])
 
   if (!open) return null
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 px-4"
+      className="gel-dialog-overlay fixed inset-0 z-50 flex items-center justify-center px-4"
       onClick={onCancel}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-sm rounded-xl border border-neutral-200 bg-white p-5 shadow-lg"
+        aria-labelledby="confirm-modal-title"
+        tabIndex={-1}
+        className="gel-dialog-panel w-full max-w-sm rounded-xl border border-neutral-200 p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-semibold text-neutral-900">{title}</h2>
+        <h2 id="confirm-modal-title" className="text-base font-semibold text-neutral-900">
+          {title}
+        </h2>
         <p className="mt-2 text-sm text-neutral-500">{description}</p>
         <div className="mt-5 flex justify-end gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-50"
+            className="gel-btn gel-btn--sm gel-btn--neutral"
           >
             {cancelText}
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium text-white transition-colors ${
-              destructive
-                ? "bg-red-600 hover:bg-red-700"
-                : "bg-neutral-900 hover:bg-neutral-700"
+            className={`gel-btn gel-btn--sm ${
+              destructive ? "gel-btn--destructive" : "gel-btn--save"
             }`}
           >
             {confirmText}

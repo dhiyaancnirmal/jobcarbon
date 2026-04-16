@@ -40,7 +40,16 @@
 - Homepage microcopy and `/about` FAQ now describe anonymous server-side history tied to an HttpOnly session cookie instead of claiming "No cookies" or browser-local storage.
 - Homepage no longer shows any extra privacy/marketing microcopy under the input.
 - Idle homepage layout no longer uses the `pt-[calc(50vh-7.125rem)]` centering hack; it now uses a simple viewport-height main area so the hero and footer fit without a scrollbar on first load.
-- Loading UI is now just a small three-dot inline spinner inside the submit button. There is no standalone loading card below the form.
+- `html` uses `overflow-y: auto; scrollbar-gutter: stable` in `globals.css` to reserve scrollbar gutter space and prevent layout shift when content grows past the viewport (classic scrollbar systems only; overlay scrollbars are unaffected).
+- Loading UI: submit button shows an inline spinner with the text "Checking…" while a request is in flight (replaced the opaque `gel-btn--loading` overlay that hid the button text behind a tiny spinner).
+- Toasts (`site/src/components/toasts.tsx`) render top-right (`right-4 top-4`, `sm:right-6 sm:top-6`). Used for invalid-URL, fetch-error, and intercept notices. Auto-dismiss after 4500ms.
+- `Logo` (`site/src/components/logo.tsx`) is a blank calendar — no day number rendered. Matches the favicon (`site/src/app/icon.svg`), which also has no number.
+- `SearchHistory` result count reflects the filter: `"N results"` when unfiltered, `"N of M results"` when a filter is active.
+- Result card simplified: removed redundant `result.summary` block and "Check again" button (semantically wrong — the original posting date shouldn't change).
+- Slide-to-top animation on successful check: `<main>` transitions from `pt-[28vh]` to `pt-8` via `data-has-history` attribute; duration 500ms ease-out.
+- Re-submitting a URL that already exists in history no longer re-fetches from the backend or creates a duplicate row. `JobChecker.onSubmit` matches the validated URL against existing `history` items and just expands the match; otherwise it runs a fresh check.
+- Only `status === "success"` results are written to history. Non-success statuses (`blocked`, `unsupported`, `no_date`, `error`) surface as toasts instead of creating a history card. `ResultCard` still handles non-success statuses for legacy entries saved before this change.
+- Toast messages simplified for bad inputs: "That doesn't look like a URL." (warn), "Couldn't reach that URL." (error) — no verbose titles or error.message bodies.
 - Placeholder typing animation pauses whenever the input has text or a request is in flight, and successful submits keep the typed URL in the field instead of clearing it.
 - Placeholder animation pause logic now depends on a single boolean (`placeholderAnimationPaused`) to avoid `useEffect` dependency-shape warnings during local dev refreshes.
 - In local development, `site/src/lib/api.ts` defaults to `http://localhost:8000` when `NEXT_PUBLIC_JOBCARBON_API` is unset. Production still defaults to `https://api.howoldisthisjob.com`.

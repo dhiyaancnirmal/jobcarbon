@@ -14,7 +14,7 @@ const mono = JetBrains_Mono({
 })
 
 const SITE_URL = "https://howoldisthisjob.com"
-const SITE_TITLE = "How Old Is This Job? — Find the real posting date"
+const SITE_TITLE = "How Old Is This Job? - Find the real posting date"
 const SITE_DESCRIPTION =
   "Paste any job posting URL and find out when it was really posted. Detect ghost jobs, reposts, and stale listings across Greenhouse, Lever, Ashby, Workday, and 20+ more platforms."
 
@@ -64,26 +64,26 @@ export default function RootLayout({
     >
       <body className="flex min-h-svh flex-col bg-white">
         {children}
-        <footer className="mt-auto mx-auto w-full max-w-xl px-6 pb-5 pt-2 text-[11px] text-neutral-400">
+        <footer className="mt-auto mx-auto w-full max-w-xl px-6 pb-5 pt-2 text-[11px] text-neutral-500">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="transition-colors hover:text-neutral-600"
+                className="transition-colors hover:text-neutral-800"
               >
                 Home
               </Link>
-              <span>·</span>
+              <span className="text-neutral-400">·</span>
               <Link
                 href="/about"
-                className="transition-colors hover:text-neutral-600"
+                className="transition-colors hover:text-neutral-800"
               >
                 About
               </Link>
             </div>
             <Link
               href="/changelog"
-              className="transition-colors hover:text-neutral-600"
+              className="transition-colors hover:text-neutral-800"
             >
               v0.1.0
             </Link>

@@ -19,7 +19,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "linkedin",
     title: "LinkedIn URL Detected",
     body:
-      "LinkedIn blocks automated access to their job pages, so we cannot extract posting dates or any job data.\n\nTip: if you see an \"Apply\" button (not \"Easy Apply\"), click it to get the company's own careers page URL — that will give much better results.",
+      "LinkedIn blocks automated access to their job pages, so we cannot extract posting dates from LinkedIn URLs.\n\nTip: if you see an \"Apply\" button (not \"Easy Apply\"), click it to get the company's own careers page URL. That will give much better results.",
     mode: "blocked",
     dismissLabel: "Got it",
   },
@@ -27,7 +27,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "indeed",
     title: "Indeed URL Detected",
     body:
-      "Indeed blocks automated access to their job pages, so we cannot extract posting dates or any job data.\n\nTip: look for the original company careers page link on the Indeed listing — that will give much better results.",
+      "Indeed blocks automated access to their job pages, so we cannot extract posting dates from Indeed URLs.\n\nTip: look for the original company careers page link on the Indeed listing. That will give much better results.",
     mode: "blocked",
     dismissLabel: "Got it",
   },
@@ -44,7 +44,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "clearcompany",
     title: "Unsupported Platform Detected",
     body:
-      "This job is hosted on ClearCompany, a platform that does not include posting dates in their pages.\n\nTip: try searching for this job title on the company's main careers page — other platforms often include dates.",
+      "This job is hosted on ClearCompany, a platform that does not include posting dates in their pages.\n\nTip: try searching for this job title on the company's main careers page. Other platforms often include dates.",
     mode: "blocked",
     dismissLabel: "Got it",
   },
@@ -52,7 +52,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "ycombinator",
     title: "Y Combinator Job Board Detected",
     body:
-      "Work at a Startup (workatastartup.com) does not include posting dates in their job listings. This is by design — the site intentionally omits dates.\n\nWe can try to extract the job title and company name, but cannot determine when this job was posted.",
+      "Work at a Startup (workatastartup.com) does not include posting dates in their job listings. This is by design; the site intentionally omits dates.\n\nWe can try to extract the job title and company name, but cannot determine when this job was posted.",
     mode: "warn",
     continueLabel: "Continue Anyway",
     dismissLabel: "Cancel",

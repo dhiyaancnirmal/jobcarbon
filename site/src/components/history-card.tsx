@@ -22,13 +22,11 @@ export function HistoryCard({
   item,
   expanded,
   onToggle,
-  onRecheck,
   onRemove,
 }: {
   item: HistoryItem
   expanded: boolean
   onToggle: () => void
-  onRecheck: () => void
   onRemove: () => void
 }) {
   const { result } = item
@@ -47,8 +45,6 @@ export function HistoryCard({
           <span className="truncate text-sm font-medium text-neutral-800">{title}</span>
           <div className="flex items-center gap-2 text-[11px] text-neutral-400">
             {company && <span className="truncate">{company}</span>}
-            {company && <span>·</span>}
-            <span>Checked {checked}</span>
           </div>
         </div>
         <span className="shrink-0 text-[11px] text-neutral-400">Expand</span>
@@ -58,8 +54,7 @@ export function HistoryCard({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between px-1">
-        <span className="text-[11px] text-neutral-400">Checked {checked}</span>
+      <div className="flex items-center justify-end px-1">
         <button
           type="button"
           onClick={onToggle}
@@ -68,7 +63,7 @@ export function HistoryCard({
           Collapse
         </button>
       </div>
-      <ResultCard result={result} onRecheck={onRecheck} onRemove={onRemove} />
+      <ResultCard result={result} onRemove={onRemove} />
       <p className="truncate px-1 text-[11px] text-neutral-400">{item.url}</p>
     </div>
   )
