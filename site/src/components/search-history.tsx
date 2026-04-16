@@ -37,14 +37,14 @@ export function SearchHistory({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-xs text-neutral-500">
             {filtered.length === items.length
               ? `${items.length} ${items.length === 1 ? "result" : "results"}`
               : `${filtered.length} of ${items.length} results`}
           </span>
           {confirmingClear ? (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <span className="text-xs text-neutral-500">Clear all?</span>
               <button
                 type="button"
@@ -52,14 +52,14 @@ export function SearchHistory({
                   setConfirmingClear(false)
                   onClearAll()
                 }}
-                className="gel-btn gel-btn--sm gel-btn--destructive h-6 px-2.5 text-[11px]"
+                className="gel-btn gel-btn--xs gel-btn--destructive w-auto px-2.5 text-[11px]"
               >
                 Yes
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmingClear(false)}
-                className="gel-btn gel-btn--sm gel-btn--neutral h-6 px-2.5 text-[11px]"
+                className="gel-btn gel-btn--xs gel-btn--neutral w-auto px-2.5 text-[11px]"
               >
                 No
               </button>

@@ -2,6 +2,14 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Move main content to top when history exists or check is in progress.
+   Keyed off html[data-has-history] set by inline script before first paint. */
+html[data-has-history] main {
+  justify-content: flex-start;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -218,6 +226,38 @@
     border-radius: 6px;
   }
 
+  .gel-btn--xs {
+    padding: 0;
+    height: 26px;
+    width: 26px;
+    min-width: 26px;
+    font-size: 0;
+    border-radius: 6px;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.04),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .gel-btn--xs.gel-btn--neutral {
+    background: linear-gradient(to bottom, #ffffff, #f5f5f5);
+    border-color: #e5e5e5;
+  }
+
+  .gel-btn--xs:hover {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
+  .gel-btn--xs:active {
+    box-shadow:
+      0 0 1px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  }
+
   .gel-btn--lg {
     padding: 12px 24px;
     font-size: 16px;
@@ -253,142 +293,144 @@
     animation: gel-spin 0.6s linear infinite;
   }
 
+  /* Platform chips — white labels; lighter brand fills are deepened slightly for contrast */
+
   .gel-btn--lever {
     color: #ffffff;
-    background: linear-gradient(to bottom, #3d8bff, #0066ff);
-    border-color: #0052cc;
+    background: linear-gradient(to bottom, #6b9fd4, #4678b8);
+    border-color: #3a6499;
   }
 
   .gel-btn--greenhouse {
     color: #ffffff;
-    background: linear-gradient(to bottom, #3dcc6e, #1a9a3e);
-    border-color: #147a30;
+    background: linear-gradient(to bottom, #4ba88e, #2e8f75);
+    border-color: #256b58;
   }
 
   .gel-btn--ashby {
     color: #ffffff;
-    background: linear-gradient(to bottom, #8b8df7, #6366f1);
-    border-color: #4f46e5;
+    background: linear-gradient(to bottom, #7d72d4, #5e54b8);
+    border-color: #4a4299;
   }
 
   .gel-btn--smartrecruiters {
     color: #ffffff;
-    background: linear-gradient(to bottom, #e04654, #c2185b);
-    border-color: #ad1457;
+    background: linear-gradient(to bottom, #4a9d7e, #357a63);
+    border-color: #2d6350;
   }
 
   .gel-btn--workable {
     color: #ffffff;
-    background: linear-gradient(to bottom, #20c9a0, #0a8f6f);
-    border-color: #077a5e;
+    background: linear-gradient(to bottom, #2a8f82, #1d7267);
+    border-color: #155a52;
   }
 
   .gel-btn--bamboohr {
     color: #ffffff;
-    background: linear-gradient(to bottom, #5dc064, #3d9142);
-    border-color: #2f7a34;
+    background: linear-gradient(to bottom, #7aa622, #5c8012);
+    border-color: #4a6810;
   }
 
   .gel-btn--brassring {
     color: #ffffff;
-    background: linear-gradient(to bottom, #4a6fa5, #2d4a73);
-    border-color: #243d5e;
+    background: linear-gradient(to bottom, #5c8fd8, #3b6fc9);
+    border-color: #2d5aa8;
   }
 
   .gel-btn--successfactors {
     color: #ffffff;
-    background: linear-gradient(to bottom, #4da8da, #1a73a7);
-    border-color: #15608c;
+    background: linear-gradient(to bottom, #4d94e8, #2b7cd9);
+    border-color: #2568b8;
   }
 
   .gel-btn--rippling {
     color: #ffffff;
-    background: linear-gradient(to bottom, #7c5cfc, #5a3ed6);
-    border-color: #4a32b8;
+    background: linear-gradient(to bottom, #d4a832, #b8891a);
+    border-color: #967514;
   }
 
   .gel-btn--icims {
     color: #ffffff;
-    background: linear-gradient(to bottom, #e07518, #b8540a);
-    border-color: #964508;
+    background: linear-gradient(to bottom, #8f7bd0, #6f5cb8);
+    border-color: #5a4a9a;
   }
 
   .gel-btn--dover {
     color: #ffffff;
-    background: linear-gradient(to bottom, #6c7bef, #4754c4);
-    border-color: #3b45a3;
+    background: linear-gradient(to bottom, #4a9e8c, #358274);
+    border-color: #2d6b5f;
   }
 
   .gel-btn--workday {
     color: #ffffff;
-    background: linear-gradient(to bottom, #f26b5b, #d44a3a);
-    border-color: #b83d2f;
+    background: linear-gradient(to bottom, #d97d35, #b86220);
+    border-color: #8f4e18;
   }
 
   .gel-btn--oracle-hcm {
     color: #ffffff;
-    background: linear-gradient(to bottom, #e84c3d, #c0392b);
-    border-color: #a33025;
+    background: linear-gradient(to bottom, #e84848, #d32f2f);
+    border-color: #a82828;
   }
 
   .gel-btn--jobvite {
     color: #ffffff;
-    background: linear-gradient(to bottom, #5b9bd5, #3a7bbf);
-    border-color: #2f66a0;
+    background: linear-gradient(to bottom, #5c9bc0, #4580a8);
+    border-color: #35688c;
   }
 
   .gel-btn--avature {
     color: #ffffff;
-    background: linear-gradient(to bottom, #26b5a0, #1a8a79);
-    border-color: #157466;
+    background: linear-gradient(to bottom, #3a9cc4, #2a7fa0);
+    border-color: #256682;
   }
 
   .gel-btn--gem {
     color: #ffffff;
-    background: linear-gradient(to bottom, #18b88a, #0e8f68);
-    border-color: #0c7556;
+    background: linear-gradient(to bottom, #4bb8a8, #369486);
+    border-color: #2d786c;
   }
 
   .gel-btn--teamtailor {
     color: #ffffff;
-    background: linear-gradient(to bottom, #d8689a, #b84272);
-    border-color: #9a3660;
+    background: linear-gradient(to bottom, #e8739c, #d45882);
+    border-color: #b04768;
   }
 
   .gel-btn--recruitee {
     color: #ffffff;
-    background: linear-gradient(to bottom, #3ac4d6, #2295a5);
-    border-color: #1c7f8d;
+    background: linear-gradient(to bottom, #3db4dc, #2896c4);
+    border-color: #1f7aa0;
   }
 
   .gel-btn--personio {
     color: #ffffff;
-    background: linear-gradient(to bottom, #9b6dd7, #7644b8);
-    border-color: #63389c;
+    background: linear-gradient(to bottom, #8b82e0, #6f66c8);
+    border-color: #5a54a8;
   }
 
   .gel-btn--breezy {
     color: #ffffff;
-    background: linear-gradient(to bottom, #5bbf54, #3f9434);
-    border-color: #347a2b;
+    background: linear-gradient(to bottom, #1db99a, #159a80);
+    border-color: #127a66;
   }
 
   .gel-btn--jazzhr {
     color: #ffffff;
-    background: linear-gradient(to bottom, #e09010, #b8700a);
-    border-color: #956008;
+    background: linear-gradient(to bottom, #d08030, #b86a1e);
+    border-color: #8f5418;
   }
 
   .gel-btn--adp {
     color: #ffffff;
-    background: linear-gradient(to bottom, #e04040, #b83030);
-    border-color: #9c2828;
+    background: linear-gradient(to bottom, #e85a52, #d43a32);
+    border-color: #a82f28;
   }
 
   .gel-btn--paycor {
     color: #ffffff;
-    background: linear-gradient(to bottom, #6b8acd, #4a6aab);
-    border-color: #3e5a90;
+    background: linear-gradient(to bottom, #3d84b8, #2a6a96);
+    border-color: #245578;
   }
 
   .gel-btn--neutral {

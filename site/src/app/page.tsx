@@ -3,8 +3,8 @@ import { Logo } from "@/components/logo"
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-[calc(100svh-56px)] w-full max-w-xl flex-col justify-center gap-6 px-6 py-6 md:py-8">
-        <div className="flex flex-col gap-6 will-change-transform transition-transform duration-220 ease-[cubic-bezier(0.22,1,0.36,1)] has-[[data-has-history]]:max-md:-translate-y-[12vh] has-[[data-has-history]]:md:-translate-y-[14vh]">
+    <main className="mx-auto flex min-h-[calc(100svh-56px)] w-full max-w-xl flex-col justify-center gap-6 px-6 py-12">
+      <div className="flex flex-col gap-6">
         <header className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <Logo size={48} />
@@ -18,7 +18,7 @@ export default function Home() {
         </header>
 
         <JobChecker />
-        </div>
+      </div>
     </main>
   )
 }

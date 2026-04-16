@@ -1,37 +1,12 @@
 import type { Metadata } from "next"
 import { Logo } from "@/components/logo"
+import { SUPPORTED_PLATFORMS } from "@/lib/supported-platforms"
 
 export const metadata: Metadata = {
   title: "About",
   description:
     "How Old Is This Job? explains how the detector uses platform records, page metadata, and archive signals to estimate when a job was really posted.",
 }
-
-const PLATFORMS = [
-  { name: "SmartRecruiters", gelClass: "gel-btn--smartrecruiters", href: "https://www.smartrecruiters.com" },
-  { name: "Lever", gelClass: "gel-btn--lever", href: "https://www.lever.co" },
-  { name: "BambooHR", gelClass: "gel-btn--bamboohr", href: "https://www.bamboohr.com" },
-  { name: "iCIMS", gelClass: "gel-btn--icims", href: "https://www.icims.com" },
-  { name: "Dover", gelClass: "gel-btn--dover", href: "https://www.dover.io" },
-  { name: "Greenhouse", gelClass: "gel-btn--greenhouse", href: "https://www.greenhouse.io" },
-  { name: "Ashby", gelClass: "gel-btn--ashby", href: "https://www.ashbyhq.com" },
-  { name: "Workday", gelClass: "gel-btn--workday", href: "https://www.workday.com" },
-  { name: "JazzHR", gelClass: "gel-btn--jazzhr", href: "https://www.jazzhr.com" },
-  { name: "Gem", gelClass: "gel-btn--gem", href: "https://www.gem.com" },
-  { name: "SuccessFactors", gelClass: "gel-btn--successfactors", href: "https://www.successfactors.com" },
-  { name: "Workable", gelClass: "gel-btn--workable", href: "https://www.workable.com" },
-  { name: "Rippling", gelClass: "gel-btn--rippling", href: "https://www.rippling.com" },
-  { name: "ADP", gelClass: "gel-btn--adp", href: "https://www.adp.com" },
-  { name: "Paycor", gelClass: "gel-btn--paycor", href: "https://www.paycor.com" },
-  { name: "Oracle HCM", gelClass: "gel-btn--oracle-hcm", href: "https://www.oracle.com/human-capital-management" },
-  { name: "Jobvite", gelClass: "gel-btn--jobvite", href: "https://www.jobvite.com" },
-  { name: "Avature", gelClass: "gel-btn--avature", href: "https://www.avature.net" },
-  { name: "Teamtailor", gelClass: "gel-btn--teamtailor", href: "https://www.teamtailor.com" },
-  { name: "Brassring", gelClass: "gel-btn--brassring", href: "https://www.ibm.com/products/brassring" },
-  { name: "Recruitee", gelClass: "gel-btn--recruitee", href: "https://www.recruitee.com" },
-  { name: "Personio", gelClass: "gel-btn--personio", href: "https://www.personio.com" },
-  { name: "Breezy HR", gelClass: "gel-btn--breezy", href: "https://breezy.hr" },
-]
 
 const FAQ = [
   {
@@ -84,9 +59,15 @@ export default function About() {
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-neutral-900">Supported platforms</h2>
         <div className="flex flex-wrap gap-2">
-          {PLATFORMS.map((p) => (
-            <a key={p.name} href={p.href} target="_blank" rel="noopener noreferrer" className={`gel-btn gel-btn--sm ${p.gelClass}`}>
-              {p.name}
+          {SUPPORTED_PLATFORMS.map((p) => (
+            <a
+              key={p.slug}
+              href={p.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`gel-btn gel-btn--sm ${p.gelClass}`}
+            >
+              {p.displayName}
             </a>
           ))}
         </div>

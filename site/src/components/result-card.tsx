@@ -1,7 +1,9 @@
 "use client"
 
+import { Check, Copy, Trash2 } from "lucide-react"
 import { useState } from "react"
 import type { EstimateResult } from "@/lib/api"
+import { getPlatformPresentation } from "@/lib/supported-platforms"
 
 function localCalendarAgeDays(iso: string | null): number | null {
   if (!iso) return null
@@ -32,13 +34,6 @@ function formatDate(iso: string | null): string | null {
     day: "numeric",
     year: "numeric",
   })
-}
-
-const confidenceColors: Record<string, string> = {
-  high: "gel-pill--high",
-  medium: "gel-pill--medium",
-  low: "gel-pill--low",
-  unknown: "gel-pill--unknown",
 }
 
 const reliabilityDot: Record<string, string> = {
@@ -105,9 +100,15 @@ function CopyButton({ text }: { text: string }) {
     <button
       type="button"
       onClick={onCopy}
-      className="gel-btn gel-btn--sm gel-btn--neutral"
+      className="gel-btn gel-btn--xs gel-btn--neutral"
+      aria-label={copied ? "Copied to clipboard" : "Copy result to clipboard"}
+      title={copied ? "Copied" : "Copy"}
     >
-      {copied ? "Copied" : "Copy"}
+      {copied ? (
+        <Check className="size-3.5 text-emerald-600" strokeWidth={2.25} aria-hidden />
+      ) : (
+        <Copy className="size-3.5 text-neutral-400" strokeWidth={1.75} aria-hidden />
+      )}
     </button>
   )
 }
@@ -163,9 +164,9 @@ function StatusMessage({ result }: { result: EstimateResult }) {
           We checked structured data, platform APIs, and archives but couldn&apos;t find a reliable posting date for this listing.
         </p>
         {(result.warnings?.length ?? 0) > 0 && (
-          <div className="mt-1 flex flex-col gap-1">
+          <div className="mt-1 flex min-w-0 flex-col gap-1">
             {result.warnings!.map((w, i) => (
-              <p key={i} className="text-[11px] text-neutral-400">
+              <p key={i} className="truncate text-[11px] text-neutral-400" title={w}>
                 {w}
               </p>
             ))}
@@ -185,6 +186,9 @@ export function ResultCard({
   result: EstimateResult
   onRemove?: () => void
 }) {
+  const [evidenceExpanded, setEvidenceExpanded] = useState(false)
+  const [insightsExpanded, setInsightsExpanded] = useState(false)
+
   if (result.status !== "success") {
     return (
       <div className="flex flex-col gap-2">
@@ -212,23 +216,38 @@ export function ResultCard({
   const hasInsights = Object.keys(result.hidden_insights ?? {}).length > 0
   const hasWarnings = (result.warnings?.length ?? 0) > 0
   const copyText = buildCopyText(result)
+  const platformUi = getPlatformPresentation(result.platform)
 
   return (
     <div className="flex flex-col rounded-xl border border-neutral-200 bg-white overflow-hidden">
-      <div className="flex items-start justify-between px-5 py-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-xl font-semibold text-neutral-900">
+      {/* Header — primary content, most breathing room */}
+      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-xl font-semibold text-neutral-900 text-balance">
             {formatAge(displayAgeDays)}
           </span>
           {dateStr && (
             <span className="text-xs text-neutral-400">Posted {dateStr}</span>
           )}
         </div>
-
+        <div className="flex shrink-0 items-center gap-1">
+          <CopyButton text={copyText} />
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="gel-btn gel-btn--xs gel-btn--neutral"
+              aria-label="Remove from history"
+              title="Remove"
+            >
+              <Trash2 className="size-3.5 text-neutral-400" strokeWidth={1.75} aria-hidden />
+            </button>
+          )}
+        </div>
       </div>
 
       {result.reposted_likely && (
-        <div className="flex items-center gap-2 border-t border-amber-100 bg-amber-50/60 px-5 py-2">
+        <div className="flex items-center gap-2 border-t border-amber-100 bg-amber-50/60 px-5 py-2.5">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-amber-600">
             <polyline points="23 4 23 10 17 10" />
             <polyline points="1 20 1 14 7 14" />
@@ -240,10 +259,11 @@ export function ResultCard({
         </div>
       )}
 
+      {/* Job meta — secondary content */}
       {hasMeta && (
-        <div className="flex flex-col gap-1 border-t border-neutral-100 px-5 py-3">
+        <div className="flex flex-col gap-1 border-t border-neutral-100 px-5 py-4">
           {result.title && (
-            <span className="text-sm font-medium text-neutral-800">{result.title}</span>
+            <span className="text-sm font-medium text-neutral-800 text-balance">{result.title}</span>
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {result.company && (
@@ -259,10 +279,22 @@ export function ResultCard({
         </div>
       )}
 
-      <div className="flex items-center gap-2 border-t border-neutral-100 px-5 py-2.5">
-        <span className="gel-pill gel-pill--neutral">
-          {result.platform}
-        </span>
+      {/* Platform / source — compact utility row */}
+      <div className="flex flex-wrap items-center gap-2 border-t border-neutral-100 px-5 py-3">
+        {platformUi.href ? (
+          <a
+            href={platformUi.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`gel-btn gel-btn--sm ${platformUi.gelClass} no-underline`}
+          >
+            {platformUi.displayName}
+          </a>
+        ) : (
+          <span className={`gel-btn gel-btn--sm ${platformUi.gelClass} pointer-events-none`}>
+            {platformUi.displayName}
+          </span>
+        )}
         {result.chosen_source && (
           <>
             <span className="text-[11px] text-neutral-400">
@@ -276,27 +308,35 @@ export function ResultCard({
         )}
       </div>
 
+      {/* Collapsible sections — compact toggle rows */}
       {(result.all_dates?.length ?? 0) > 0 && (
         <div className="border-t border-neutral-100">
-          <details>
-            <summary className="cursor-pointer px-5 py-2.5 text-[11px] font-medium text-neutral-400 transition-colors hover:text-neutral-600">
+          <button
+            type="button"
+            onClick={() => setEvidenceExpanded((open) => !open)}
+            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-400 transition-colors hover:text-neutral-600"
+          >
+            <span>
               Evidence ({result.all_dates!.length} date
               {result.all_dates!.length !== 1 ? "s" : ""} found)
-            </summary>
-            <div className="border-t border-neutral-100">
+            </span>
+            <span className="text-neutral-400">{evidenceExpanded ? "Hide" : "Show"}</span>
+          </button>
+          {evidenceExpanded && (
+            <div className="flex flex-col gap-3 px-5 pb-4 pt-1">
               {result.all_dates!.map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 px-5 py-2 text-[11px] border-b border-neutral-50 last:border-b-0"
+                  className="flex items-start gap-3 text-[11px]"
                 >
-                  <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center">
+                  <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                     <span
                       className={`inline-block gel-dot ${reliabilityDot[item.reliability]}`}
                     />
                   </span>
                   <div className="flex flex-1 flex-col gap-0.5">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-mono text-neutral-700">{item.date}</span>
+                      <span className="font-mono tabular-nums text-neutral-700">{item.date}</span>
                       <span className="text-neutral-400">
                         {kindLabel[item.kind] ?? item.kind}
                       </span>
@@ -306,27 +346,34 @@ export function ResultCard({
                       {item.field ? `.${item.field}` : ""}
                     </span>
                     {item.note && (
-                      <span className="text-neutral-400 italic">{item.note}</span>
+                      <span className="text-neutral-400 italic text-pretty">{item.note}</span>
                     )}
                   </div>
                 </div>
               ))}
             </div>
-          </details>
+          )}
         </div>
       )}
 
       {hasInsights && (
         <div className="border-t border-neutral-100">
-          <details>
-            <summary className="cursor-pointer px-5 py-2.5 text-[11px] font-medium text-neutral-400 transition-colors hover:text-neutral-600">
+          <button
+            type="button"
+            onClick={() => setInsightsExpanded((open) => !open)}
+            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-400 transition-colors hover:text-neutral-600"
+          >
+            <span>
               Hidden insights ({Object.keys(result.hidden_insights ?? {}).length})
-            </summary>
-            <div className="border-t border-neutral-100">
+            </span>
+            <span className="text-neutral-400">{insightsExpanded ? "Hide" : "Show"}</span>
+          </button>
+          {insightsExpanded && (
+            <div className="flex flex-col gap-3 px-5 pb-4 pt-1">
               {Object.entries(result.hidden_insights ?? {}).map(([key, value]) => (
                 <div
                   key={key}
-                  className="flex items-baseline gap-2 px-5 py-2 text-[11px] border-b border-neutral-50 last:border-b-0"
+                  className="flex items-baseline gap-2 text-[11px]"
                 >
                   <span className="shrink-0 text-neutral-400">{key}</span>
                   <span className="truncate font-mono text-neutral-600">
@@ -335,32 +382,24 @@ export function ResultCard({
                 </div>
               ))}
             </div>
-          </details>
+          )}
         </div>
       )}
 
+      {/* Warnings — compact auxiliary */}
       {hasWarnings && (
-        <div className="border-t border-neutral-100 px-5 py-2.5">
+        <div className="min-w-0 border-t border-neutral-100 px-5 py-2.5">
           {result.warnings!.map((w, i) => (
-            <p key={i} className="text-[11px] text-neutral-400 leading-relaxed">
+            <p
+              key={i}
+              className="truncate text-[11px] text-neutral-400"
+              title={w}
+            >
               {w}
             </p>
           ))}
         </div>
       )}
-
-      <div className="flex items-center justify-end gap-2 border-t border-neutral-100 bg-neutral-50/40 px-5 py-2.5">
-        <CopyButton text={copyText} />
-        {onRemove && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="gel-btn gel-btn--sm gel-btn--neutral"
-          >
-            Remove
-          </button>
-        )}
-      </div>
     </div>
   )
 }

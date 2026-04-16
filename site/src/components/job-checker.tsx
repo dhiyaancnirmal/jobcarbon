@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 
 import {
   clearHistory,
@@ -91,6 +91,17 @@ function useTypingPlaceholder(urls: string[], paused: boolean) {
   return placeholder
 }
 
+const HISTORY_CACHE_KEY = "jobcarbon-history"
+
+function readCachedHistory(): HistoryItem[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_CACHE_KEY)
+    return raw ? (JSON.parse(raw) as HistoryItem[]) : []
+  } catch {
+    return []
+  }
+}
+
 export function JobChecker() {
   const invalidShakeTimeoutRef = useRef<number>(0)
   const invalidShakeFrameRef = useRef<number>(0)
@@ -103,6 +114,28 @@ export function JobChecker() {
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [toasts, setToasts] = useState<ToastItem[]>([])
+
+  // Pre-populate from localStorage before first paint to avoid flash of empty state
+  useLayoutEffect(() => {
+    const cached = readCachedHistory()
+    if (cached.length > 0) setHistory(cached)
+  }, [])
+
+  // Keep localStorage in sync with any history change
+  useEffect(() => {
+    try {
+      localStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify(history))
+    } catch {}
+  }, [history])
+
+  // Keep html[data-has-history] in sync so CSS reacts to runtime changes (loading, clear)
+  useEffect(() => {
+    if (history.length > 0 || loading) {
+      document.documentElement.setAttribute('data-has-history', '')
+    } else {
+      document.documentElement.removeAttribute('data-has-history')
+    }
+  }, [history, loading])
 
   const dismissToast = useCallback((id: string) => {
     setToasts((cur) => cur.filter((t) => t.id !== id))
@@ -262,16 +295,15 @@ export function JobChecker() {
     setExpandedId(null)
   }
 
-  const placeholder = useTypingPlaceholder(PLACEHOLDER_URLS, !!url || loading)
-
   const hasHistory = history.length > 0
+
+  const placeholder = useTypingPlaceholder(PLACEHOLDER_URLS, !!url || loading || hasHistory)
 
   return (
     <>
       <Toasts items={toasts} onDismiss={dismissToast} />
       <div
         className="flex w-full flex-col gap-6"
-        data-has-history={hasHistory || loading ? "true" : undefined}
       >
       <div className="flex flex-col gap-2">
         <form
@@ -282,7 +314,7 @@ export function JobChecker() {
           <input
             type="url"
             required
-            placeholder={url ? "https://careers.example.com/jobs/…" : placeholder}
+            placeholder={url || hasHistory ? "https://careers.example.com/jobs/123" : placeholder}
             value={url}
             onChange={(event) => {
               setUrl(event.target.value)
@@ -326,7 +358,7 @@ export function JobChecker() {
         />
       )}
 
-      {historyReady && !hasHistory && !loading && (
+      {!hasHistory && !loading && (
         <div className="flex flex-col gap-4 -mx-6">
           <p className="px-6 text-xs text-neutral-400">23+ platforms supported</p>
           <PlatformCarousel />
