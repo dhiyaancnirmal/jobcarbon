@@ -18,16 +18,29 @@ def load_json(name: str) -> Any:
 
 
 class FakeResponse:
-    def __init__(self, *, text: str = "", json_data: Any = None, status_code: int = 200) -> None:
+    def __init__(
+        self, *, text: str = "", json_data: Any = None, status_code: int = 200
+    ) -> None:
         self.text = text
         self._json_data = json_data
         self.status_code = status_code
+        self._force_json_error = False
+
+    @classmethod
+    def malformed_json(
+        cls, *, text: str = "", status_code: int = 200
+    ) -> "FakeResponse":
+        inst = cls(text=text, status_code=status_code)
+        inst._force_json_error = True
+        return inst
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
             raise jobcarbon.HTTPRequestError(f"HTTP {self.status_code}")
 
     def json(self) -> Any:
+        if self._force_json_error:
+            raise json.JSONDecodeError("Expecting value", self.text or "", 0)
         if self._json_data is not None:
             return self._json_data
         return json.loads(self.text)
@@ -44,19 +57,27 @@ class FakeSession:
 class JobcarbonIntegrationTests(unittest.TestCase):
     def test_jsonld_primary_path_returns_rich_success_result(self) -> None:
         target_url = "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694"
-        session = FakeSession({target_url: FakeResponse(text=load_text("lever_job_page.html"))})
+        session = FakeSession(
+            {target_url: FakeResponse(text=load_text("lever_job_page.html"))}
+        )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 1))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2024, 3, 1)
+        )
 
         self.assertEqual(result["platform"], "lever")
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["likely_posted_date"], "2021-10-21")
         self.assertEqual(result["confidence"], "high")
         self.assertEqual(result["chosen_source"]["source"], "jsonld.jobposting")
-        self.assertTrue(any(item["field"] == "datePosted" for item in result["all_dates"]))
+        self.assertTrue(
+            any(item["field"] == "datePosted" for item in result["all_dates"])
+        )
 
     def test_greenhouse_api_beats_refresh_and_archive_signals(self) -> None:
-        target_url = "https://job-boards.greenhouse.io/applytogreenspark/jobs/4169702004"
+        target_url = (
+            "https://job-boards.greenhouse.io/applytogreenspark/jobs/4169702004"
+        )
         session = FakeSession(
             {
                 target_url: FakeResponse(text=load_text("no_jsonld_page.html")),
@@ -69,24 +90,32 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 1))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2024, 3, 1)
+        )
 
         self.assertEqual(result["likely_posted_date"], "2021-11-03")
         self.assertEqual(result["chosen_source"]["source"], "greenhouse.api")
-        self.assertTrue(any(item["field"] == "updated_at" for item in result["all_dates"]))
+        self.assertTrue(
+            any(item["field"] == "updated_at" for item in result["all_dates"])
+        )
         self.assertTrue(any(item["kind"] == "archive" for item in result["all_dates"]))
 
     def test_smartrecruiters_api_handles_js_blocked_page(self) -> None:
         target_url = "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer"
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><body>Please enable JS and disable any ad blocker</body></html>"),
+                target_url: FakeResponse(
+                    text="<html><body>Please enable JS and disable any ad blocker</body></html>"
+                ),
                 "https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000103790775": FakeResponse(
                     text=json.dumps(
                         {
                             "name": "Software Engineer",
                             "company": {"name": "ServiceNow"},
-                            "location": {"fullLocation": "San Diego, California, United States"},
+                            "location": {
+                                "fullLocation": "San Diego, California, United States"
+                            },
                             "typeOfEmployment": {"label": "Full-time"},
                             "releasedDate": "2026-02-13T18:34:40.956Z",
                             "department": {"label": "Customer Outcomes"},
@@ -102,7 +131,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "smartrecruiters")
         self.assertEqual(result["company"], "ServiceNow")
@@ -114,7 +145,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         target_url = "https://apply.workable.com/remote/j/8D1C44BDF7/"
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><body><div id='app'></div></body></html>"),
+                target_url: FakeResponse(
+                    text="<html><body><div id='app'></div></body></html>"
+                ),
                 "https://r.jina.ai/http://apply.workable.com/remote/j/8D1C44BDF7": FakeResponse(
                     text="Senior Engineer\nDate Posted: March 3, 2024\nRemote"
                 ),
@@ -124,13 +157,17 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 10))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2024, 3, 10)
+        )
 
         self.assertEqual(result["platform"], "workable")
         self.assertEqual(result["likely_posted_date"], "2024-03-03")
         self.assertEqual(result["chosen_source"]["source"], "jina.render")
 
-    def test_ashby_api_prefers_localized_published_timestamp_over_date_only_jsonld(self) -> None:
+    def test_ashby_api_prefers_localized_published_timestamp_over_date_only_jsonld(
+        self,
+    ) -> None:
         target_url = "https://jobs.ashbyhq.com/AfterQuery/489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3/application"
         session = FakeSession(
             {
@@ -145,7 +182,10 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                                 "title": "Strategic Projects Intern",
                                 "datePosted": "2026-04-14",
                                 "employmentType": "INTERN",
-                                "hiringOrganization": {"@type": "Organization", "name": "AfterQuery"},
+                                "hiringOrganization": {
+                                    "@type": "Organization",
+                                    "name": "AfterQuery",
+                                },
                             }
                         )
                         + "</script>"
@@ -178,15 +218,21 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "ashby")
         self.assertEqual(result["likely_posted_date"], "2026-04-13")
         self.assertEqual(result["chosen_source"]["source"], "ashby.api")
-        self.assertEqual(result["hidden_insights"]["posting_timezone"], "America/Los_Angeles")
+        self.assertEqual(
+            result["hidden_insights"]["posting_timezone"], "America/Los_Angeles"
+        )
         self.assertIn("America/Los_Angeles", result["chosen_source"]["note"])
 
-    def test_rippling_embedded_next_data_supplies_created_on_and_hidden_metadata(self) -> None:
+    def test_rippling_embedded_next_data_supplies_created_on_and_hidden_metadata(
+        self,
+    ) -> None:
         target_url = "https://ats.rippling.com/rippling/jobs/bda12f6a-6afc-45af-8e6a-b0056facf15c"
         session = FakeSession(
             {
@@ -236,7 +282,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "rippling")
         self.assertEqual(result["company"], "Rippling")
@@ -246,7 +294,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["chosen_source"]["source"], "rippling.embedded")
         self.assertEqual(result["hidden_insights"]["department"], "Bizops")
         self.assertTrue(result["hidden_insights"]["ai_evaluations_enabled"])
-        self.assertEqual(result["hidden_insights"]["pay_range_details"][0]["currency"], "USD")
+        self.assertEqual(
+            result["hidden_insights"]["pay_range_details"][0]["currency"], "USD"
+        )
 
     def test_icims_api_uses_base_href_host_and_prefers_posted_date(self) -> None:
         target_url = "https://globalcareers-customer0.icims.com/jobs/6341/login"
@@ -281,14 +331,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         }
                     )
                 ),
-                "https://globalcareers-customer0.icims.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://globalcareers-customer0.icims.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fglobalcareers-customer0.icims.com%2Fjobs%2F6341%2Flogin&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "icims")
         self.assertEqual(result["company"], "iCIMS")
@@ -298,13 +352,87 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["chosen_source"]["source"], "icims.api")
         self.assertEqual(result["hidden_insights"]["category"], "Customer Success")
         self.assertEqual(result["hidden_insights"]["location_type"], "remote")
-        self.assertTrue(any(item["field"] == "update_date" for item in result["all_dates"]))
+        self.assertTrue(
+            any(item["field"] == "update_date" for item in result["all_dates"])
+        )
 
-    def test_dover_api_returns_created_date_and_metadata(self) -> None:
-        target_url = "https://app.dover.com/apply/netnow/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff"
+    def test_icims_malformed_api_payload_is_warning_not_crash(self) -> None:
+        target_url = (
+            "https://careers-peraton.icims.com/jobs/164159/senior-ai-ml-engineer/job"
+        )
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><body><div id='root'></div></body></html>"),
+                target_url: FakeResponse(
+                    text=(
+                        '<html><head><base href="https://careers-peraton.icims.com/careers-home" />'
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://careers-peraton.icims.com/api/jobs?limit=100&page=1": FakeResponse.malformed_json(
+                    text="not-json"
+                ),
+                "https://careers-peraton.icims.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fcareers-peraton.icims.com%2Fjobs%2F164159%2Fsenior-ai-ml-engineer%2Fjob&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 16)
+        )
+
+        self.assertEqual(result["platform"], "icims")
+        self.assertEqual(result["status"], "no_date")
+        self.assertTrue(
+            any(
+                "iCIMS API fallback failed" in warning for warning in result["warnings"]
+            )
+        )
+
+    def test_lever_malformed_api_payload_is_warning_not_crash(self) -> None:
+        target_url = "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text="<html><body><div id='app'></div></body></html>"
+                ),
+                "https://api.lever.co/v0/postings/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694?mode=json": FakeResponse.malformed_json(
+                    text="invalid-json"
+                ),
+                "https://r.jina.ai/http://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694": FakeResponse(
+                    text="No visible date"
+                ),
+                "https://jobs.lever.co/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.lever.co%2Fskio%2Fbbdd5a7b-652a-43ad-b92e-58f4e970c694&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 16)
+        )
+
+        self.assertEqual(result["platform"], "lever")
+        self.assertEqual(result["status"], "no_date")
+        self.assertTrue(
+            any(
+                "Lever API fallback failed" in warning for warning in result["warnings"]
+            )
+        )
+
+    def test_dover_api_returns_created_date_and_metadata(self) -> None:
+        target_url = (
+            "https://app.dover.com/apply/netnow/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff"
+        )
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text="<html><body><div id='root'></div></body></html>"
+                ),
                 "https://app.dover.com/api/v1/inbound/application-portal-job/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff": FakeResponse(
                     text=json.dumps(
                         {
@@ -334,15 +462,21 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "dover")
         self.assertEqual(result["company"], "Netnow")
         self.assertEqual(result["employment_type"], "FULL_TIME")
         self.assertEqual(result["likely_posted_date"], "2025-07-16")
         self.assertEqual(result["chosen_source"]["source"], "dover.api")
-        self.assertEqual(result["hidden_insights"]["workplace_types"], ["hybrid", "remote"])
-        self.assertEqual(result["hidden_insights"]["compensation"]["currency_code"], "CAD")
+        self.assertEqual(
+            result["hidden_insights"]["workplace_types"], ["hybrid", "remote"]
+        )
+        self.assertEqual(
+            result["hidden_insights"]["compensation"]["currency_code"], "CAD"
+        )
 
     def test_bamboohr_api_returns_date_posted_and_metadata(self) -> None:
         target_url = "https://signal1.bamboohr.com/careers/39"
@@ -387,14 +521,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         }
                     )
                 ),
-                "https://signal1.bamboohr.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://signal1.bamboohr.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fsignal1.bamboohr.com%2Fcareers%2F39&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "bamboohr")
         self.assertEqual(result["company"], "Signal 1")
@@ -403,7 +541,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["employment_type"], "Full-Time")
         self.assertEqual(result["likely_posted_date"], "2026-02-24")
         self.assertEqual(result["chosen_source"]["source"], "bamboohr.api")
-        self.assertEqual(result["hidden_insights"]["department"], "Application Engineering")
+        self.assertEqual(
+            result["hidden_insights"]["department"], "Application Engineering"
+        )
         self.assertEqual(result["hidden_insights"]["location_type"], "Hybrid")
         self.assertEqual(result["hidden_insights"]["compensation"]["currency"], "CAD")
 
@@ -443,7 +583,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "jobvite")
         self.assertEqual(result["company"], "Clinch")
@@ -468,14 +610,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "</head><body></body></html>"
                     )
                 ),
-                "https://sjobs.brassring.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://sjobs.brassring.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fsjobs.brassring.com%2FTGnewUI%2FSearch%2Fhome%2FHomeWithPreLoad%3FPageType%3DJobDetails%26jobid%3D2244127%26partnerid%3D25633%26siteid%3D5439&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "brassring")
         self.assertEqual(result["title"], "Java Developer")
@@ -492,7 +638,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "<html lang='en-US'><head>"
                         "<meta itemprop='datePosted' content='Thu Apr 02 00:00:00 UTC 2026' />"
                         "</head><body>"
-                        "<script>j2w.init({\"ssoCompanyId\":\"SAP\"});</script>"
+                        '<script>j2w.init({"ssoCompanyId":"SAP"});</script>'
                         "<img src='https://rmkcdn.successfactors.com/example.jpg'/>"
                         "</body></html>"
                     )
@@ -516,7 +662,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "successfactors")
         self.assertEqual(result["title"], "Senior Developer")
@@ -563,20 +711,26 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "</urlset>"
                     )
                 ),
-                "https://bloomberg.avature.net/sitemap.xml": FakeResponse(status_code=404),
+                "https://bloomberg.avature.net/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fbloomberg.avature.net%2Fcareers%2FJobDetail%2FSenior-Software-Engineer-BQuant%2F4661&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "avature")
         self.assertEqual(result["title"], "Senior Software Engineer - BQuant")
         self.assertEqual(result["likely_posted_date"], "2024-08-05")
         self.assertEqual(result["chosen_source"]["source"], "avature.feed")
-        self.assertTrue(any(item["source"] == "avature.sitemap" for item in result["all_dates"]))
+        self.assertTrue(
+            any(item["source"] == "avature.sitemap" for item in result["all_dates"])
+        )
 
     def test_amazon_jobs_search_json_returns_posted_date(self) -> None:
         target_url = "https://www.amazon.jobs/en/jobs/3202233/software-engineer-amazon"
@@ -616,7 +770,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "custom_backend")
         self.assertEqual(result["company"], "Amazon")
@@ -625,7 +781,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["employment_type"], "full-time")
         self.assertEqual(result["likely_posted_date"], "2026-03-03")
         self.assertEqual(result["chosen_source"]["source"], "amazon_jobs.api")
-        self.assertEqual(result["hidden_insights"]["job_category"], "Software Development")
+        self.assertEqual(
+            result["hidden_insights"]["job_category"], "Software Development"
+        )
 
     def test_stripe_greenhouse_lookup_returns_first_published(self) -> None:
         target_url = "https://stripe.com/jobs/listing/account-executive-hunter-uk-enterprise-retail/7451366"
@@ -653,11 +811,15 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "greenhouse")
         self.assertEqual(result["company"], "Stripe")
-        self.assertEqual(result["title"], "Account Executive (Hunter) , UK Enterprise Retail")
+        self.assertEqual(
+            result["title"], "Account Executive (Hunter) , UK Enterprise Retail"
+        )
         self.assertEqual(result["location"], "London")
         self.assertEqual(result["likely_posted_date"], "2025-12-15")
         self.assertEqual(result["chosen_source"]["source"], "stripe.greenhouse")
@@ -699,11 +861,16 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "oracle_hcm")
         self.assertEqual(result["company"], "Goldman Sachs")
-        self.assertEqual(result["title"], "Engineering-L2-Bengaluru-Vice President-Software Engineering")
+        self.assertEqual(
+            result["title"],
+            "Engineering-L2-Bengaluru-Vice President-Software Engineering",
+        )
         self.assertEqual(result["location"], "Bengaluru, Karnataka, India")
         self.assertEqual(result["likely_posted_date"], "2026-03-13")
         self.assertEqual(result["chosen_source"]["source"], "goldman_sachs.oracle")
@@ -713,14 +880,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         session = FakeSession(
             {
                 target_url: FakeResponse(text="<html><body></body></html>"),
-                "https://jobs.bendingspoons.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://jobs.bendingspoons.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.bendingspoons.com%2Fpositions%2F6617c4b6b0f3c7a11f8d2a8e&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "custom_backend")
         self.assertEqual(result["company"], "Bending Spoons")
@@ -728,7 +899,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["chosen_source"]["source"], "bendingspoons.objectid")
 
     def test_teamtailor_page_metadata_supports_platform_and_posted_date(self) -> None:
-        target_url = "https://career.teamtailor.com/jobs/7217456-head-of-group-accounting"
+        target_url = (
+            "https://career.teamtailor.com/jobs/7217456-head-of-group-accounting"
+        )
         session = FakeSession(
             {
                 target_url: FakeResponse(
@@ -740,14 +913,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "</head><body></body></html>"
                     )
                 ),
-                "https://career.teamtailor.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://career.teamtailor.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fcareer.teamtailor.com%2Fjobs%2F7217456-head-of-group-accounting&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "teamtailor")
         self.assertEqual(result["likely_posted_date"], "2026-02-12")
@@ -757,7 +934,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         target_url = "https://mcdugaldsteele.recruitee.com/o/start-your-career-with-mcdugald-steele"
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><head><title>Start your Career with McDugald Steele!</title></head><body></body></html>"),
+                target_url: FakeResponse(
+                    text="<html><head><title>Start your Career with McDugald Steele!</title></head><body></body></html>"
+                ),
                 "https://mcdugaldsteele.recruitee.com/api/offers/start-your-career-with-mcdugald-steele": FakeResponse(
                     text=json.dumps(
                         {
@@ -781,14 +960,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         }
                     )
                 ),
-                "https://mcdugaldsteele.recruitee.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://mcdugaldsteele.recruitee.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fmcdugaldsteele.recruitee.com%2Fo%2Fstart-your-career-with-mcdugald-steele&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "recruitee")
         self.assertEqual(result["company"], "McDugald Steele")
@@ -802,7 +985,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         target_url = "https://contabo.jobs.personio.de/job/2563171?language=en"
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><head><title>Lead Software Developer</title></head><body></body></html>"),
+                target_url: FakeResponse(
+                    text="<html><head><title>Lead Software Developer</title></head><body></body></html>"
+                ),
                 "https://contabo.jobs.personio.de/xml?language=en": FakeResponse(
                     text=(
                         "<?xml version='1.0' encoding='UTF-8'?>"
@@ -819,14 +1004,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "</workzag-jobs>"
                     )
                 ),
-                "https://contabo.jobs.personio.de/sitemap.xml": FakeResponse(status_code=404),
+                "https://contabo.jobs.personio.de/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fcontabo.jobs.personio.de%2Fjob%2F2563171%3Flanguage%3Den&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "personio")
         self.assertEqual(result["company"], "Contabo GmbH")
@@ -836,7 +1025,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["department"], "Engineering")
 
     def test_breezy_embedded_payload_returns_first_publish_date(self) -> None:
-        target_url = "https://jobs.breezy.hr/p/865698971aa0-customer-success-agent/apply"
+        target_url = (
+            "https://jobs.breezy.hr/p/865698971aa0-customer-success-agent/apply"
+        )
         payload = {
             "_id": "865698971aa0",
             "name": "Customer Success Agent",
@@ -866,7 +1057,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "breezy")
         self.assertEqual(result["company"], "Breezy HR")
@@ -888,14 +1081,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "</head><body></body></html>"
                     )
                 ),
-                "https://publiccitizen.applytojob.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://publiccitizen.applytojob.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fpubliccitizen.applytojob.com%2Fapply%2FVZj90FMXn0%2FDemocracy-Team-Manager&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "jazzhr")
         self.assertEqual(result["company"], "Public Citizen")
@@ -927,7 +1124,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                                 "offices": [
                                     {
                                         "name": "San Francisco",
-                                        "location": {"name": "San Francisco, United States"},
+                                        "location": {
+                                            "name": "San Francisco, United States"
+                                        },
                                     }
                                 ],
                                 "internal_job_id": "4029987002",
@@ -943,7 +1142,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "gem")
         self.assertEqual(result["company"], "Gem")
@@ -953,7 +1154,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["likely_posted_date"], "2026-02-21")
         self.assertEqual(result["chosen_source"]["source"], "gem.api")
         self.assertEqual(result["hidden_insights"]["department"], "Engineering")
-        self.assertEqual(result["hidden_insights"]["offices"], ["San Francisco, United States"])
+        self.assertEqual(
+            result["hidden_insights"]["offices"], ["San Francisco, United States"]
+        )
 
     def test_sitemap_and_wayback_remain_comparison_evidence(self) -> None:
         target_url = "https://example.com/jobs/123"
@@ -980,12 +1183,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 3, 10))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2024, 3, 10)
+        )
 
         self.assertEqual(result["likely_posted_date"], "2024-03-01")
         self.assertEqual(result["chosen_source"]["field"], "article:published_time")
-        self.assertTrue(any(item["source"] == "sitemap" for item in result["all_dates"]))
-        self.assertTrue(any(item["source"] == "wayback.cdx" for item in result["all_dates"]))
+        self.assertTrue(
+            any(item["source"] == "sitemap" for item in result["all_dates"])
+        )
+        self.assertTrue(
+            any(item["source"] == "wayback.cdx" for item in result["all_dates"])
+        )
 
     def test_repost_conflict_is_flagged_when_refresh_date_is_much_newer(self) -> None:
         target_url = "https://example.com/jobs/reposted"
@@ -1008,7 +1217,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2024, 4, 1))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2024, 4, 1)
+        )
 
         self.assertEqual(result["likely_posted_date"], "2024-01-01")
         self.assertTrue(result["reposted_likely"])
@@ -1018,7 +1229,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         target_url = "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer"
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><body>Please enable JS and disable any ad blocker</body></html>"),
+                target_url: FakeResponse(
+                    text="<html><body>Please enable JS and disable any ad blocker</body></html>"
+                ),
                 "https://api.smartrecruiters.com/v1/companies/ServiceNow/postings/744000103790775": FakeResponse(
                     text=json.dumps(
                         {
@@ -1027,24 +1240,36 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                             "releasedDate": "2026-02-13T18:34:40.956Z",
                             "department": {"label": "Customer Outcomes"},
                             "customField": [
-                                {"fieldLabel": "Work Persona", "valueLabel": "Flexible"},
-                                {"fieldLabel": "Region", "valueLabel": "AMS - North America and Canada"},
+                                {
+                                    "fieldLabel": "Work Persona",
+                                    "valueLabel": "Flexible",
+                                },
+                                {
+                                    "fieldLabel": "Region",
+                                    "valueLabel": "AMS - North America and Canada",
+                                },
                             ],
                         }
                     )
                 ),
-                "https://r.jina.ai/http://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer": FakeResponse(text="No visible date"),
+                "https://r.jina.ai/http://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer": FakeResponse(
+                    text="No visible date"
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.smartrecruiters.com%2FServiceNow%2F744000103790775-software-engineer&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["hidden_insights"]["department"], "Customer Outcomes")
         self.assertEqual(result["hidden_insights"]["work_persona"], "Flexible")
-        self.assertEqual(result["hidden_insights"]["region"], "AMS - North America and Canada")
+        self.assertEqual(
+            result["hidden_insights"]["region"], "AMS - North America and Canada"
+        )
 
     def test_workable_embedded_payload_supplies_posted_date_and_metadata(self) -> None:
         target_url = "https://jobs.workable.com/view/5Sz2Mnf9VdJsXnPCvoYudJ/captain"
@@ -1055,7 +1280,11 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "shortcode": "5Sz2Mnf9VdJsXnPCvoYudJ",
                         "title": "Captain",
                         "company": {"name": "Harbor Co"},
-                        "location": {"city": "Piraeus", "region": "Attica", "country": "Greece"},
+                        "location": {
+                            "city": "Piraeus",
+                            "region": "Attica",
+                            "country": "Greece",
+                        },
                         "employmentType": "FULL_TIME",
                         "department": {"name": "Operations"},
                         "workplace": "on_site",
@@ -1080,7 +1309,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "workable")
         self.assertEqual(result["title"], "Captain")
@@ -1091,21 +1322,30 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["chosen_source"]["source"], "workable.embedded")
         self.assertEqual(result["hidden_insights"]["department"], "Operations")
         self.assertEqual(result["hidden_insights"]["workplace"], "on_site")
-        self.assertTrue(any(item["field"] == "updated" and item["kind"] == "refresh" for item in result["all_dates"]))
+        self.assertTrue(
+            any(
+                item["field"] == "updated" and item["kind"] == "refresh"
+                for item in result["all_dates"]
+            )
+        )
 
     def test_workday_cxs_api_returns_start_date_and_metadata(self) -> None:
         target_url = "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Senior-Software-Engineer_JR1990000"
         api_url = "https://nvidia.wd5.myworkdayjobs.com/wday/cxs/nvidia/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Senior-Software-Engineer_JR1990000"
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><body><div id='root'></div></body></html>"),
+                target_url: FakeResponse(
+                    text="<html><body><div id='root'></div></body></html>"
+                ),
                 api_url: FakeResponse(
                     text=json.dumps(
                         {
                             "jobPostingInfo": {
                                 "title": "Senior Software Engineer",
                                 "location": "US-CA-Santa Clara",
-                                "jobRequisitionLocation": {"descriptor": "US, CA, Santa Clara"},
+                                "jobRequisitionLocation": {
+                                    "descriptor": "US, CA, Santa Clara"
+                                },
                                 "timeType": "Full time",
                                 "jobReqId": "JR1990000",
                                 "jobPostingSiteId": "NVIDIAExternalCareerSite",
@@ -1117,14 +1357,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         }
                     )
                 ),
-                "https://nvidia.wd5.myworkdayjobs.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://nvidia.wd5.myworkdayjobs.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fnvidia.wd5.myworkdayjobs.com%2Fen-US%2FNVIDIAExternalCareerSite%2Fjob%2FUS-CA-Santa-Clara%2FSenior-Software-Engineer_JR1990000&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "workday")
         self.assertEqual(result["company"], "NVIDIA")
@@ -1134,8 +1378,15 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["likely_posted_date"], "2026-01-10")
         self.assertEqual(result["chosen_source"]["source"], "workday.cxs")
         self.assertEqual(result["hidden_insights"]["job_req_id"], "JR1990000")
-        self.assertEqual(result["hidden_insights"]["country"], "United States of America")
-        self.assertTrue(any(item["field"] == "endDate" and item["kind"] == "expiry" for item in result["all_dates"]))
+        self.assertEqual(
+            result["hidden_insights"]["country"], "United States of America"
+        )
+        self.assertTrue(
+            any(
+                item["field"] == "endDate" and item["kind"] == "expiry"
+                for item in result["all_dates"]
+            )
+        )
 
     def test_oracle_hcm_api_returns_posted_start_date_and_hidden_insights(self) -> None:
         target_url = "https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/12345"
@@ -1145,7 +1396,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         )
         session = FakeSession(
             {
-                target_url: FakeResponse(text="<html><body><div id='root'></div></body></html>"),
+                target_url: FakeResponse(
+                    text="<html><body><div id='root'></div></body></html>"
+                ),
                 api_url: FakeResponse(
                     text=json.dumps(
                         {
@@ -1165,14 +1418,18 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         }
                     )
                 ),
-                "https://eeho.fa.us2.oraclecloud.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://eeho.fa.us2.oraclecloud.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
                 "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Feeho.fa.us2.oraclecloud.com%2FhcmUI%2FCandidateExperience%2Fen%2Fsites%2FCX_1%2Fjob%2F12345&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
                     json_data=[["timestamp", "original"]]
                 ),
             }
         )
 
-        result = jobcarbon.analyze_url(target_url, session=session, today=jobcarbon.date(2026, 4, 14))
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 14)
+        )
 
         self.assertEqual(result["platform"], "oracle_hcm")
         self.assertEqual(result["title"], "Principal Backend Engineer")
@@ -1182,7 +1439,12 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["chosen_source"]["source"], "oracle_hcm.api")
         self.assertEqual(result["hidden_insights"]["category"], "Engineering")
         self.assertEqual(result["hidden_insights"]["workplace_type"], "Hybrid")
-        self.assertTrue(any(item["field"] == "ExternalPostedEndDate" and item["kind"] == "expiry" for item in result["all_dates"]))
+        self.assertTrue(
+            any(
+                item["field"] == "ExternalPostedEndDate" and item["kind"] == "expiry"
+                for item in result["all_dates"]
+            )
+        )
 
     def test_blocked_platform_returns_blocked_status(self) -> None:
         result = jobcarbon.analyze_url("https://www.indeed.com/viewjob?jk=123")

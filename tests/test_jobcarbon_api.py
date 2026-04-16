@@ -78,7 +78,9 @@ class JobcarbonAPITests(unittest.TestCase):
         )
 
         self.assertEqual(status, 200)
-        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://localhost:3000")
+        self.assertEqual(
+            headers["Access-Control-Allow-Origin"], "http://localhost:3000"
+        )
         self.assertEqual(headers["Access-Control-Allow-Credentials"], "true")
         self.assertEqual(json.loads(body), {"ok": True, "service": "jobcarbon-api"})
 
@@ -145,7 +147,9 @@ class JobcarbonAPITests(unittest.TestCase):
             method="GET",
             path="/api/v1/estimate",
             query_string="url=notaurl",
-            analyzer=lambda url: (_ for _ in ()).throw(jobcarbon.InvalidURLError("Invalid URL: notaurl")),
+            analyzer=lambda url: (_ for _ in ()).throw(
+                jobcarbon.InvalidURLError("Invalid URL: notaurl")
+            ),
             request_headers=self._origin_headers(),
         )
 
@@ -157,12 +161,30 @@ class JobcarbonAPITests(unittest.TestCase):
             method="GET",
             path="/api/v1/estimate",
             query_string="url=https%3A%2F%2Fexample.com%2Fjob",
-            analyzer=lambda url: (_ for _ in ()).throw(jobcarbon.PageFetchError("Unable to fetch job page")),
+            analyzer=lambda url: (_ for _ in ()).throw(
+                jobcarbon.PageFetchError("Unable to fetch job page")
+            ),
             request_headers=self._origin_headers(),
         )
 
         self.assertEqual(status, 502)
         self.assertEqual(json.loads(body)["error"]["code"], "upstream_fetch_failed")
+
+    def test_http_request_error_maps_to_bad_gateway_with_payload_code(self) -> None:
+        status, _, body = jobcarbon_api.handle_api_request(
+            method="GET",
+            path="/api/v1/estimate",
+            query_string="url=https%3A%2F%2Fexample.com%2Fjob",
+            analyzer=lambda url: (_ for _ in ()).throw(
+                jobcarbon.HTTPRequestError(
+                    "Malformed JSON payload for url: https://example.com/api"
+                )
+            ),
+            request_headers=self._origin_headers(),
+        )
+
+        self.assertEqual(status, 502)
+        self.assertEqual(json.loads(body)["error"]["code"], "upstream_payload_error")
 
     def test_platforms_endpoint_returns_capability_matrix(self) -> None:
         status, headers, body = jobcarbon_api.handle_api_request(
@@ -172,7 +194,9 @@ class JobcarbonAPITests(unittest.TestCase):
         )
 
         self.assertEqual(status, 200)
-        self.assertEqual(headers["Access-Control-Allow-Origin"], "http://localhost:3000")
+        self.assertEqual(
+            headers["Access-Control-Allow-Origin"], "http://localhost:3000"
+        )
         payload = json.loads(body)
         platforms = {item["platform"]: item for item in payload["platforms"]}
         self.assertIn("workable", platforms)
@@ -354,7 +378,9 @@ class JobcarbonAPITests(unittest.TestCase):
         self.assertEqual(get_b_status, 200)
         self.assertEqual(json.loads(get_a_body)["history"], [])
         self.assertEqual(len(json.loads(get_b_body)["history"]), 1)
-        self.assertEqual(json.loads(get_b_body)["history"][0]["url"], "https://jobs.lever.co/acme/b")
+        self.assertEqual(
+            json.loads(get_b_body)["history"][0]["url"], "https://jobs.lever.co/acme/b"
+        )
 
     def test_history_validates_payload(self) -> None:
         invalid_json_status, _, invalid_json_body = jobcarbon_api.handle_api_request(
@@ -369,20 +395,26 @@ class JobcarbonAPITests(unittest.TestCase):
         missing_url_status, _, missing_url_body = jobcarbon_api.handle_api_request(
             method="POST",
             path="/api/v1/history",
-            body=json.dumps({"result": sample_result("https://jobs.lever.co/acme")}).encode("utf-8"),
+            body=json.dumps(
+                {"result": sample_result("https://jobs.lever.co/acme")}
+            ).encode("utf-8"),
             request_headers=self._origin_headers(),
         )
         self.assertEqual(missing_url_status, 400)
         self.assertEqual(json.loads(missing_url_body)["error"]["code"], "missing_url")
 
-        missing_result_status, _, missing_result_body = jobcarbon_api.handle_api_request(
-            method="POST",
-            path="/api/v1/history",
-            body=json.dumps({"url": "https://jobs.lever.co/acme"}).encode("utf-8"),
-            request_headers=self._origin_headers(),
+        missing_result_status, _, missing_result_body = (
+            jobcarbon_api.handle_api_request(
+                method="POST",
+                path="/api/v1/history",
+                body=json.dumps({"url": "https://jobs.lever.co/acme"}).encode("utf-8"),
+                request_headers=self._origin_headers(),
+            )
         )
         self.assertEqual(missing_result_status, 400)
-        self.assertEqual(json.loads(missing_result_body)["error"]["code"], "missing_result")
+        self.assertEqual(
+            json.loads(missing_result_body)["error"]["code"], "missing_result"
+        )
 
     def test_options_returns_cors_headers(self) -> None:
         status, headers, body = jobcarbon_api.handle_api_request(
@@ -392,7 +424,9 @@ class JobcarbonAPITests(unittest.TestCase):
         )
 
         self.assertEqual(status, 204)
-        self.assertEqual(headers["Access-Control-Allow-Methods"], "GET, POST, DELETE, OPTIONS")
+        self.assertEqual(
+            headers["Access-Control-Allow-Methods"], "GET, POST, DELETE, OPTIONS"
+        )
         self.assertEqual(headers["Access-Control-Allow-Credentials"], "true")
         self.assertEqual(body, b"")
 

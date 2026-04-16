@@ -27,6 +27,11 @@ DEFAULT_TIMEOUT_SECONDS = 15
 MAX_HTTP_ATTEMPTS = 3
 BACKOFF_BASE_SECONDS = 0.5
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+TOTAL_ANALYSIS_BUDGET_SECONDS = 30.0
+MIN_BUDGET_FOR_RENDER_SECONDS = 4.0
+MIN_BUDGET_FOR_SITEMAP_SECONDS = 2.5
+MIN_BUDGET_FOR_WAYBACK_SECONDS = 1.5
+COMPARISON_SOURCES = {"sitemap", "wayback.cdx", "avature.sitemap"}
 DATE_KIND_PRIORITY = {
     "posted": 0,
     "published": 1,
@@ -183,14 +188,24 @@ PLATFORM_CAPABILITIES = {
         "display_name": "Paycor / Newton",
         "supported": True,
         "integration": "generic",
-        "detection": ["gnk=job", "gni query param", "newton.newtonsoftware.com", "recruitingbypaycor.com"],
+        "detection": [
+            "gnk=job",
+            "gni query param",
+            "newton.newtonsoftware.com",
+            "recruitingbypaycor.com",
+        ],
         "notes": "Platform detection with generic extraction, sitemap, and archive fallbacks.",
     },
     "successfactors": {
         "display_name": "SAP SuccessFactors",
         "supported": True,
         "integration": "direct",
-        "detection": ["successfactors in host or path", "j2w.init", "rmkcdn.successfactors.com", "ssoCompanyId"],
+        "detection": [
+            "successfactors in host or path",
+            "j2w.init",
+            "rmkcdn.successfactors.com",
+            "ssoCompanyId",
+        ],
         "notes": "SuccessFactors-powered boards expose RSS search feeds at `/services/rss/job/` and often embed durable `itemprop=datePosted` metadata on the page.",
     },
     "workday": {
@@ -225,7 +240,11 @@ PLATFORM_CAPABILITIES = {
         "display_name": "Jobvite",
         "supported": True,
         "integration": "direct",
-        "detection": ["jobs.jobvite.com", "CompanyJobs/Xml.aspx", "companyEId in page config"],
+        "detection": [
+            "jobs.jobvite.com",
+            "CompanyJobs/Xml.aspx",
+            "companyEId in page config",
+        ],
         "notes": "Public Jobvite XML feed `CompanyJobs/Xml.aspx?c={companyEId}&j={jobId}` with durable posting dates.",
     },
     "icims": {
@@ -296,15 +315,62 @@ VISIBLE_DATE_RE = re.compile(
     re.IGNORECASE,
 )
 COMMON_DATE_PATTERNS = (
-    ("datePosted", re.compile(r"datePosted[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "posted", "high"),
-    ("first_published", re.compile(r"first_published[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "posted", "high"),
-    ("published_at", re.compile(r"published_at[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "published", "medium"),
-    ("publishedAt", re.compile(r"publishedAt[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "published", "medium"),
-    ("createdAt", re.compile(r"createdAt[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "posted", "low"),
-    ("releasedDate", re.compile(r"releasedDate[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "posted", "high"),
-    ("updated_at", re.compile(r"updated_at[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "refresh", "medium"),
-    ("updatedAt", re.compile(r"updatedAt[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "refresh", "medium"),
-    ("validThrough", re.compile(r"validThrough[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE), "expiry", "medium"),
+    (
+        "datePosted",
+        re.compile(r"datePosted[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "posted",
+        "high",
+    ),
+    (
+        "first_published",
+        re.compile(
+            r"first_published[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE
+        ),
+        "posted",
+        "high",
+    ),
+    (
+        "published_at",
+        re.compile(r"published_at[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "published",
+        "medium",
+    ),
+    (
+        "publishedAt",
+        re.compile(r"publishedAt[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "published",
+        "medium",
+    ),
+    (
+        "createdAt",
+        re.compile(r"createdAt[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "posted",
+        "low",
+    ),
+    (
+        "releasedDate",
+        re.compile(r"releasedDate[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "posted",
+        "high",
+    ),
+    (
+        "updated_at",
+        re.compile(r"updated_at[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "refresh",
+        "medium",
+    ),
+    (
+        "updatedAt",
+        re.compile(r"updatedAt[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "refresh",
+        "medium",
+    ),
+    (
+        "validThrough",
+        re.compile(r"validThrough[\"']?\s*[:=]\s*[\"']([^\"']+)[\"']", re.IGNORECASE),
+        "expiry",
+        "medium",
+    ),
 )
 DATE_KEY_RULES = {
     "dateposted": ("posted", "high"),
@@ -321,9 +387,20 @@ DATE_KEY_RULES = {
     "validthrough": ("expiry", "medium"),
 }
 TEXT_TITLE_FIELDS = {"title", "name", "jobtitle"}
-TEXT_COMPANY_FIELDS = {"company", "companyname", "hiringorganization", "organization", "accountname"}
+TEXT_COMPANY_FIELDS = {
+    "company",
+    "companyname",
+    "hiringorganization",
+    "organization",
+    "accountname",
+}
 TEXT_LOCATION_FIELDS = {"location", "fulllocation", "city", "region"}
-TEXT_EMPLOYMENT_FIELDS = {"employmenttype", "typeofemployment", "employeetype", "workpersona"}
+TEXT_EMPLOYMENT_FIELDS = {
+    "employmenttype",
+    "typeofemployment",
+    "employeetype",
+    "workpersona",
+}
 HIDDEN_INSIGHT_FIELDS = {
     "department",
     "team",
@@ -407,13 +484,20 @@ class HTTPSession:
     def _backoff_seconds(self, attempt_number: int) -> float:
         return BACKOFF_BASE_SECONDS * (2 ** (attempt_number - 1))
 
-    def get(self, url: str, timeout: int) -> HTTPResponse:
+    def get(self, url: str, timeout: int | float) -> HTTPResponse:
         request = Request(url, headers=self.headers)
         last_error: HTTPRequestError | None = None
+        call_deadline = time.monotonic() + max(float(timeout), 1.0)
 
         for attempt_number in range(1, self.max_attempts + 1):
+            remaining_seconds = max(0.0, call_deadline - time.monotonic())
+            if remaining_seconds <= 0:
+                raise last_error or HTTPRequestError(
+                    f"The read operation timed out for url: {url}",
+                    retryable=True,
+                )
             try:
-                with self.opener(request, timeout=timeout) as response:
+                with self.opener(request, timeout=remaining_seconds) as response:
                     charset = response.headers.get_content_charset() or "utf-8"
                     body = response.read().decode(charset, errors="replace")
                     status_code = getattr(response, "status", response.getcode())
@@ -437,7 +521,12 @@ class HTTPSession:
             if not last_error.retryable or attempt_number >= self.max_attempts:
                 raise last_error
 
-            self.sleeper(self._backoff_seconds(attempt_number))
+            sleep_seconds = min(
+                self._backoff_seconds(attempt_number),
+                max(0.0, call_deadline - time.monotonic()),
+            )
+            if sleep_seconds > 0:
+                self.sleeper(sleep_seconds)
 
         raise last_error or HTTPRequestError(f"Unknown request failure for url: {url}")
 
@@ -528,8 +617,43 @@ class AnalysisAccumulator:
             reliability=reliability,
             note=note,
         )
-        if not any(existing.as_dict() == candidate.as_dict() for existing in self.all_dates):
+        if not any(
+            existing.as_dict() == candidate.as_dict() for existing in self.all_dates
+        ):
             self.all_dates.append(candidate)
+
+
+@dataclass
+class RequestBudget:
+    deadline_monotonic: float
+
+    @classmethod
+    def start(cls, total_seconds: float) -> "RequestBudget":
+        return cls(deadline_monotonic=time.monotonic() + max(total_seconds, 1.0))
+
+    def remaining_seconds(self) -> float:
+        return max(0.0, self.deadline_monotonic - time.monotonic())
+
+    def exhausted(self) -> bool:
+        return self.remaining_seconds() <= 0.0
+
+    def can_run(self, minimum_seconds: float = 0.0) -> bool:
+        return self.remaining_seconds() >= minimum_seconds
+
+
+class BudgetedSession:
+    def __init__(self, base_session: Any, budget: RequestBudget) -> None:
+        self.base_session = base_session
+        self.budget = budget
+
+    def get(self, url: str, timeout: int | float) -> HTTPResponse:
+        remaining = self.budget.remaining_seconds()
+        if remaining <= 0:
+            raise HTTPRequestError(
+                f"Analysis time budget exhausted before requesting url: {url}"
+            )
+        effective_timeout = max(0.01, min(float(timeout), remaining))
+        return self.base_session.get(url, timeout=effective_timeout)
 
 
 def build_session() -> HTTPSession:
@@ -563,30 +687,84 @@ def detect_platform(url: str) -> URLMetadata:
         return URLMetadata(platform="google_careers")
     if host.endswith(".hrmdirect.com"):
         return URLMetadata(platform="clearcompany")
-    if host.endswith(".teamtailor.com") and segments and segments[0] == "jobs":
-        return URLMetadata(platform="teamtailor", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
+    if host.endswith(".teamtailor.com"):
+        if "jobs" in segments:
+            jobs_index = segments.index("jobs")
+            return URLMetadata(
+                platform="teamtailor",
+                org=host.split(".")[0],
+                job_id=segments[jobs_index + 1]
+                if len(segments) > jobs_index + 1
+                else None,
+            )
+        if len(segments) >= 1 and re.fullmatch(
+            r"\d+(?:-[a-z0-9-]+)?", segments[-1], re.IGNORECASE
+        ):
+            return URLMetadata(
+                platform="teamtailor",
+                org=host.split(".")[0],
+                job_id=segments[-1],
+            )
     if host.endswith(".recruitee.com") and segments and segments[0] == "o":
-        return URLMetadata(platform="recruitee", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
+        return URLMetadata(
+            platform="recruitee",
+            org=host.split(".")[0],
+            job_id=segments[1] if len(segments) > 1 else None,
+        )
     if host.endswith(".jobs.personio.de") and segments and segments[0] == "job":
-        return URLMetadata(platform="personio", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
-    if host == "jobs.breezy.hr" and segments and segments[0] == "p":
-        return URLMetadata(platform="breezy", job_id=segments[1] if len(segments) > 1 else None)
+        return URLMetadata(
+            platform="personio",
+            org=host.split(".")[0],
+            job_id=segments[1] if len(segments) > 1 else None,
+        )
+    if (
+        (host == "jobs.breezy.hr" or host.endswith(".breezy.hr"))
+        and segments
+        and segments[0] == "p"
+    ):
+        return URLMetadata(
+            platform="breezy", job_id=segments[1] if len(segments) > 1 else None
+        )
     if host.endswith(".applytojob.com") and segments and segments[0] == "apply":
         if len(segments) >= 3 and segments[1] == "jobs" and segments[2] == "details":
-            return URLMetadata(platform="jazzhr", org=host.split(".")[0], job_id=segments[3] if len(segments) > 3 else None)
-        return URLMetadata(platform="jazzhr", org=host.split(".")[0], job_id=segments[1] if len(segments) > 1 else None)
+            return URLMetadata(
+                platform="jazzhr",
+                org=host.split(".")[0],
+                job_id=segments[3] if len(segments) > 3 else None,
+            )
+        return URLMetadata(
+            platform="jazzhr",
+            org=host.split(".")[0],
+            job_id=segments[1] if len(segments) > 1 else None,
+        )
     if host == "www.amazon.jobs":
         job_match = re.search(r"/jobs/(\d+)", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="custom_backend", job_id=job_match.group(1) if job_match else None, extra={"resolver": "amazon_jobs"})
+        return URLMetadata(
+            platform="custom_backend",
+            job_id=job_match.group(1) if job_match else None,
+            extra={"resolver": "amazon_jobs"},
+        )
     if host == "stripe.com" and "/jobs/listing/" in parsed.path:
         job_match = re.search(r"/jobs/listing/[^/]+/(\d+)", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="greenhouse", job_id=job_match.group(1) if job_match else None, extra={"resolver": "stripe"})
+        return URLMetadata(
+            platform="greenhouse",
+            job_id=job_match.group(1) if job_match else None,
+            extra={"resolver": "stripe"},
+        )
     if host == "higher.gs.com" and "/roles/" in parsed.path:
         job_match = re.search(r"/roles/(\d+)", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="oracle_hcm", job_id=job_match.group(1) if job_match else None, extra={"resolver": "goldman_sachs"})
+        return URLMetadata(
+            platform="oracle_hcm",
+            job_id=job_match.group(1) if job_match else None,
+            extra={"resolver": "goldman_sachs"},
+        )
     if host == "jobs.bendingspoons.com":
         job_match = re.search(r"/positions/([a-f0-9]{24})", parsed.path, re.IGNORECASE)
-        return URLMetadata(platform="custom_backend", job_id=job_match.group(1) if job_match else None, extra={"resolver": "bending_spoons"})
+        return URLMetadata(
+            platform="custom_backend",
+            job_id=job_match.group(1) if job_match else None,
+            extra={"resolver": "bending_spoons"},
+        )
     if host == "app.dover.com" and len(segments) >= 3 and segments[0] == "apply":
         return URLMetadata(platform="dover", org=segments[1], job_id=segments[2])
     if host == "jobs.lever.co" and len(segments) >= 2:
@@ -614,7 +792,9 @@ def detect_platform(url: str) -> URLMetadata:
         )
     if host == "apply.workable.com":
         job_id = segments[2] if len(segments) >= 3 and segments[1] == "j" else None
-        return URLMetadata(platform="workable", org=segments[0] if segments else None, job_id=job_id)
+        return URLMetadata(
+            platform="workable", org=segments[0] if segments else None, job_id=job_id
+        )
     if host == "jobs.workable.com" and len(segments) >= 2 and segments[0] == "view":
         return URLMetadata(platform="workable", job_id=segments[1])
     if host == "ats.rippling.com" and len(segments) >= 3:
@@ -638,12 +818,16 @@ def detect_platform(url: str) -> URLMetadata:
     if host.endswith(".bamboohr.com") and "careers" in segments:
         company = host.split(".")[0]
         careers_index = segments.index("careers")
-        job_id = segments[careers_index + 1] if len(segments) > careers_index + 1 else None
+        job_id = (
+            segments[careers_index + 1] if len(segments) > careers_index + 1 else None
+        )
         return URLMetadata(platform="bamboohr", org=company, job_id=job_id)
     if "brassring.com" in host:
         job_id = query.get("jobid", [None])[0] or query.get("JobId", [None])[0]
         if not job_id and parsed.fragment:
-            fragment_match = re.search(r"jobDetails=(\d+)", parsed.fragment, re.IGNORECASE)
+            fragment_match = re.search(
+                r"jobDetails=(\d+)", parsed.fragment, re.IGNORECASE
+            )
             if fragment_match:
                 job_id = fragment_match.group(1)
         extra: dict[str, Any] = {}
@@ -662,7 +846,9 @@ def detect_platform(url: str) -> URLMetadata:
             if len(segments) > 1:
                 extra["slug"] = segments[1]
             if len(segments) > 2:
-                return URLMetadata(platform="successfactors", job_id=segments[2], extra=extra)
+                return URLMetadata(
+                    platform="successfactors", job_id=segments[2], extra=extra
+                )
         return URLMetadata(platform="successfactors", extra=extra)
     if host == "workforcenow.adp.com":
         extra: dict[str, Any] = {}
@@ -696,7 +882,11 @@ def detect_platform(url: str) -> URLMetadata:
             if "JobDetail" in segments:
                 detail_index = segments.index("JobDetail")
                 if len(segments) > detail_index + 2:
-                    return URLMetadata(platform="avature", job_id=segments[detail_index + 2], extra=extra)
+                    return URLMetadata(
+                        platform="avature",
+                        job_id=segments[detail_index + 2],
+                        extra=extra,
+                    )
         return URLMetadata(platform="avature", extra=extra)
     if host.endswith(".oraclecloud.com") and "/hcmUI/" in parsed.path:
         extra: dict[str, Any] = {}
@@ -716,7 +906,9 @@ def detect_platform(url: str) -> URLMetadata:
                 req_id = segments[req_index + 1]
         if site:
             extra["site"] = site
-        return URLMetadata(platform="oracle_hcm", org=host.split(".")[0], job_id=req_id, extra=extra)
+        return URLMetadata(
+            platform="oracle_hcm", org=host.split(".")[0], job_id=req_id, extra=extra
+        )
     if "jobvite.com" in host:
         job_id = query.get("j", [None])[0]
         extra: dict[str, Any] = {}
@@ -831,13 +1023,23 @@ def normalize_date(value: Any, *, tz_name: str | None = None) -> str | None:
     except ValueError:
         pass
 
-    for fmt in ("%B %d, %Y", "%b %d, %Y", "%m/%d/%Y", "%Y/%m/%d", "%Y-%m-%d %H:%M:%S %Z"):
+    for fmt in (
+        "%B %d, %Y",
+        "%b %d, %Y",
+        "%m/%d/%Y",
+        "%Y/%m/%d",
+        "%Y-%m-%d %H:%M:%S %Z",
+    ):
         try:
             return datetime.strptime(cleaned, fmt).date().isoformat()
         except ValueError:
             continue
 
-    for fmt in ("%a %b %d %H:%M:%S %Z %Y", "%a, %d %b %Y %H:%M:%S %Z", "%a, %d %b %Y %H:%M:%S %z"):
+    for fmt in (
+        "%a %b %d %H:%M:%S %Z %Y",
+        "%a, %d %b %Y %H:%M:%S %Z",
+        "%a, %d %b %Y %H:%M:%S %z",
+    ):
         try:
             return datetime.strptime(cleaned, fmt).date().isoformat()
         except ValueError:
@@ -861,16 +1063,31 @@ def age_days(estimated_posted: str | None, today: date | None = None) -> int | N
     return (reference_day - date.fromisoformat(estimated_posted)).days
 
 
-def fetch_text(session: Any, url: str) -> str:
-    response = session.get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
+def fetch_text(
+    session: Any, url: str, *, timeout: int | float = DEFAULT_TIMEOUT_SECONDS
+) -> str:
+    response = session.get(url, timeout=timeout)
     response.raise_for_status()
     return response.text
 
 
-def fetch_json(session: Any, url: str) -> Any:
-    response = session.get(url, timeout=DEFAULT_TIMEOUT_SECONDS)
+def fetch_json(
+    session: Any, url: str, *, timeout: int | float = DEFAULT_TIMEOUT_SECONDS
+) -> Any:
+    response = session.get(url, timeout=timeout)
     response.raise_for_status()
-    return response.json()
+    try:
+        return response.json()
+    except (json.JSONDecodeError, ValueError, TypeError) as exc:
+        raw = getattr(response, "text", "").strip()
+        if not raw:
+            raise HTTPRequestError(f"Empty JSON payload for url: {url}") from exc
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as decode_exc:
+            raise HTTPRequestError(
+                f"Malformed JSON payload for url: {url}: {decode_exc}"
+            ) from decode_exc
 
 
 def parse_jsonish(value: str) -> Any | None:
@@ -1051,7 +1268,9 @@ def extract_jsonld(accumulator: AnalysisAccumulator, html: str) -> None:
         hiring_org = posting.get("hiringOrganization")
         if isinstance(hiring_org, dict):
             accumulator.set_if_missing("company", hiring_org.get("name"))
-        accumulator.set_if_missing("location", extract_location_text(posting.get("jobLocation")))
+        accumulator.set_if_missing(
+            "location", extract_location_text(posting.get("jobLocation"))
+        )
         accumulator.set_if_missing("employment_type", posting.get("employmentType"))
 
         identifier = posting.get("identifier")
@@ -1144,7 +1363,9 @@ def iter_greenhouse_jobs(node: Any) -> list[dict[str, Any]]:
     if not isinstance(node, dict):
         return jobs
 
-    if "absolute_url" in node and ("published_at" in node or "updated_at" in node or "id" in node):
+    if "absolute_url" in node and (
+        "published_at" in node or "updated_at" in node or "id" in node
+    ):
         jobs.append(node)
 
     for value in node.values():
@@ -1159,7 +1380,9 @@ def normalized_url_path(url: str) -> str:
 
 
 def add_scalar_metadata(accumulator: AnalysisAccumulator, key: str, value: Any) -> None:
-    normalized_key = key.replace("-", "").replace(":", "").replace(".", "").replace(" ", "").lower()
+    normalized_key = (
+        key.replace("-", "").replace(":", "").replace(".", "").replace(" ", "").lower()
+    )
 
     if normalized_key in DATE_KEY_RULES:
         kind, reliability = DATE_KEY_RULES[normalized_key]
@@ -1186,12 +1409,16 @@ def add_scalar_metadata(accumulator: AnalysisAccumulator, key: str, value: Any) 
     if normalized_key in HIDDEN_INSIGHT_FIELDS:
         if isinstance(value, dict):
             rendered = value.get("name") or value.get("label") or value.get("value")
-            accumulator.add_hidden(normalized_key, rendered if rendered is not None else value)
+            accumulator.add_hidden(
+                normalized_key, rendered if rendered is not None else value
+            )
         else:
             accumulator.add_hidden(normalized_key, value)
 
 
-def walk_json_payload(accumulator: AnalysisAccumulator, payload: Any, path: str = "") -> None:
+def walk_json_payload(
+    accumulator: AnalysisAccumulator, payload: Any, path: str = ""
+) -> None:
     if isinstance(payload, dict):
         for key, value in payload.items():
             next_path = f"{path}.{key}" if path else key
@@ -1235,7 +1462,12 @@ def detect_from_greenhouse_html(
 
         accumulator.set_if_missing("title", job.get("title"))
         accumulator.set_if_missing("company", job.get("company_name"))
-        accumulator.set_if_missing("location", job.get("location", {}).get("name") if isinstance(job.get("location"), dict) else job.get("location"))
+        accumulator.set_if_missing(
+            "location",
+            job.get("location", {}).get("name")
+            if isinstance(job.get("location"), dict)
+            else job.get("location"),
+        )
         accumulator.add_date(
             job.get("published_at"),
             source="greenhouse.html",
@@ -1253,7 +1485,9 @@ def detect_from_greenhouse_html(
         )
 
 
-def extract_greenhouse_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_greenhouse_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.org or not metadata.job_id:
         return
     api_url = f"https://boards-api.greenhouse.io/v1/boards/{metadata.org}/jobs/{metadata.job_id}"
@@ -1283,10 +1517,14 @@ def extract_greenhouse_api(accumulator: AnalysisAccumulator, session: Any, metad
     )
 
 
-def extract_lever_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_lever_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.org or not metadata.job_id:
         return
-    api_url = f"https://api.lever.co/v0/postings/{metadata.org}/{metadata.job_id}?mode=json"
+    api_url = (
+        f"https://api.lever.co/v0/postings/{metadata.org}/{metadata.job_id}?mode=json"
+    )
     try:
         payload = fetch_json(session, api_url)
     except HTTPRequestError as exc:
@@ -1360,7 +1598,9 @@ def extract_ashby_api(
         return
 
 
-def extract_smartrecruiters_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_smartrecruiters_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.org or not metadata.job_id:
         return
     api_url = f"https://api.smartrecruiters.com/v1/companies/{metadata.org}/postings/{metadata.job_id}"
@@ -1374,9 +1614,14 @@ def extract_smartrecruiters_api(accumulator: AnalysisAccumulator, session: Any, 
     if isinstance(payload.get("company"), dict):
         accumulator.set_preferred("company", payload["company"].get("name"))
     if isinstance(payload.get("location"), dict):
-        accumulator.set_preferred("location", payload["location"].get("fullLocation") or payload["location"].get("city"))
+        accumulator.set_preferred(
+            "location",
+            payload["location"].get("fullLocation") or payload["location"].get("city"),
+        )
     if isinstance(payload.get("typeOfEmployment"), dict):
-        accumulator.set_preferred("employment_type", payload["typeOfEmployment"].get("label"))
+        accumulator.set_preferred(
+            "employment_type", payload["typeOfEmployment"].get("label")
+        )
     if isinstance(payload.get("department"), dict):
         accumulator.add_hidden("department", payload["department"].get("label"))
     if isinstance(payload.get("customField"), list):
@@ -1400,7 +1645,12 @@ def extract_rippling_embedded(accumulator: AnalysisAccumulator, html: str) -> No
     if not isinstance(next_data, dict):
         return
 
-    job_post = next_data.get("props", {}).get("pageProps", {}).get("apiData", {}).get("jobPost")
+    job_post = (
+        next_data.get("props", {})
+        .get("pageProps", {})
+        .get("apiData", {})
+        .get("jobPost")
+    )
     if not isinstance(job_post, dict):
         return
 
@@ -1415,14 +1665,18 @@ def extract_rippling_embedded(accumulator: AnalysisAccumulator, html: str) -> No
 
     employment_type = job_post.get("employmentType")
     if isinstance(employment_type, dict):
-        accumulator.set_preferred("employment_type", employment_type.get("id") or employment_type.get("label"))
+        accumulator.set_preferred(
+            "employment_type", employment_type.get("id") or employment_type.get("label")
+        )
     else:
         accumulator.set_preferred("employment_type", employment_type)
 
     if isinstance(job_post.get("department"), dict):
         accumulator.add_hidden("department", job_post["department"].get("name"))
     accumulator.add_hidden("pay_range_details", job_post.get("payRangeDetails"))
-    accumulator.add_hidden("ai_evaluations_enabled", job_post.get("hasAIEvaluationsEnabled"))
+    accumulator.add_hidden(
+        "ai_evaluations_enabled", job_post.get("hasAIEvaluationsEnabled")
+    )
 
     accumulator.add_date(
         job_post.get("createdOn"),
@@ -1444,9 +1698,9 @@ def iter_workable_job_nodes(node: Any) -> list[dict[str, Any]]:
     if not isinstance(node, dict):
         return jobs
 
-    if any(key in node for key in ("created", "createdAt", "published_on", "publishedOn")) and (
-        node.get("title") or node.get("name") or node.get("shortcode")
-    ):
+    if any(
+        key in node for key in ("created", "createdAt", "published_on", "publishedOn")
+    ) and (node.get("title") or node.get("name") or node.get("shortcode")):
         jobs.append(node)
 
     for value in node.values():
@@ -1455,7 +1709,9 @@ def iter_workable_job_nodes(node: Any) -> list[dict[str, Any]]:
     return jobs
 
 
-def select_workable_job(jobs: list[dict[str, Any]], metadata: URLMetadata) -> dict[str, Any] | None:
+def select_workable_job(
+    jobs: list[dict[str, Any]], metadata: URLMetadata
+) -> dict[str, Any] | None:
     if not jobs:
         return None
     if metadata.job_id:
@@ -1497,7 +1753,9 @@ def extract_workable_embedded(
 
     company = job.get("company")
     if isinstance(company, dict):
-        accumulator.set_preferred("company", company.get("name") or company.get("title"))
+        accumulator.set_preferred(
+            "company", company.get("name") or company.get("title")
+        )
     elif isinstance(company, str):
         accumulator.set_preferred("company", company)
     else:
@@ -1512,7 +1770,10 @@ def extract_workable_embedded(
         if rendered:
             accumulator.set_preferred("location", rendered)
         else:
-            accumulator.set_preferred("location", location_value.get("fullLocation") or location_value.get("name"))
+            accumulator.set_preferred(
+                "location",
+                location_value.get("fullLocation") or location_value.get("name"),
+            )
     elif isinstance(location_value, str):
         accumulator.set_preferred("location", location_value)
     elif isinstance(job.get("locations"), list) and job["locations"]:
@@ -1523,21 +1784,30 @@ def extract_workable_embedded(
             if rendered:
                 accumulator.set_preferred("location", rendered)
 
-    employment_type = job.get("employmentType") or job.get("employment_type") or job.get("type")
+    employment_type = (
+        job.get("employmentType") or job.get("employment_type") or job.get("type")
+    )
     if isinstance(employment_type, dict):
-        accumulator.set_preferred("employment_type", employment_type.get("label") or employment_type.get("name"))
+        accumulator.set_preferred(
+            "employment_type",
+            employment_type.get("label") or employment_type.get("name"),
+        )
     elif isinstance(employment_type, str):
         accumulator.set_preferred("employment_type", employment_type)
 
     department = job.get("department")
     if isinstance(department, dict):
-        accumulator.add_hidden("department", department.get("name") or department.get("label"))
+        accumulator.add_hidden(
+            "department", department.get("name") or department.get("label")
+        )
     elif isinstance(department, str):
         accumulator.add_hidden("department", department)
 
     function = job.get("function")
     if isinstance(function, dict):
-        accumulator.add_hidden("function", function.get("name") or function.get("label"))
+        accumulator.add_hidden(
+            "function", function.get("name") or function.get("label")
+        )
     elif isinstance(function, str):
         accumulator.add_hidden("function", function)
 
@@ -1557,7 +1827,12 @@ def extract_workable_embedded(
             accumulator.add_hidden("workable_url", value)
             break
 
-    posted_value = job.get("created") or job.get("createdAt") or job.get("published_on") or job.get("publishedOn")
+    posted_value = (
+        job.get("created")
+        or job.get("createdAt")
+        or job.get("published_on")
+        or job.get("publishedOn")
+    )
     accumulator.add_date(
         posted_value,
         source="workable.embedded",
@@ -1566,7 +1841,12 @@ def extract_workable_embedded(
         reliability="high",
     )
 
-    updated_value = job.get("updated") or job.get("updatedAt") or job.get("updated_on") or job.get("updatedOn")
+    updated_value = (
+        job.get("updated")
+        or job.get("updatedAt")
+        or job.get("updated_on")
+        or job.get("updatedOn")
+    )
     accumulator.add_date(
         updated_value,
         source="workable.embedded",
@@ -1631,7 +1911,9 @@ def extract_icims_api(
                     continue
 
                 apply_url = data.get("apply_url") or ""
-                req_id = str(data.get("req_id")) if data.get("req_id") is not None else None
+                req_id = (
+                    str(data.get("req_id")) if data.get("req_id") is not None else None
+                )
                 slug = str(data.get("slug")) if data.get("slug") is not None else None
                 matches = metadata.job_id in {req_id, slug}
                 if not matches and apply_url:
@@ -1641,8 +1923,12 @@ def extract_icims_api(
 
                 accumulator.set_preferred("title", data.get("title"))
                 accumulator.set_preferred("company", data.get("hiring_organization"))
-                accumulator.set_preferred("location", data.get("full_location") or data.get("location_name"))
-                accumulator.set_preferred("employment_type", data.get("employment_type"))
+                accumulator.set_preferred(
+                    "location", data.get("full_location") or data.get("location_name")
+                )
+                accumulator.set_preferred(
+                    "employment_type", data.get("employment_type")
+                )
                 accumulator.add_hidden("category", data.get("category"))
                 accumulator.add_hidden("location_type", data.get("location_type"))
                 accumulator.add_hidden("ats_code", data.get("ats_code"))
@@ -1672,11 +1958,15 @@ def extract_icims_api(
                 break
 
 
-def extract_dover_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_dover_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.job_id:
         return
 
-    api_url = f"https://app.dover.com/api/v1/inbound/application-portal-job/{metadata.job_id}"
+    api_url = (
+        f"https://app.dover.com/api/v1/inbound/application-portal-job/{metadata.job_id}"
+    )
     try:
         payload = fetch_json(session, api_url)
     except HTTPRequestError as exc:
@@ -1688,7 +1978,11 @@ def extract_dover_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
 
     locations = payload.get("locations")
     if isinstance(locations, list) and locations:
-        location_names = [item.get("name") for item in locations if isinstance(item, dict) and item.get("name")]
+        location_names = [
+            item.get("name")
+            for item in locations
+            if isinstance(item, dict) and item.get("name")
+        ]
         if location_names:
             accumulator.set_preferred("location", " / ".join(location_names[:4]))
         location_types = sorted(
@@ -1705,7 +1999,9 @@ def extract_dover_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
 
     if isinstance(payload.get("compensation"), dict):
         compensation = payload["compensation"]
-        accumulator.set_preferred("employment_type", compensation.get("employment_type"))
+        accumulator.set_preferred(
+            "employment_type", compensation.get("employment_type")
+        )
         accumulator.add_hidden("compensation", compensation)
     accumulator.add_hidden("compensation_details", payload.get("compensation_details"))
     accumulator.add_hidden("visa_support", payload.get("visa_support"))
@@ -1720,7 +2016,9 @@ def extract_dover_api(accumulator: AnalysisAccumulator, session: Any, metadata: 
     )
 
 
-def extract_bamboohr_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_bamboohr_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.org or not metadata.job_id:
         return
 
@@ -1741,7 +2039,11 @@ def extract_bamboohr_api(accumulator: AnalysisAccumulator, session: Any, metadat
 
     location = job.get("location")
     if isinstance(location, dict):
-        parts = [location.get("city"), location.get("state"), location.get("addressCountry")]
+        parts = [
+            location.get("city"),
+            location.get("state"),
+            location.get("addressCountry"),
+        ]
         rendered = ", ".join(str(part).strip() for part in parts if part)
         accumulator.set_preferred("location", rendered)
 
@@ -1848,7 +2150,9 @@ def looks_like_successfactors(html: str) -> bool:
     )
 
 
-def maybe_detect_html_platform(url: str, html: str, metadata: URLMetadata) -> URLMetadata:
+def maybe_detect_html_platform(
+    url: str, html: str, metadata: URLMetadata
+) -> URLMetadata:
     if metadata.platform == "unknown" and looks_like_successfactors(html):
         parsed = urlparse(url)
         segments = [segment for segment in parsed.path.split("/") if segment]
@@ -1859,7 +2163,12 @@ def maybe_detect_html_platform(url: str, html: str, metadata: URLMetadata) -> UR
                 extra["slug"] = segments[1]
             if len(segments) > 2:
                 job_id = segments[2]
-        return URLMetadata(platform="successfactors", org=parsed.netloc.lower(), job_id=job_id, extra=extra)
+        return URLMetadata(
+            platform="successfactors",
+            org=parsed.netloc.lower(),
+            job_id=job_id,
+            extra=extra,
+        )
     return metadata
 
 
@@ -1898,7 +2207,9 @@ def html_lang_to_locale(html: str) -> str | None:
     return match.group(1).replace("-", "_")
 
 
-def extract_successfactors_itemprop_date(accumulator: AnalysisAccumulator, html: str) -> None:
+def extract_successfactors_itemprop_date(
+    accumulator: AnalysisAccumulator, html: str
+) -> None:
     match = re.search(
         r'<meta[^>]+itemprop=["\']datePosted["\'][^>]+content=["\']([^"\']+)',
         html,
@@ -1946,7 +2257,11 @@ def extract_successfactors_rss(
                 items = channel.findall("item") if channel is not None else []
                 for item in items:
                     link = item.findtext("link") or ""
-                    if metadata.job_id and metadata.job_id not in link and slug not in link:
+                    if (
+                        metadata.job_id
+                        and metadata.job_id not in link
+                        and slug not in link
+                    ):
                         continue
                     accumulator.add_date(
                         item.findtext("pubDate"),
@@ -1975,7 +2290,9 @@ def extract_avature_feed_or_sitemap(
         if segments:
             portal = segments[0]
     if not portal:
-        portal_match = re.search(r'avature\.portal\.id[^>]*content=["\']([^"\']+)', html, re.IGNORECASE)
+        portal_match = re.search(
+            r'avature\.portal\.id[^>]*content=["\']([^"\']+)', html, re.IGNORECASE
+        )
         if portal_match:
             portal = portal_match.group(1).strip()
     if not portal:
@@ -2035,7 +2352,9 @@ def extract_avature_feed_or_sitemap(
             return
 
 
-def extract_amazon_jobs_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_amazon_jobs_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.job_id:
         return
 
@@ -2050,13 +2369,17 @@ def extract_amazon_jobs_api(accumulator: AnalysisAccumulator, session: Any, meta
     if not isinstance(jobs, list) or not jobs:
         return
 
-    job = next((item for item in jobs if str(item.get("id_icims")) == metadata.job_id), jobs[0])
+    job = next(
+        (item for item in jobs if str(item.get("id_icims")) == metadata.job_id), jobs[0]
+    )
     if not isinstance(job, dict):
         return
 
     accumulator.set_preferred("title", job.get("title"))
     accumulator.set_preferred("company", "Amazon")
-    accumulator.set_preferred("location", job.get("normalized_location") or job.get("location"))
+    accumulator.set_preferred(
+        "location", job.get("normalized_location") or job.get("location")
+    )
     accumulator.set_preferred("employment_type", job.get("job_schedule_type"))
     accumulator.add_hidden("job_category", job.get("job_category"))
     accumulator.add_hidden("business_category", job.get("business_category"))
@@ -2071,7 +2394,9 @@ def extract_amazon_jobs_api(accumulator: AnalysisAccumulator, session: Any, meta
     )
 
 
-def extract_stripe_greenhouse(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_stripe_greenhouse(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.job_id:
         return
 
@@ -2126,7 +2451,9 @@ def extract_goldman_sachs_oracle(
     items = payload.get("items") if isinstance(payload, dict) else None
     if not isinstance(items, list) or not items:
         return
-    requisitions = items[0].get("requisitionList") if isinstance(items[0], dict) else None
+    requisitions = (
+        items[0].get("requisitionList") if isinstance(items[0], dict) else None
+    )
     if not isinstance(requisitions, list) or not requisitions:
         return
     job = requisitions[0]
@@ -2147,8 +2474,12 @@ def extract_goldman_sachs_oracle(
     )
 
 
-def extract_bendingspoons_objectid(accumulator: AnalysisAccumulator, metadata: URLMetadata) -> None:
-    if not metadata.job_id or not re.fullmatch(r"[a-f0-9]{24}", metadata.job_id, re.IGNORECASE):
+def extract_bendingspoons_objectid(
+    accumulator: AnalysisAccumulator, metadata: URLMetadata
+) -> None:
+    if not metadata.job_id or not re.fullmatch(
+        r"[a-f0-9]{24}", metadata.job_id, re.IGNORECASE
+    ):
         return
 
     timestamp = int(metadata.job_id[:8], 16)
@@ -2167,11 +2498,15 @@ def extract_bendingspoons_objectid(accumulator: AnalysisAccumulator, metadata: U
     )
 
 
-def extract_gem_job_board_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_gem_job_board_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.org:
         return
 
-    api_url = f"https://api.gem.com/job_board/v0/{quote(metadata.org, safe='')}/job_posts/"
+    api_url = (
+        f"https://api.gem.com/job_board/v0/{quote(metadata.org, safe='')}/job_posts/"
+    )
     try:
         payload = fetch_json(session, api_url)
     except HTTPRequestError as exc:
@@ -2191,20 +2526,26 @@ def extract_gem_job_board_api(accumulator: AnalysisAccumulator, session: Any, me
             return True
         return False
 
-    job = next((item for item in payload if isinstance(item, dict) and matches_job(item)), None)
+    job = next(
+        (item for item in payload if isinstance(item, dict) and matches_job(item)), None
+    )
     if job is None:
         job = next((item for item in payload if isinstance(item, dict)), None)
     if not isinstance(job, dict):
         return
 
     accumulator.set_preferred("title", job.get("title"))
-    accumulator.set_if_missing("company", metadata.org.replace("-", " ").title() if metadata.org else None)
+    accumulator.set_if_missing(
+        "company", metadata.org.replace("-", " ").title() if metadata.org else None
+    )
     if isinstance(job.get("location"), dict):
         accumulator.set_preferred("location", job["location"].get("name"))
 
     employment_type = job.get("employment_type")
     if isinstance(employment_type, str):
-        accumulator.set_preferred("employment_type", employment_type.replace("_", " ").title())
+        accumulator.set_preferred(
+            "employment_type", employment_type.replace("_", " ").title()
+        )
 
     accumulator.add_hidden("internal_job_id", job.get("internal_job_id"))
     accumulator.add_hidden("requisition_id", job.get("requisition_id"))
@@ -2256,7 +2597,9 @@ def extract_gem_job_board_api(accumulator: AnalysisAccumulator, session: Any, me
     )
 
 
-def extract_recruitee_api(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_recruitee_api(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     if not metadata.org or not metadata.job_id:
         return
 
@@ -2323,12 +2666,16 @@ def extract_personio_xml_fallback(
 ) -> None:
     if not metadata.job_id:
         return
-    if any(candidate.kind in {"posted", "published"} for candidate in accumulator.all_dates):
+    if any(
+        candidate.kind in {"posted", "published"} for candidate in accumulator.all_dates
+    ):
         return
 
     parsed = urlparse(original_url)
     language = parse_qs(parsed.query).get("language", [None])[0] or "en"
-    xml_url = f"{parsed.scheme}://{parsed.netloc}/xml?language={quote(language, safe='')}"
+    xml_url = (
+        f"{parsed.scheme}://{parsed.netloc}/xml?language={quote(language, safe='')}"
+    )
     try:
         xml_text = fetch_text(session, xml_url)
     except HTTPRequestError as exc:
@@ -2347,7 +2694,9 @@ def extract_personio_xml_fallback(
         accumulator.set_if_missing("company", position.findtext("subcompany"))
         accumulator.set_if_missing("location", position.findtext("office"))
         accumulator.add_hidden("department", position.findtext("department"))
-        accumulator.add_hidden("recruiting_category", position.findtext("recruitingCategory"))
+        accumulator.add_hidden(
+            "recruiting_category", position.findtext("recruitingCategory")
+        )
         accumulator.add_date(
             position.findtext("createdAt"),
             source="personio.xml",
@@ -2440,7 +2789,9 @@ def extract_workday_api(
         accumulator.set_preferred("location", location)
     requisition_location = info.get("jobRequisitionLocation")
     if isinstance(requisition_location, dict):
-        accumulator.set_preferred("location", requisition_location.get("descriptor") or location)
+        accumulator.set_preferred(
+            "location", requisition_location.get("descriptor") or location
+        )
 
     accumulator.set_preferred("employment_type", info.get("timeType"))
 
@@ -2530,7 +2881,9 @@ def extract_oracle_hcm_api(
 
 
 def should_use_render_fallback(html: str, accumulator: AnalysisAccumulator) -> bool:
-    if any(candidate.kind in {"posted", "published"} for candidate in accumulator.all_dates):
+    if any(
+        candidate.kind in {"posted", "published"} for candidate in accumulator.all_dates
+    ):
         return False
     if not html.strip():
         return True
@@ -2539,13 +2892,15 @@ def should_use_render_fallback(html: str, accumulator: AnalysisAccumulator) -> b
         "please enable js",
         "cf-challenge",
         "captcha-delivery",
-        "<div id=\"app\"",
-        "<div id=\"root\"",
+        '<div id="app"',
+        '<div id="root"',
     )
     return len(html) < 2500 or any(marker in lower_html for marker in thin_markers)
 
 
-def extract_dates_from_rendered_text(accumulator: AnalysisAccumulator, rendered_text: str) -> None:
+def extract_dates_from_rendered_text(
+    accumulator: AnalysisAccumulator, rendered_text: str
+) -> None:
     for match in VISIBLE_DATE_RE.finditer(rendered_text):
         accumulator.add_date(
             match.group(1),
@@ -2568,7 +2923,13 @@ def extract_dates_from_rendered_text(accumulator: AnalysisAccumulator, rendered_
 
 def extract_jina_render(accumulator: AnalysisAccumulator, session: Any) -> None:
     try:
-        rendered_text = fetch_text(session, JINA_PREFIX + build_normalized_url(accumulator.url).removeprefix("https://").removeprefix("http://"))
+        rendered_text = fetch_text(
+            session,
+            JINA_PREFIX
+            + build_normalized_url(accumulator.url)
+            .removeprefix("https://")
+            .removeprefix("http://"),
+        )
     except HTTPRequestError as exc:
         accumulator.add_warning(f"Jina render fallback failed: {exc}")
         return
@@ -2607,7 +2968,9 @@ def parse_sitemap_documents(xml_text: str) -> tuple[list[str], list[tuple[str, s
     return sitemap_urls, entries
 
 
-def path_matches_sitemap(target_url: str, candidate_url: str, metadata: URLMetadata) -> bool:
+def path_matches_sitemap(
+    target_url: str, candidate_url: str, metadata: URLMetadata
+) -> bool:
     target = build_normalized_url(target_url)
     candidate = build_normalized_url(candidate_url)
     if target == candidate:
@@ -2617,7 +2980,9 @@ def path_matches_sitemap(target_url: str, candidate_url: str, metadata: URLMetad
     return normalized_url_path(target_url) == normalized_url_path(candidate_url)
 
 
-def extract_sitemap_dates(accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata) -> None:
+def extract_sitemap_dates(
+    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+) -> None:
     queue = sitemap_candidates(accumulator.url)
     visited: set[str] = set()
 
@@ -2680,7 +3045,8 @@ def choose_best_date(all_dates: list[CandidateDate]) -> CandidateDate | None:
     credible = [
         candidate
         for candidate in all_dates
-        if candidate.kind in {"posted", "published"} and candidate.reliability in {"high", "medium"}
+        if candidate.kind in {"posted", "published"}
+        and candidate.reliability in {"high", "medium"}
     ]
     if credible:
         return sorted(
@@ -2710,7 +3076,9 @@ def choose_best_date(all_dates: list[CandidateDate]) -> CandidateDate | None:
     )[0]
 
 
-def detect_repost(best_date: CandidateDate | None, all_dates: list[CandidateDate]) -> bool:
+def detect_repost(
+    best_date: CandidateDate | None, all_dates: list[CandidateDate]
+) -> bool:
     if best_date is None:
         return False
     best_day = date.fromisoformat(best_date.date)
@@ -2749,7 +3117,11 @@ def build_result(
 ) -> dict[str, Any]:
     sorted_dates = sorted(
         accumulator.all_dates,
-        key=lambda item: (item.date, DATE_KIND_PRIORITY[item.kind], RELIABILITY_PRIORITY[item.reliability]),
+        key=lambda item: (
+            item.date,
+            DATE_KIND_PRIORITY[item.kind],
+            RELIABILITY_PRIORITY[item.reliability],
+        ),
     )
     best_date = choose_best_date(sorted_dates)
     reposted_likely = detect_repost(best_date, sorted_dates)
@@ -2778,9 +3150,13 @@ def build_result(
     }
 
 
-def handle_blocked_or_unsupported(url: str, metadata: URLMetadata) -> dict[str, Any] | None:
+def handle_blocked_or_unsupported(
+    url: str, metadata: URLMetadata
+) -> dict[str, Any] | None:
     normalized_url = build_normalized_url(url)
-    accumulator = AnalysisAccumulator(url=url, normalized_url=normalized_url, platform=metadata.platform)
+    accumulator = AnalysisAccumulator(
+        url=url, normalized_url=normalized_url, platform=metadata.platform
+    )
     if metadata.platform in BLOCKED_PLATFORM_MESSAGES:
         accumulator.add_warning(BLOCKED_PLATFORM_MESSAGES[metadata.platform])
         return build_result(accumulator, status_override="blocked")
@@ -2788,6 +3164,34 @@ def handle_blocked_or_unsupported(url: str, metadata: URLMetadata) -> dict[str, 
         accumulator.add_warning(UNSUPPORTED_PLATFORM_MESSAGES[metadata.platform])
         return build_result(accumulator, status_override="unsupported")
     return None
+
+
+def run_extraction_stage(
+    accumulator: AnalysisAccumulator,
+    stage_label: str,
+    extractor: Any,
+    *args: Any,
+) -> None:
+    try:
+        extractor(*args)
+    except HTTPRequestError as exc:
+        accumulator.add_warning(f"{stage_label} failed: {exc}")
+    except Exception as exc:
+        accumulator.add_warning(f"{stage_label} parser error: {exc}")
+
+
+def has_credible_posted_signal(accumulator: AnalysisAccumulator) -> bool:
+    return any(
+        candidate.kind in {"posted", "published"}
+        and candidate.reliability in {"high", "medium"}
+        for candidate in accumulator.all_dates
+    )
+
+
+def has_comparison_evidence(accumulator: AnalysisAccumulator) -> bool:
+    return any(
+        candidate.source in COMPARISON_SOURCES for candidate in accumulator.all_dates
+    )
 
 
 def analyze_url(
@@ -2798,6 +3202,8 @@ def analyze_url(
 ) -> dict[str, Any]:
     validated_url = validate_url(url)
     active_session = session or build_session()
+    budget = RequestBudget.start(TOTAL_ANALYSIS_BUDGET_SECONDS)
+    session_with_budget = BudgetedSession(active_session, budget)
     metadata = detect_platform(validated_url)
 
     blocked_result = handle_blocked_or_unsupported(validated_url, metadata)
@@ -2813,7 +3219,7 @@ def analyze_url(
     page_fetch_error: HTTPRequestError | None = None
     html = ""
     try:
-        html = fetch_text(active_session, validated_url)
+        html = fetch_text(session_with_budget, validated_url)
     except HTTPRequestError as exc:
         page_fetch_error = exc
         accumulator.add_warning(
@@ -2822,74 +3228,327 @@ def analyze_url(
 
     if html:
         metadata = maybe_detect_html_platform(validated_url, html, metadata)
-        extract_jsonld(accumulator, html)
-        extract_meta_and_open_graph(accumulator, html)
-        extract_regex_dates(accumulator, html)
-        extract_embedded_json(accumulator, html)
+        run_extraction_stage(
+            accumulator, "JSON-LD extraction", extract_jsonld, accumulator, html
+        )
+        run_extraction_stage(
+            accumulator,
+            "Meta/OpenGraph extraction",
+            extract_meta_and_open_graph,
+            accumulator,
+            html,
+        )
+        run_extraction_stage(
+            accumulator, "Regex date extraction", extract_regex_dates, accumulator, html
+        )
+        run_extraction_stage(
+            accumulator,
+            "Embedded JSON extraction",
+            extract_embedded_json,
+            accumulator,
+            html,
+        )
         accumulator.platform = metadata.platform
 
     if metadata.platform == "lever":
-        extract_lever_api(accumulator, active_session, metadata)
+        run_extraction_stage(
+            accumulator,
+            "Lever API fallback",
+            extract_lever_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
     elif metadata.platform == "greenhouse":
         if metadata.extra.get("resolver") == "stripe":
-            extract_stripe_greenhouse(accumulator, active_session, metadata)
+            run_extraction_stage(
+                accumulator,
+                "Stripe Greenhouse fallback",
+                extract_stripe_greenhouse,
+                accumulator,
+                session_with_budget,
+                metadata,
+            )
         else:
-            extract_greenhouse_api(accumulator, active_session, metadata)
+            run_extraction_stage(
+                accumulator,
+                "Greenhouse API fallback",
+                extract_greenhouse_api,
+                accumulator,
+                session_with_budget,
+                metadata,
+            )
             if html:
-                detect_from_greenhouse_html(accumulator, html, validated_url, metadata)
+                run_extraction_stage(
+                    accumulator,
+                    "Greenhouse HTML fallback",
+                    detect_from_greenhouse_html,
+                    accumulator,
+                    html,
+                    validated_url,
+                    metadata,
+                )
     elif metadata.platform == "ashby":
-        extract_ashby_api(accumulator, active_session, metadata, validated_url, html)
+        run_extraction_stage(
+            accumulator,
+            "Ashby API fallback",
+            extract_ashby_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+            validated_url,
+            html,
+        )
     elif metadata.platform == "recruitee":
-        extract_recruitee_api(accumulator, active_session, metadata)
+        run_extraction_stage(
+            accumulator,
+            "Recruitee API fallback",
+            extract_recruitee_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
     elif metadata.platform == "smartrecruiters":
-        extract_smartrecruiters_api(accumulator, active_session, metadata)
+        run_extraction_stage(
+            accumulator,
+            "SmartRecruiters API fallback",
+            extract_smartrecruiters_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
     elif metadata.platform == "personio":
-        extract_personio_xml_fallback(accumulator, active_session, metadata, validated_url)
+        run_extraction_stage(
+            accumulator,
+            "Personio XML fallback",
+            extract_personio_xml_fallback,
+            accumulator,
+            session_with_budget,
+            metadata,
+            validated_url,
+        )
     elif metadata.platform == "rippling" and html:
-        extract_rippling_embedded(accumulator, html)
+        run_extraction_stage(
+            accumulator,
+            "Rippling embedded extraction",
+            extract_rippling_embedded,
+            accumulator,
+            html,
+        )
     elif metadata.platform == "breezy" and html:
-        extract_breezy_data_position(accumulator, html)
+        run_extraction_stage(
+            accumulator,
+            "Breezy embedded extraction",
+            extract_breezy_data_position,
+            accumulator,
+            html,
+        )
     elif metadata.platform == "workable" and html:
-        extract_workable_embedded(accumulator, html, metadata)
+        run_extraction_stage(
+            accumulator,
+            "Workable embedded extraction",
+            extract_workable_embedded,
+            accumulator,
+            html,
+            metadata,
+        )
     elif metadata.platform == "icims" and html:
-        extract_icims_api(accumulator, active_session, metadata, html, validated_url)
+        run_extraction_stage(
+            accumulator,
+            "iCIMS API fallback",
+            extract_icims_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+            html,
+            validated_url,
+        )
     elif metadata.platform == "dover":
-        extract_dover_api(accumulator, active_session, metadata)
+        run_extraction_stage(
+            accumulator,
+            "Dover API fallback",
+            extract_dover_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
     elif metadata.platform == "bamboohr":
-        extract_bamboohr_api(accumulator, active_session, metadata)
+        run_extraction_stage(
+            accumulator,
+            "BambooHR API fallback",
+            extract_bamboohr_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
     elif metadata.platform == "brassring" and html:
-        extract_brassring_html(accumulator, html)
+        run_extraction_stage(
+            accumulator,
+            "Brassring HTML extraction",
+            extract_brassring_html,
+            accumulator,
+            html,
+        )
     elif metadata.platform == "successfactors" and html:
-        extract_successfactors_rss(accumulator, active_session, metadata, validated_url, html)
+        run_extraction_stage(
+            accumulator,
+            "SuccessFactors RSS fallback",
+            extract_successfactors_rss,
+            accumulator,
+            session_with_budget,
+            metadata,
+            validated_url,
+            html,
+        )
     elif metadata.platform == "gem":
-        extract_gem_job_board_api(accumulator, active_session, metadata)
+        run_extraction_stage(
+            accumulator,
+            "Gem API fallback",
+            extract_gem_job_board_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
     elif metadata.platform == "custom_backend":
         resolver = metadata.extra.get("resolver")
         if resolver == "amazon_jobs":
-            extract_amazon_jobs_api(accumulator, active_session, metadata)
+            run_extraction_stage(
+                accumulator,
+                "Amazon.jobs API fallback",
+                extract_amazon_jobs_api,
+                accumulator,
+                session_with_budget,
+                metadata,
+            )
         elif resolver == "bending_spoons":
-            extract_bendingspoons_objectid(accumulator, metadata)
+            run_extraction_stage(
+                accumulator,
+                "Bending Spoons ObjectID extraction",
+                extract_bendingspoons_objectid,
+                accumulator,
+                metadata,
+            )
     elif metadata.platform == "workday":
-        extract_workday_api(accumulator, active_session, metadata, validated_url)
+        run_extraction_stage(
+            accumulator,
+            "Workday CXS fallback",
+            extract_workday_api,
+            accumulator,
+            session_with_budget,
+            metadata,
+            validated_url,
+        )
     elif metadata.platform == "oracle_hcm":
         if metadata.extra.get("resolver") == "goldman_sachs":
-            extract_goldman_sachs_oracle(accumulator, active_session, metadata)
+            run_extraction_stage(
+                accumulator,
+                "Goldman Sachs Oracle fallback",
+                extract_goldman_sachs_oracle,
+                accumulator,
+                session_with_budget,
+                metadata,
+            )
         else:
-            extract_oracle_hcm_api(accumulator, active_session, metadata, validated_url)
+            run_extraction_stage(
+                accumulator,
+                "Oracle HCM fallback",
+                extract_oracle_hcm_api,
+                accumulator,
+                session_with_budget,
+                metadata,
+                validated_url,
+            )
     elif metadata.platform == "jobvite" and html:
-        extract_jobvite_xml(accumulator, active_session, metadata, html)
+        run_extraction_stage(
+            accumulator,
+            "Jobvite XML fallback",
+            extract_jobvite_xml,
+            accumulator,
+            session_with_budget,
+            metadata,
+            html,
+        )
     elif metadata.platform == "avature" and html:
-        extract_avature_feed_or_sitemap(accumulator, active_session, metadata, validated_url, html)
+        run_extraction_stage(
+            accumulator,
+            "Avature feed/sitemap fallback",
+            extract_avature_feed_or_sitemap,
+            accumulator,
+            session_with_budget,
+            metadata,
+            validated_url,
+            html,
+        )
 
     if should_use_render_fallback(html, accumulator):
-        extract_jina_render(accumulator, active_session)
+        if budget.can_run(MIN_BUDGET_FOR_RENDER_SECONDS):
+            run_extraction_stage(
+                accumulator,
+                "Jina render fallback",
+                extract_jina_render,
+                accumulator,
+                session_with_budget,
+            )
+        else:
+            accumulator.add_warning(
+                "Skipped Jina render fallback due to remaining analysis budget."
+            )
 
-    extract_sitemap_dates(accumulator, active_session, metadata)
-    extract_wayback(accumulator, active_session)
+    platform_capability = get_platform_capability(metadata.platform)
+    skip_comparison_fallbacks = (
+        platform_capability["integration"] == "direct"
+        and has_credible_posted_signal(accumulator)
+        and has_comparison_evidence(accumulator)
+    ) or (
+        metadata.platform == "successfactors"
+        and has_credible_posted_signal(accumulator)
+    )
+
+    if skip_comparison_fallbacks:
+        pass
+    elif budget.can_run(MIN_BUDGET_FOR_SITEMAP_SECONDS):
+        run_extraction_stage(
+            accumulator,
+            "Sitemap fallback",
+            extract_sitemap_dates,
+            accumulator,
+            session_with_budget,
+            metadata,
+        )
+    else:
+        accumulator.add_warning(
+            "Skipped sitemap fallback due to remaining analysis budget."
+        )
+
+    if skip_comparison_fallbacks:
+        pass
+    elif budget.can_run(MIN_BUDGET_FOR_WAYBACK_SECONDS):
+        run_extraction_stage(
+            accumulator,
+            "Wayback fallback",
+            extract_wayback,
+            accumulator,
+            session_with_budget,
+        )
+    else:
+        accumulator.add_warning(
+            "Skipped Wayback fallback due to remaining analysis budget."
+        )
+
+    if budget.exhausted():
+        accumulator.add_warning(
+            "Analysis time budget exhausted before all fallbacks could run."
+        )
 
     result = build_result(accumulator, today=today)
-    if result["status"] == "no_date" and page_fetch_error is not None and not accumulator.all_dates:
-        raise PageFetchError(f"Unable to fetch job page: {validated_url}") from page_fetch_error
+    if (
+        result["status"] == "no_date"
+        and page_fetch_error is not None
+        and not accumulator.all_dates
+    ):
+        raise PageFetchError(
+            f"Unable to fetch job page: {validated_url}"
+        ) from page_fetch_error
     return result
 
 

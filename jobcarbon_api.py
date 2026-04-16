@@ -57,7 +57,9 @@ def error_payload(code: str, message: str) -> dict[str, Any]:
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return (
+        datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    )
 
 
 def _get_header(headers: dict[str, str] | None, name: str) -> str | None:
@@ -77,7 +79,9 @@ def _allowed_origins() -> set[str]:
     return {entry.strip() for entry in raw.split(",") if entry.strip()}
 
 
-def _build_headers(request_headers: dict[str, str] | None) -> tuple[dict[str, str], str | None, bool]:
+def _build_headers(
+    request_headers: dict[str, str] | None,
+) -> tuple[dict[str, str], str | None, bool]:
     headers = dict(BASE_HEADERS)
     origin = _get_header(request_headers, "Origin")
     if not origin:
@@ -262,10 +266,14 @@ def _handle_history_route(
             return (
                 HTTPStatus.METHOD_NOT_ALLOWED,
                 response_headers,
-                json_bytes(error_payload("method_not_allowed", "Use DELETE or OPTIONS.")),
+                json_bytes(
+                    error_payload("method_not_allowed", "Use DELETE or OPTIONS.")
+                ),
             )
 
-        session_id, _ = _resolve_or_create_session(request_headers, create_if_missing=False)
+        session_id, _ = _resolve_or_create_session(
+            request_headers, create_if_missing=False
+        )
         if not session_id:
             return HTTPStatus.OK, response_headers, json_bytes({"history": []})
 
@@ -287,7 +295,9 @@ def _handle_history_route(
             return (
                 HTTPStatus.METHOD_NOT_ALLOWED,
                 response_headers,
-                json_bytes(error_payload("method_not_allowed", "Use DELETE or OPTIONS.")),
+                json_bytes(
+                    error_payload("method_not_allowed", "Use DELETE or OPTIONS.")
+                ),
             )
 
         try:
@@ -296,7 +306,9 @@ def _handle_history_route(
             return (
                 HTTPStatus.BAD_REQUEST,
                 response_headers,
-                json_bytes(error_payload("invalid_json", "Request body must be valid JSON.")),
+                json_bytes(
+                    error_payload("invalid_json", "Request body must be valid JSON.")
+                ),
             )
 
         url = payload.get("url")
@@ -306,17 +318,25 @@ def _handle_history_route(
             return (
                 HTTPStatus.BAD_REQUEST,
                 response_headers,
-                json_bytes(error_payload("missing_url", "A non-empty 'url' value is required.")),
+                json_bytes(
+                    error_payload("missing_url", "A non-empty 'url' value is required.")
+                ),
             )
 
         if not isinstance(result, dict):
             return (
                 HTTPStatus.BAD_REQUEST,
                 response_headers,
-                json_bytes(error_payload("missing_result", "A JSON object 'result' value is required.")),
+                json_bytes(
+                    error_payload(
+                        "missing_result", "A JSON object 'result' value is required."
+                    )
+                ),
             )
 
-        session_id, set_cookie = _resolve_or_create_session(request_headers, create_if_missing=True)
+        session_id, set_cookie = _resolve_or_create_session(
+            request_headers, create_if_missing=True
+        )
         assert session_id is not None
 
         item = {
@@ -348,13 +368,17 @@ def _handle_history_route(
         return HTTPStatus.CREATED, response_headers, json_bytes({"item": item})
 
     if method == "DELETE":
-        session_id, _ = _resolve_or_create_session(request_headers, create_if_missing=False)
+        session_id, _ = _resolve_or_create_session(
+            request_headers, create_if_missing=False
+        )
         if not session_id:
             return HTTPStatus.NO_CONTENT, response_headers, b""
 
         with _db_connect() as conn:
             if item_id is None:
-                conn.execute("DELETE FROM search_history WHERE session_id = ?", (session_id,))
+                conn.execute(
+                    "DELETE FROM search_history WHERE session_id = ?", (session_id,)
+                )
             else:
                 conn.execute(
                     "DELETE FROM search_history WHERE session_id = ? AND id = ?",
@@ -367,7 +391,9 @@ def _handle_history_route(
     return (
         HTTPStatus.METHOD_NOT_ALLOWED,
         response_headers,
-        json_bytes(error_payload("method_not_allowed", "Use GET, POST, DELETE, or OPTIONS.")),
+        json_bytes(
+            error_payload("method_not_allowed", "Use GET, POST, DELETE, or OPTIONS.")
+        ),
     )
 
 
@@ -386,7 +412,9 @@ def handle_api_request(
         return (
             HTTPStatus.FORBIDDEN,
             headers,
-            json_bytes(error_payload("cors_origin_not_allowed", "Origin is not allowed.")),
+            json_bytes(
+                error_payload("cors_origin_not_allowed", "Origin is not allowed.")
+            ),
         )
 
     if method == "OPTIONS":
@@ -443,21 +471,27 @@ def handle_api_request(
             return (
                 HTTPStatus.BAD_REQUEST,
                 headers,
-                json_bytes(error_payload("invalid_json", "Request body must be valid JSON.")),
+                json_bytes(
+                    error_payload("invalid_json", "Request body must be valid JSON.")
+                ),
             )
         url = payload.get("url")
     else:
         return (
             HTTPStatus.METHOD_NOT_ALLOWED,
             headers,
-            json_bytes(error_payload("method_not_allowed", "Use GET, POST, or OPTIONS.")),
+            json_bytes(
+                error_payload("method_not_allowed", "Use GET, POST, or OPTIONS.")
+            ),
         )
 
     if not isinstance(url, str) or not url.strip():
         return (
             HTTPStatus.BAD_REQUEST,
             headers,
-            json_bytes(error_payload("missing_url", "A non-empty 'url' value is required.")),
+            json_bytes(
+                error_payload("missing_url", "A non-empty 'url' value is required.")
+            ),
         )
 
     try:
@@ -467,6 +501,12 @@ def handle_api_request(
             HTTPStatus.BAD_REQUEST,
             headers,
             json_bytes(error_payload("invalid_url", str(exc))),
+        )
+    except jobcarbon.HTTPRequestError as exc:
+        return (
+            HTTPStatus.BAD_GATEWAY,
+            headers,
+            json_bytes(error_payload("upstream_payload_error", str(exc))),
         )
     except jobcarbon.PageFetchError as exc:
         return (
