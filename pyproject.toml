@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Estimate how old a job posting really is."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "sentry-sdk>=2.17",
+]
 
 [project.scripts]
 jobcarbon = "jobcarbon:main"

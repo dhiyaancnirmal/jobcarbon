@@ -77,3 +77,14 @@ Polish:
 - No recent a11y / Lighthouse pass.
 
 Awaiting user pick on which slice to tackle first.
+
+## Sentry Wiring (2026-04-19, in progress)
+- Frontend: `@sentry/wizard` ran successfully under `site/`. Next.js project is `dhiyaan/jobcarbon`. Created `sentry.server.config.ts`, `sentry.edge.config.ts`, `src/instrumentation.ts`, `src/instrumentation-client.ts`, `src/app/global-error.tsx`. Wizard also added `withSentryConfig(...)` wrapper and `tunnelRoute: "/monitoring"` in `site/next.config.ts`.
+- Wizard's example scaffolding (`src/app/sentry-example-page/`, `src/app/api/sentry-example-api/`) deleted.
+- `tracesSampleRate` tuned from `1` → `0.1` in all three site configs to protect the 10k-performance-units/mo free quota.
+- Backend: `jobcarbon_api.py` now performs a defensive `sentry_sdk.init(...)` from `SENTRY_DSN` env var with `traces_sample_rate=0.1` and `send_default_pii=True`. Added `_capture_exception` helper and wired it into the two `except Exception` fallbacks (sync handler ~line 519 and SSE stream handler ~line 589). Init is guarded so missing `sentry-sdk` or missing DSN is a no-op.
+- `pyproject.toml` now depends on `sentry-sdk>=2.17`. Railway nixpacks will install it on next deploy.
+- Local unit/integration/API suite still green (83 tests, up from 68 — the SSE stream endpoint shipped in the uncommitted-streaming commit added tests).
+- `SENTRY_AUTH_TOKEN` pushed to Vercel **production** env (Preview skipped — CLI prompt wanted an additional "all preview branches" selection that didn't accept piped stdin cleanly; can add later if preview source-map upload becomes useful).
+- Pending: user needs to create a **Python project** in the Sentry UI (name `jobcarbon-api`), then paste the DSN so we can run `railway variables --set SENTRY_DSN=...` and redeploy.
+- Sentry MCP server explicitly declined by the user.

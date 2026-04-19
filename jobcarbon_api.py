@@ -18,6 +18,23 @@ from urllib.parse import parse_qs, urlparse
 
 import jobcarbon
 
+try:
+    import sentry_sdk  # type: ignore[import-not-found]
+
+    sentry_sdk.init(
+        dsn=os.environ.get("SENTRY_DSN"),
+        traces_sample_rate=0.1,
+        send_default_pii=True,
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "production"),
+    )
+except ImportError:
+    sentry_sdk = None  # type: ignore[assignment]
+
+
+def _capture_exception(exc: BaseException) -> None:
+    if sentry_sdk is not None:
+        sentry_sdk.capture_exception(exc)
+
 
 DEFAULT_ALLOWED_ORIGINS = (
     "http://localhost:3000",
@@ -517,6 +534,7 @@ def handle_api_request(
             json_bytes(error_payload("upstream_fetch_failed", str(exc))),
         )
     except Exception as exc:  # pragma: no cover - defensive HTTP guard
+        _capture_exception(exc)
         return (
             HTTPStatus.INTERNAL_SERVER_ERROR,
             headers,
@@ -574,6 +592,7 @@ def run_stream_estimate(
             )
             return
         except Exception as exc:  # pragma: no cover - defensive guard
+            _capture_exception(exc)
             emit(
                 {
                     "type": "error",
