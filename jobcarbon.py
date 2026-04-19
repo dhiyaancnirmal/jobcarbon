@@ -8,14 +8,43 @@ import socket
 import sys
 import time
 import xml.etree.ElementTree as ET
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from html import unescape
-from typing import Any
+from typing import Any, Callable
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, quote, urlparse
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+
+ProgressEvent = dict[str, Any]
+ProgressEmitter = Callable[[ProgressEvent], None]
+
+_progress_emitter: ContextVar[ProgressEmitter | None] = ContextVar(
+    "_jobcarbon_progress_emitter", default=None
+)
+
+
+def set_progress_emitter(emitter: ProgressEmitter | None) -> Token:
+    """Install a progress emitter for the current context. Returns a reset token."""
+    return _progress_emitter.set(emitter)
+
+
+def reset_progress_emitter(token: Token) -> None:
+    _progress_emitter.reset(token)
+
+
+def _emit_progress(event: ProgressEvent) -> None:
+    emitter = _progress_emitter.get()
+    if emitter is None:
+        return
+    try:
+        emitter(event)
+    except Exception:
+        # Emitter failures must never break analysis.
+        pass
 
 
 USER_AGENT = (
@@ -3172,12 +3201,30 @@ def run_extraction_stage(
     extractor: Any,
     *args: Any,
 ) -> None:
+    _emit_progress({"type": "stage", "label": stage_label, "status": "start"})
     try:
         extractor(*args)
+        _emit_progress({"type": "stage", "label": stage_label, "status": "ok"})
     except HTTPRequestError as exc:
         accumulator.add_warning(f"{stage_label} failed: {exc}")
+        _emit_progress(
+            {
+                "type": "stage",
+                "label": stage_label,
+                "status": "warn",
+                "detail": str(exc),
+            }
+        )
     except Exception as exc:
         accumulator.add_warning(f"{stage_label} parser error: {exc}")
+        _emit_progress(
+            {
+                "type": "stage",
+                "label": stage_label,
+                "status": "warn",
+                "detail": str(exc),
+            }
+        )
 
 
 def has_credible_posted_signal(accumulator: AnalysisAccumulator) -> bool:
@@ -3200,11 +3247,13 @@ def analyze_url(
     session: Any | None = None,
     today: date | None = None,
 ) -> dict[str, Any]:
+    _emit_progress({"type": "start", "url": url})
     validated_url = validate_url(url)
     active_session = session or build_session()
     budget = RequestBudget.start(TOTAL_ANALYSIS_BUDGET_SECONDS)
     session_with_budget = BudgetedSession(active_session, budget)
     metadata = detect_platform(validated_url)
+    _emit_progress({"type": "platform", "platform": metadata.platform})
 
     blocked_result = handle_blocked_or_unsupported(validated_url, metadata)
     if blocked_result is not None:
@@ -3218,16 +3267,29 @@ def analyze_url(
 
     page_fetch_error: HTTPRequestError | None = None
     html = ""
+    _emit_progress({"type": "stage", "label": "Page fetch", "status": "start"})
     try:
         html = fetch_text(session_with_budget, validated_url)
+        _emit_progress({"type": "stage", "label": "Page fetch", "status": "ok"})
     except HTTPRequestError as exc:
         page_fetch_error = exc
         accumulator.add_warning(
             f"Primary page fetch failed: {exc}. Falling back to ATS APIs, render fallback, sitemap, and archive signals."
         )
+        _emit_progress(
+            {
+                "type": "stage",
+                "label": "Page fetch",
+                "status": "warn",
+                "detail": str(exc),
+            }
+        )
 
     if html:
+        previous_platform = metadata.platform
         metadata = maybe_detect_html_platform(validated_url, html, metadata)
+        if metadata.platform != previous_platform:
+            _emit_progress({"type": "platform", "platform": metadata.platform})
         run_extraction_stage(
             accumulator, "JSON-LD extraction", extract_jsonld, accumulator, html
         )

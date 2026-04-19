@@ -61,13 +61,11 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${inter.variable} ${mono.variable} h-full antialiased`}
-      suppressHydrationWarning
     >
       <body className="flex min-h-svh flex-col bg-white">
-        <script dangerouslySetInnerHTML={{ __html: `try{var h=localStorage.getItem('jobcarbon-history');if(h&&JSON.parse(h).length>0)document.documentElement.setAttribute('data-has-history','')}catch(e){}` }} />
         {children}
-        <footer className="mt-auto mx-auto w-full max-w-xl px-6 pb-5 pt-2 text-[11px] text-neutral-500">
-          <div className="flex items-center justify-between">
+        <footer className="mt-auto mx-auto w-full max-w-4xl px-6 pb-5 pt-2 text-[11px] text-neutral-600">
+          <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <Link
                 href="/"

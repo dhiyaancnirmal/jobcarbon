@@ -540,5 +540,95 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertTrue(jobcarbon.has_comparison_evidence(accumulator))
 
 
+class ProgressEmitterTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.events: list[dict] = []
+        self.token = jobcarbon.set_progress_emitter(self.events.append)
+
+    def tearDown(self) -> None:
+        jobcarbon.reset_progress_emitter(self.token)
+
+    def _accumulator(self) -> "jobcarbon.AnalysisAccumulator":
+        return jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+
+    def test_run_extraction_stage_emits_start_then_ok_on_success(self) -> None:
+        accumulator = self._accumulator()
+
+        def extractor(acc: jobcarbon.AnalysisAccumulator) -> None:
+            acc.add_hidden("ran", True)
+
+        jobcarbon.run_extraction_stage(accumulator, "JSON-LD", extractor, accumulator)
+
+        self.assertEqual(
+            self.events,
+            [
+                {"type": "stage", "label": "JSON-LD", "status": "start"},
+                {"type": "stage", "label": "JSON-LD", "status": "ok"},
+            ],
+        )
+        self.assertEqual(accumulator.warnings, [])
+
+    def test_run_extraction_stage_emits_warn_on_http_request_error(self) -> None:
+        accumulator = self._accumulator()
+
+        def extractor(_acc: jobcarbon.AnalysisAccumulator) -> None:
+            raise jobcarbon.HTTPRequestError("boom")
+
+        jobcarbon.run_extraction_stage(
+            accumulator, "Page fetch", extractor, accumulator
+        )
+
+        self.assertEqual(len(self.events), 2)
+        self.assertEqual(
+            self.events[0], {"type": "stage", "label": "Page fetch", "status": "start"}
+        )
+        self.assertEqual(self.events[1]["type"], "stage")
+        self.assertEqual(self.events[1]["status"], "warn")
+        self.assertEqual(self.events[1]["label"], "Page fetch")
+        self.assertIn("boom", self.events[1]["detail"])
+        self.assertTrue(
+            any("Page fetch failed" in w for w in accumulator.warnings),
+            accumulator.warnings,
+        )
+
+    def test_run_extraction_stage_emits_warn_on_unexpected_exception(self) -> None:
+        accumulator = self._accumulator()
+
+        def extractor(_acc: jobcarbon.AnalysisAccumulator) -> None:
+            raise ValueError("parser blew up")
+
+        jobcarbon.run_extraction_stage(
+            accumulator, "Meta/OpenGraph", extractor, accumulator
+        )
+
+        self.assertEqual(self.events[0]["status"], "start")
+        self.assertEqual(self.events[-1]["status"], "warn")
+        self.assertIn("parser blew up", self.events[-1]["detail"])
+        self.assertTrue(
+            any("parser error" in w for w in accumulator.warnings), accumulator.warnings
+        )
+
+    def test_emitter_failure_does_not_break_analysis(self) -> None:
+        accumulator = self._accumulator()
+
+        def bad_emitter(_event: dict) -> None:
+            raise RuntimeError("emitter is broken")
+
+        jobcarbon.reset_progress_emitter(self.token)
+        self.token = jobcarbon.set_progress_emitter(bad_emitter)
+
+        def extractor(acc: jobcarbon.AnalysisAccumulator) -> None:
+            acc.add_hidden("ran", True)
+
+        jobcarbon.run_extraction_stage(accumulator, "JSON-LD", extractor, accumulator)
+
+        self.assertEqual(accumulator.hidden_insights.get("ran"), True)
+        self.assertEqual(accumulator.warnings, [])
+
+
 if __name__ == "__main__":
     unittest.main()

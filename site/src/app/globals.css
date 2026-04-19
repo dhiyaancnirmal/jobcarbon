@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 
 /* Move main content to top when history exists or check is in progress.
-   Keyed off html[data-has-history] set by inline script before first paint. */
+   Keyed off html[data-has-history] managed by the client UI. */
 html[data-has-history] main {
   justify-content: flex-start;
   padding-top: 2rem;
@@ -74,8 +74,27 @@ html[data-has-history] main {
 
 @layer base {
   html {
-    overflow-y: auto;
     scrollbar-gutter: stable;
+    background: var(--background);
+    scrollbar-color: #d4d4d4 transparent;
+  }
+
+  /* WebKit: paint the scrollbar track transparent so the reserved gutter
+     blends with page bg (and with the modal dim when a dialog is open). */
+  html::-webkit-scrollbar {
+    width: 14px;
+    background: transparent;
+  }
+  html::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  html::-webkit-scrollbar-thumb {
+    background-color: #d4d4d4;
+    border-radius: 7px;
+    border: 3px solid var(--background);
+  }
+  html::-webkit-scrollbar-thumb:hover {
+    background-color: #a3a3a3;
   }
 
   body {
@@ -92,6 +111,12 @@ html[data-has-history] main {
 
   input:focus::placeholder {
     color: transparent;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
   }
 }
 
@@ -520,6 +545,10 @@ html[data-has-history] main {
     background-color: rgba(23, 23, 23, 0.45);
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
+    /* Cover the scrollbar-gutter reserve so the dim doesn't leave an
+       undimmed strip on the right edge. */
+    width: 100vw;
+    left: 0;
   }
 
   .gel-dialog-panel {
@@ -635,7 +664,7 @@ html[data-has-history] main {
 
   .carousel-track {
     display: flex;
-    gap: 10px;
+    gap: 6px;
     width: max-content;
     will-change: transform;
     pointer-events: auto;
@@ -647,6 +676,22 @@ html[data-has-history] main {
 
   .carousel-track:hover {
     animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carousel-track--animate,
+  .toast-card--enter,
+  .toast-card--exit,
+  .toast-progress,
+  .url-input--shake {
+    animation: none !important;
+  }
+
+  .gel-btn,
+  .gel-input,
+  .toast-close-btn {
+    transition: none !important;
   }
 }
 

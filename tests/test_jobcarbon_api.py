@@ -441,5 +441,146 @@ class JobcarbonAPITests(unittest.TestCase):
             self.assertEqual(jobcarbon_api.default_port(), 8000)
 
 
+class RunStreamEstimateTests(unittest.TestCase):
+    @staticmethod
+    def _collect(written: list[bytes]) -> list[dict]:
+        joined = b"".join(written).decode("utf-8")
+        return [
+            json.loads(line)
+            for line in joined.split("\n")
+            if line.strip()
+        ]
+
+    def test_success_path_emits_scripted_stages_then_result(self) -> None:
+        url = "https://jobs.lever.co/example/abc"
+        result_payload = sample_result(url)
+        written: list[bytes] = []
+
+        def analyzer(passed_url: str) -> dict:
+            self.assertEqual(passed_url, url)
+            jobcarbon._emit_progress({"type": "platform", "platform": "lever"})
+            jobcarbon._emit_progress(
+                {"type": "stage", "label": "Page fetch", "status": "start"}
+            )
+            jobcarbon._emit_progress(
+                {"type": "stage", "label": "Page fetch", "status": "ok"}
+            )
+            return result_payload
+
+        jobcarbon_api.run_stream_estimate(url, written.append, analyzer=analyzer)
+
+        events = self._collect(written)
+        self.assertEqual(events[0], {"type": "platform", "platform": "lever"})
+        self.assertEqual(
+            events[1], {"type": "stage", "label": "Page fetch", "status": "start"}
+        )
+        self.assertEqual(
+            events[2], {"type": "stage", "label": "Page fetch", "status": "ok"}
+        )
+        self.assertEqual(events[-1], {"type": "result", "result": result_payload})
+
+    def test_invalid_url_error_is_mapped_to_error_event(self) -> None:
+        written: list[bytes] = []
+
+        def analyzer(_url: str) -> dict:
+            raise jobcarbon.InvalidURLError("Invalid URL: bogus")
+
+        jobcarbon_api.run_stream_estimate("bogus", written.append, analyzer=analyzer)
+
+        events = self._collect(written)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["type"], "error")
+        self.assertEqual(events[0]["code"], "invalid_url")
+        self.assertIn("Invalid URL", events[0]["message"])
+
+    def test_http_request_error_maps_to_upstream_payload_error(self) -> None:
+        written: list[bytes] = []
+
+        def analyzer(_url: str) -> dict:
+            raise jobcarbon.HTTPRequestError("Malformed JSON from upstream")
+
+        jobcarbon_api.run_stream_estimate(
+            "https://jobs.lever.co/example/abc", written.append, analyzer=analyzer
+        )
+
+        events = self._collect(written)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["type"], "error")
+        self.assertEqual(events[0]["code"], "upstream_payload_error")
+
+    def test_page_fetch_error_maps_to_upstream_fetch_failed(self) -> None:
+        written: list[bytes] = []
+
+        def analyzer(_url: str) -> dict:
+            raise jobcarbon.PageFetchError("Could not reach page")
+
+        jobcarbon_api.run_stream_estimate(
+            "https://jobs.lever.co/example/abc", written.append, analyzer=analyzer
+        )
+
+        events = self._collect(written)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["type"], "error")
+        self.assertEqual(events[0]["code"], "upstream_fetch_failed")
+
+    def test_emitter_is_reset_after_run(self) -> None:
+        def analyzer(_url: str) -> dict:
+            return sample_result("https://jobs.lever.co/example/abc")
+
+        jobcarbon_api.run_stream_estimate(
+            "https://jobs.lever.co/example/abc",
+            lambda _b: None,
+            analyzer=analyzer,
+        )
+
+        self.assertIsNone(jobcarbon._progress_emitter.get())
+
+    def test_write_errors_do_not_propagate(self) -> None:
+        def analyzer(_url: str) -> dict:
+            jobcarbon._emit_progress(
+                {"type": "stage", "label": "Page fetch", "status": "start"}
+            )
+            return sample_result("https://jobs.lever.co/example/abc")
+
+        def failing_write(_data: bytes) -> None:
+            raise BrokenPipeError("client disconnected")
+
+        jobcarbon_api.run_stream_estimate(
+            "https://jobs.lever.co/example/abc",
+            failing_write,
+            analyzer=analyzer,
+        )
+
+
+class StreamURLFromRequestTests(unittest.TestCase):
+    def test_get_extracts_url_param(self) -> None:
+        url, err = jobcarbon_api._stream_url_from_request(
+            "GET", "url=https%3A%2F%2Fexample.com%2Fjob", b""
+        )
+        self.assertEqual(url, "https://example.com/job")
+        self.assertIsNone(err)
+
+    def test_missing_url_returns_error_payload(self) -> None:
+        url, err = jobcarbon_api._stream_url_from_request("GET", "", b"")
+        self.assertIsNone(url)
+        self.assertEqual(err["error"]["code"], "missing_url")
+
+    def test_post_parses_json_body(self) -> None:
+        body = json.dumps({"url": "https://example.com/job"}).encode("utf-8")
+        url, err = jobcarbon_api._stream_url_from_request("POST", "", body)
+        self.assertEqual(url, "https://example.com/job")
+        self.assertIsNone(err)
+
+    def test_post_invalid_json_returns_error(self) -> None:
+        url, err = jobcarbon_api._stream_url_from_request("POST", "", b"{not json")
+        self.assertIsNone(url)
+        self.assertEqual(err["error"]["code"], "invalid_json")
+
+    def test_unsupported_method_returns_method_not_allowed(self) -> None:
+        url, err = jobcarbon_api._stream_url_from_request("PUT", "", b"")
+        self.assertIsNone(url)
+        self.assertEqual(err["error"]["code"], "method_not_allowed")
+
+
 if __name__ == "__main__":
     unittest.main()

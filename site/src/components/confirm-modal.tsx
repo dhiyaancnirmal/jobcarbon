@@ -19,30 +19,12 @@ export function ConfirmModal({
   title: string
   description: string
   confirmText?: string
-  cancelText?: string
+  cancelText?: string | null
   destructive?: boolean
   onConfirm: () => void
   onCancel: () => void
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-
-    const prevOverflow = document.body.style.overflow
-    const prevPaddingRight = document.body.style.paddingRight
-    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
-
-    document.body.style.overflow = "hidden"
-    if (scrollbarWidth > 0) {
-      document.body.style.paddingRight = `${scrollbarWidth}px`
-    }
-
-    return () => {
-      document.body.style.overflow = prevOverflow
-      document.body.style.paddingRight = prevPaddingRight
-    }
-  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -126,15 +108,17 @@ export function ConfirmModal({
         <h2 id="confirm-modal-title" className="text-base font-semibold text-neutral-900">
           {title}
         </h2>
-        <p className="mt-2 text-sm text-neutral-500">{description}</p>
+        <p className="mt-2 whitespace-pre-line text-sm text-neutral-600">{description}</p>
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="gel-btn gel-btn--sm gel-btn--neutral"
-          >
-            {cancelText}
-          </button>
+          {cancelText ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="gel-btn gel-btn--sm gel-btn--neutral"
+            >
+              {cancelText}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onConfirm}

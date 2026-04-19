@@ -126,7 +126,7 @@ function StatusMessage({ result }: { result: EstimateResult }) {
           <span className="text-sm font-medium text-amber-800">Platform blocks automated access</span>
         </div>
         <p className="text-xs text-amber-700 leading-relaxed">
-          {result.warnings?.[0] ?? `${result.platform} blocks automated access. Try the original company careers page URL instead.`}
+          {`${result.platform} blocks automated access. Try the original company careers page URL instead.`}
         </p>
       </div>
     )
@@ -144,7 +144,7 @@ function StatusMessage({ result }: { result: EstimateResult }) {
           <span className="text-sm font-medium text-neutral-700">Platform not supported</span>
         </div>
         <p className="text-xs text-neutral-500 leading-relaxed">
-          {result.warnings?.[0] ?? `${result.platform} does not expose reliable posting dates.`}
+          {`${result.platform} does not expose reliable posting dates.`}
         </p>
       </div>
     )
@@ -163,15 +163,6 @@ function StatusMessage({ result }: { result: EstimateResult }) {
         <p className="text-xs text-neutral-500 leading-relaxed">
           We checked structured data, platform APIs, and archives but couldn&apos;t find a reliable posting date for this listing.
         </p>
-        {(result.warnings?.length ?? 0) > 0 && (
-          <div className="mt-1 flex min-w-0 flex-col gap-1">
-            {result.warnings!.map((w, i) => (
-              <p key={i} className="truncate text-[11px] text-neutral-400" title={w}>
-                {w}
-              </p>
-            ))}
-          </div>
-        )}
       </div>
     )
   }
@@ -214,7 +205,6 @@ export function ResultCard({
   const hasMeta =
     result.title || result.company || result.location || result.employment_type
   const hasInsights = Object.keys(result.hidden_insights ?? {}).length > 0
-  const hasWarnings = (result.warnings?.length ?? 0) > 0
   const copyText = buildCopyText(result)
   const platformUi = getPlatformPresentation(result.platform)
 
@@ -227,7 +217,7 @@ export function ResultCard({
             {formatAge(displayAgeDays)}
           </span>
           {dateStr && (
-            <span className="text-xs text-neutral-400">Posted {dateStr}</span>
+            <span className="text-xs text-neutral-500">Posted {dateStr}</span>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -267,13 +257,13 @@ export function ResultCard({
           )}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {result.company && (
-              <span className="text-xs text-neutral-500">{result.company}</span>
+              <span className="text-xs text-neutral-600">{result.company}</span>
             )}
             {result.location && (
-              <span className="text-xs text-neutral-400">{result.location}</span>
+              <span className="text-xs text-neutral-500">{result.location}</span>
             )}
             {result.employment_type && (
-              <span className="text-xs text-neutral-400">{result.employment_type}</span>
+              <span className="text-xs text-neutral-500">{result.employment_type}</span>
             )}
           </div>
         </div>
@@ -297,7 +287,7 @@ export function ResultCard({
         )}
         {result.chosen_source && (
           <>
-            <span className="text-[11px] text-neutral-400">
+            <span className="text-[11px] text-neutral-500">
               via {result.chosen_source.source}
               {result.chosen_source.field && `.${result.chosen_source.field}`}
             </span>
@@ -314,13 +304,13 @@ export function ResultCard({
           <button
             type="button"
             onClick={() => setEvidenceExpanded((open) => !open)}
-            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-400 transition-colors hover:text-neutral-600"
+            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-700"
           >
             <span>
               Evidence ({result.all_dates!.length} date
               {result.all_dates!.length !== 1 ? "s" : ""} found)
             </span>
-            <span className="text-neutral-400">{evidenceExpanded ? "Hide" : "Show"}</span>
+            <span className="text-neutral-500">{evidenceExpanded ? "Hide" : "Show"}</span>
           </button>
           {evidenceExpanded && (
             <div className="flex flex-col gap-3 px-5 pb-4 pt-1">
@@ -337,16 +327,16 @@ export function ResultCard({
                   <div className="flex flex-1 flex-col gap-0.5">
                     <div className="flex items-baseline gap-2">
                       <span className="font-mono tabular-nums text-neutral-700">{item.date}</span>
-                      <span className="text-neutral-400">
+                      <span className="text-neutral-500">
                         {kindLabel[item.kind] ?? item.kind}
                       </span>
                     </div>
-                    <span className="text-neutral-400">
+                    <span className="text-neutral-500">
                       {item.source}
                       {item.field ? `.${item.field}` : ""}
                     </span>
                     {item.note && (
-                      <span className="text-neutral-400 italic text-pretty">{item.note}</span>
+                      <span className="text-neutral-500 italic text-pretty">{item.note}</span>
                     )}
                   </div>
                 </div>
@@ -361,12 +351,12 @@ export function ResultCard({
           <button
             type="button"
             onClick={() => setInsightsExpanded((open) => !open)}
-            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-400 transition-colors hover:text-neutral-600"
+            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-700"
           >
             <span>
               Hidden insights ({Object.keys(result.hidden_insights ?? {}).length})
             </span>
-            <span className="text-neutral-400">{insightsExpanded ? "Hide" : "Show"}</span>
+            <span className="text-neutral-500">{insightsExpanded ? "Hide" : "Show"}</span>
           </button>
           {insightsExpanded && (
             <div className="flex flex-col gap-3 px-5 pb-4 pt-1">
@@ -375,29 +365,14 @@ export function ResultCard({
                   key={key}
                   className="flex items-baseline gap-2 text-[11px]"
                 >
-                  <span className="shrink-0 text-neutral-400">{key}</span>
-                  <span className="truncate font-mono text-neutral-600">
+                  <span className="shrink-0 text-neutral-500">{key}</span>
+                  <span className="truncate font-mono text-neutral-700">
                     {typeof value === "string" ? value : JSON.stringify(value)}
                   </span>
                 </div>
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {/* Warnings — compact auxiliary */}
-      {hasWarnings && (
-        <div className="min-w-0 border-t border-neutral-100 px-5 py-2.5">
-          {result.warnings!.map((w, i) => (
-            <p
-              key={i}
-              className="truncate text-[11px] text-neutral-400"
-              title={w}
-            >
-              {w}
-            </p>
-          ))}
         </div>
       )}
     </div>

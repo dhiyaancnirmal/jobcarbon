@@ -35,6 +35,8 @@ BASE_HEADERS = {
     "Vary": "Origin",
 }
 
+STREAM_PATH = "/api/v1/estimate/stream"
+
 _DB_INIT_LOCK = threading.Lock()
 _DB_INITIALIZED_PATHS: set[str] = set()
 
@@ -524,6 +526,92 @@ def handle_api_request(
     return HTTPStatus.OK, headers, json_bytes(result)
 
 
+def run_stream_estimate(
+    url: str,
+    write: Callable[[bytes], None],
+    *,
+    analyzer: Callable[[str], dict[str, Any]] = jobcarbon.analyze_url,
+) -> None:
+    """
+    Drive `analyzer(url)` with a progress emitter that serializes each event
+    as an NDJSON line via `write`. Emits a terminal `result` or `error` event.
+    """
+
+    def emit(event: dict[str, Any]) -> None:
+        try:
+            line = (json.dumps(event) + "\n").encode("utf-8")
+        except (TypeError, ValueError):
+            return
+        try:
+            write(line)
+        except Exception:
+            # A dead client must not break analysis state; swallow write errors.
+            pass
+
+    token = jobcarbon.set_progress_emitter(emit)
+    try:
+        try:
+            result = analyzer(url)
+        except jobcarbon.InvalidURLError as exc:
+            emit({"type": "error", "code": "invalid_url", "message": str(exc)})
+            return
+        except jobcarbon.HTTPRequestError as exc:
+            emit(
+                {
+                    "type": "error",
+                    "code": "upstream_payload_error",
+                    "message": str(exc),
+                }
+            )
+            return
+        except jobcarbon.PageFetchError as exc:
+            emit(
+                {
+                    "type": "error",
+                    "code": "upstream_fetch_failed",
+                    "message": str(exc),
+                }
+            )
+            return
+        except Exception as exc:  # pragma: no cover - defensive guard
+            emit(
+                {
+                    "type": "error",
+                    "code": "internal_error",
+                    "message": f"Unexpected error: {exc}",
+                }
+            )
+            return
+        emit({"type": "result", "result": result})
+    finally:
+        jobcarbon.reset_progress_emitter(token)
+
+
+def _stream_url_from_request(
+    method: str, query_string: str, body: bytes
+) -> tuple[str | None, dict[str, Any] | None]:
+    """Return (url, error_payload). Exactly one is non-None."""
+    if method == "GET":
+        params = parse_qs(query_string)
+        url = params.get("url", [None])[0]
+    elif method == "POST":
+        try:
+            payload = parse_json_body(body)
+        except json.JSONDecodeError:
+            return None, error_payload(
+                "invalid_json", "Request body must be valid JSON."
+            )
+        url = payload.get("url")
+    else:
+        return None, error_payload("method_not_allowed", "Use GET, POST, or OPTIONS.")
+
+    if not isinstance(url, str) or not url.strip():
+        return None, error_payload(
+            "missing_url", "A non-empty 'url' value is required."
+        )
+    return url.strip(), None
+
+
 class JobcarbonAPIHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:  # noqa: N802
         self._handle()
@@ -544,6 +632,10 @@ class JobcarbonAPIHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers.get("Content-Length", "0"))
             body = self.rfile.read(content_length)
 
+        if parsed.path == STREAM_PATH and self.command != "OPTIONS":
+            self._handle_stream(parsed.query, body)
+            return
+
         status, headers, payload = handle_api_request(
             method=self.command,
             path=parsed.path,
@@ -558,6 +650,60 @@ class JobcarbonAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
         if payload:
             self.wfile.write(payload)
+
+    def _handle_stream(self, query_string: str, body: bytes) -> None:
+        request_headers = dict(self.headers.items())
+        cors_headers, origin, origin_allowed = _build_headers(request_headers)
+        if origin and not origin_allowed:
+            self.send_response(HTTPStatus.FORBIDDEN)
+            for name, value in cors_headers.items():
+                self.send_header(name, value)
+            self.end_headers()
+            self.wfile.write(
+                json_bytes(
+                    error_payload(
+                        "cors_origin_not_allowed", "Origin is not allowed."
+                    )
+                )
+            )
+            return
+
+        url, err = _stream_url_from_request(self.command, query_string, body)
+        if err is not None:
+            code = err["error"]["code"]
+            if code == "method_not_allowed":
+                status = HTTPStatus.METHOD_NOT_ALLOWED
+            else:
+                status = HTTPStatus.BAD_REQUEST
+            self.send_response(status)
+            for name, value in cors_headers.items():
+                self.send_header(name, value)
+            self.end_headers()
+            self.wfile.write(json_bytes(err))
+            return
+
+        # Streaming headers: NDJSON, close-delimited (no Content-Length).
+        self.send_response(HTTPStatus.OK)
+        stream_headers = {
+            k: v
+            for k, v in cors_headers.items()
+            if k not in {"Content-Type", "Content-Length"}
+        }
+        stream_headers["Content-Type"] = "application/x-ndjson; charset=utf-8"
+        stream_headers["Cache-Control"] = "no-store"
+        stream_headers["X-Accel-Buffering"] = "no"
+        stream_headers["Connection"] = "close"
+        for name, value in stream_headers.items():
+            self.send_header(name, value)
+        self.end_headers()
+        self.wfile.flush()
+
+        def write_line(data: bytes) -> None:
+            self.wfile.write(data)
+            self.wfile.flush()
+
+        run_stream_estimate(url, write_line)
+        self.close_connection = True
 
     def log_message(self, format: str, *args: Any) -> None:
         return

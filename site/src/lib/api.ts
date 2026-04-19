@@ -85,6 +85,81 @@ export async function estimateJobAge(url: string): Promise<EstimateResult> {
   return payload as EstimateResult
 }
 
+export type StreamEvent =
+  | { type: "start"; url: string }
+  | { type: "platform"; platform: string }
+  | {
+      type: "stage"
+      label: string
+      status: "start" | "ok" | "warn"
+      detail?: string
+    }
+  | { type: "result"; result: EstimateResult }
+  | { type: "error"; code: string; message: string }
+
+export async function streamEstimateJobAge(
+  url: string,
+  onEvent: (event: StreamEvent) => void,
+  options?: { signal?: AbortSignal },
+): Promise<EstimateResult> {
+  const endpoint = `${API_BASE}/api/v1/estimate/stream?url=${encodeURIComponent(url)}`
+  const response = await fetch(endpoint, {
+    method: "GET",
+    signal: options?.signal,
+  })
+
+  if (!response.ok || !response.body) {
+    let message = `Stream request failed (${response.status})`
+    try {
+      const payload = (await response.json()) as ApiError
+      if (payload?.error?.message) message = payload.error.message
+    } catch {}
+    throw new Error(message)
+  }
+
+  const reader = response.body
+    .pipeThrough(new TextDecoderStream())
+    .getReader()
+
+  let buffer = ""
+  let result: EstimateResult | null = null
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += value
+      let newlineIdx = buffer.indexOf("\n")
+      while (newlineIdx >= 0) {
+        const line = buffer.slice(0, newlineIdx).trim()
+        buffer = buffer.slice(newlineIdx + 1)
+        if (line) {
+          let event: StreamEvent
+          try {
+            event = JSON.parse(line) as StreamEvent
+          } catch {
+            newlineIdx = buffer.indexOf("\n")
+            continue
+          }
+          onEvent(event)
+          if (event.type === "result") result = event.result
+          if (event.type === "error") throw new Error(event.message)
+        }
+        newlineIdx = buffer.indexOf("\n")
+      }
+    }
+  } finally {
+    try {
+      reader.releaseLock()
+    } catch {}
+  }
+
+  if (!result) {
+    throw new Error("Stream ended without a result event.")
+  }
+  return result
+}
+
 export async function fetchPlatforms(): Promise<PlatformsResponse> {
   const endpoint = `${API_BASE}/api/v1/platforms`
   const response = await fetch(endpoint, { method: "GET" })

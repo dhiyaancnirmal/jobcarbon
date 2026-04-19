@@ -18,7 +18,6 @@ export function SearchHistory({
   onClearAll: () => void
 }) {
   const [filter, setFilter] = useState("")
-  const [confirmingClear, setConfirmingClear] = useState(false)
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase()
@@ -38,41 +37,18 @@ export function SearchHistory({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-xs text-neutral-500">
+          <span className="text-xs text-neutral-600">
             {filtered.length === items.length
               ? `${items.length} ${items.length === 1 ? "result" : "results"}`
               : `${filtered.length} of ${items.length} results`}
           </span>
-          {confirmingClear ? (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-500">Clear all?</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setConfirmingClear(false)
-                  onClearAll()
-                }}
-                className="gel-btn gel-btn--xs gel-btn--destructive w-auto px-2.5 text-[11px]"
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmingClear(false)}
-                className="gel-btn gel-btn--xs gel-btn--neutral w-auto px-2.5 text-[11px]"
-              >
-                No
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmingClear(true)}
-              className="text-xs text-neutral-400 transition-colors hover:text-neutral-600"
-            >
-              Clear all
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="text-xs text-neutral-500 transition-colors hover:text-neutral-700"
+          >
+            Clear all
+          </button>
         </div>
         <input
           type="text"
@@ -80,7 +56,7 @@ export function SearchHistory({
           onChange={(e) => setFilter(e.target.value)}
           placeholder="Filter by title, company…"
           aria-label="Filter results"
-          className="gel-input h-8 min-h-8 w-full min-w-0 rounded-md px-3 text-xs sm:w-56"
+          className="gel-input h-8 min-h-8 w-full min-w-0 rounded-md px-3 text-xs sm:w-64"
         />
       </div>
 
