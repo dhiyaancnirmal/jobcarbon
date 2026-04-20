@@ -86,7 +86,7 @@ const FAQ = [
   },
   {
     q: "Do you store any data?",
-    a: "No accounts, no cookies, no server-side history. Recent checks live in your browser only.",
+    a: "No accounts and no third-party tracking pixels. One HttpOnly cookie holds a hashed session token so your search history follows you back, and Sentry receives anonymized error and performance traces. That's it.",
   },
 ]
 

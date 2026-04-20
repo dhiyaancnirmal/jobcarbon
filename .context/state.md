@@ -88,3 +88,25 @@ Awaiting user pick on which slice to tackle first.
 - `SENTRY_AUTH_TOKEN` pushed to Vercel **production** env (Preview skipped — CLI prompt wanted an additional "all preview branches" selection that didn't accept piped stdin cleanly; can add later if preview source-map upload becomes useful).
 - Pending: user needs to create a **Python project** in the Sentry UI (name `jobcarbon-api`), then paste the DSN so we can run `railway variables --set SENTRY_DSN=...` and redeploy.
 - Sentry MCP server explicitly declined by the user.
+
+## Sentry Wiring (2026-04-19, completed)
+- Created Sentry Python project `dhiyaan/jobcarbon-api` via REST API using a user-supplied broader auth token (the wizard's `SENTRY_AUTH_TOKEN` was scoped to source-map upload only).
+- Backend DSN: `https://15bde52bdb02fa5ad72723bce3e13075@o4511248857235456.ingest.us.sentry.io/4511248942759936` (set as `SENTRY_DSN` on Railway, public DSN — fine to log).
+- **Critical fix**: Railpack on Railway only detected Python and ran `python3 jobcarbon_api.py` directly — it did NOT run `pip install` from `pyproject.toml` alone. Added `requirements.txt` (single line: `sentry-sdk>=2.17`) which Railpack does pick up. New deploy installed `sentry-sdk-2.58.0` and healthcheck succeeded.
+- Final state: both surfaces live with Sentry. Vercel production has `SENTRY_AUTH_TOKEN`; Railway has `SENTRY_DSN` + `SENTRY_ENVIRONMENT=production`. `/healthz` on `api.howoldisthisjob.com` returns OK after the requirements.txt redeploy. Commits: `36a227e` (Sentry wiring across both surfaces) and `5b38a98` (requirements.txt).
+
+## SEO + Security headers + Analytics (2026-04-19, completed)
+- `site/src/app/robots.ts`: app-router metadata file. Allow `/`, disallow `/monitoring` (Sentry tunnel) and `/api/`. Points crawlers at `https://howoldisthisjob.com/sitemap.xml`.
+- `site/src/app/sitemap.ts`: lists `/`, `/about`, `/changelog`. Output verified to be valid `<urlset>` XML with `lastmod`, `changefreq`, `priority`.
+- `site/next.config.ts`: added `headers()` returning 5 security headers globally (`source: '/:path*'`): `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()`, `Content-Security-Policy: frame-ancestors 'none'`. Skipped a full script-src CSP because Sentry tunnel + Vercel Analytics + Tailwind would need nonce middleware — not worth the breakage risk for this scale. HSTS already comes from Vercel.
+- `site/src/app/layout.tsx`: added `<Analytics />` from `@vercel/analytics/next` (v2.0.1) at end of `<body>`. Free tier, no config needed; data appears in Vercel dashboard once deployed.
+- `npm run lint` clean, `npm run build` clean (8 static routes including `/robots.txt` and `/sitemap.xml`). Verified at `http://localhost:3001` after PM2 restart.
+
+## Cloudflare Setup (2026-04-19, completed)
+- Moved `howoldisthisjob.com` DNS from Spaceship to Cloudflare. Zone ID: `92a2115c6b80ea0b692f5052c38586eb`. Cloudflare nameservers: `gabriel.ns.cloudflare.com`, `saanvi.ns.cloudflare.com`. Zone active and proxying.
+- All three DNS records proxied (orange cloud): `@` A 76.76.21.21 (Vercel), `www` A 76.76.21.21 (Vercel), `api` CNAME paig7uuj.up.railway.app (Railway). Verified apex + www still return 200 through the Cloudflare proxy with no Vercel TLS complaints.
+- Rate limit rule created via Rulesets API (`http_ratelimit` phase) scoped to `http.host eq "api.howoldisthisjob.com" and starts_with(http.request.uri.path, "/api/v1/estimate")`. Characteristics: `ip.src + cf.colo.id`, period 10s, 10 req/period, action `block`, mitigation_timeout 10s. Free-plan entitlements force all three timers to 10s. Verified with a serial burst of 20: first 6 returned 400 (backend), remaining 14 returned 429 (Cloudflare block).
+- User's Cloudflare plan is Workers Paid (account-scoped compute), but the jobcarbon zone sits on the Free zone plan — sufficient for this use case.
+- API token `cfat_rXDRIgOIZyzfO3YPUCZ40iXgOa3JgqTbro6mIP4De074d911` updated by user on 2026-04-19 to add `Zone Settings:Edit`. Used the expanded scope to flip three zone settings: `always_use_https=on`, `automatic_https_rewrites=on`, `brotli=on`. Verified: `http://howoldisthisjob.com` now 301-redirects to `https://howoldisthisjob.com/`.
+- Bot Fight Mode could NOT be flipped via API — the `/zones/{zone_id}/bot_management` endpoint requires Account-level Bot Management auth, not Zone Settings. User must toggle it manually at Security → Bots in the dashboard if desired (free, blocks obvious scrapers).
+- No backend code change required — rate limiting lives at the edge.
