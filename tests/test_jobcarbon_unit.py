@@ -539,6 +539,101 @@ class JobcarbonUnitTests(unittest.TestCase):
         )
         self.assertTrue(jobcarbon.has_comparison_evidence(accumulator))
 
+    def test_should_run_wayback_fallback_skips_clean_strong_posted_signal(self) -> None:
+        accumulator = jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+        accumulator.add_date(
+            "2026-03-15",
+            source="greenhouse.api",
+            field="published_at",
+            kind="published",
+            reliability="high",
+        )
+
+        self.assertFalse(jobcarbon.should_run_wayback_fallback(accumulator))
+
+    def test_has_strong_native_posted_signal_requires_direct_high_confidence_source(
+        self,
+    ) -> None:
+        accumulator = jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+        accumulator.add_date(
+            "2026-03-15",
+            source="jsonld.jobposting",
+            field="datePosted",
+            kind="posted",
+            reliability="high",
+        )
+        self.assertTrue(jobcarbon.has_strong_native_posted_signal(accumulator))
+
+        comparison_only = jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+        comparison_only.add_date(
+            "2026-03-15",
+            source="sitemap",
+            field="lastmod",
+            kind="crawl",
+            reliability="low",
+        )
+        self.assertFalse(jobcarbon.has_strong_native_posted_signal(comparison_only))
+
+    def test_should_run_wayback_fallback_runs_when_no_dates_exist(self) -> None:
+        accumulator = jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+
+        self.assertTrue(jobcarbon.should_run_wayback_fallback(accumulator))
+
+    def test_should_run_wayback_fallback_runs_for_repost_conflict(self) -> None:
+        accumulator = jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+        accumulator.add_date(
+            "2026-03-01",
+            source="example.api",
+            field="published_at",
+            kind="published",
+            reliability="high",
+        )
+        accumulator.add_date(
+            "2026-04-15",
+            source="example.page",
+            field="updated_at",
+            kind="refresh",
+            reliability="medium",
+        )
+
+        self.assertTrue(jobcarbon.should_run_wayback_fallback(accumulator))
+
+    def test_should_run_wayback_fallback_skips_when_comparison_evidence_exists(self) -> None:
+        accumulator = jobcarbon.AnalysisAccumulator(
+            url="https://example.com/job",
+            normalized_url="https://example.com/job",
+            platform="example",
+        )
+        accumulator.add_date(
+            "2026-03-15",
+            source="sitemap",
+            field="lastmod",
+            kind="crawl",
+            reliability="low",
+        )
+
+        self.assertFalse(jobcarbon.should_run_wayback_fallback(accumulator))
+
 
 class ProgressEmitterTests(unittest.TestCase):
     def setUp(self) -> None:

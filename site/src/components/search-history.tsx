@@ -37,7 +37,7 @@ export function SearchHistory({
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-xs text-neutral-600">
+          <span className="text-xs text-neutral-600 dark:text-neutral-300">
             {filtered.length === items.length
               ? `${items.length} ${items.length === 1 ? "result" : "results"}`
               : `${filtered.length} of ${items.length} results`}
@@ -45,7 +45,7 @@ export function SearchHistory({
           <button
             type="button"
             onClick={onClearAll}
-            className="text-xs text-neutral-500 transition-colors hover:text-neutral-700"
+            className="text-xs text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
           >
             Clear all
           </button>
@@ -61,7 +61,7 @@ export function SearchHistory({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-neutral-200 bg-white px-5 py-6 text-center text-xs text-neutral-400">
+        <p className="rounded-xl border border-dashed border-neutral-200 bg-white px-5 py-6 text-center text-xs text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-500">
           No results match &ldquo;{filter}&rdquo;.
         </p>
       ) : (

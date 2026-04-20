@@ -22,15 +22,15 @@ export function HistoryCard({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left transition-colors hover:bg-neutral-50"
+        className="flex w-full items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900"
       >
         <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium text-neutral-800">{title}</span>
-          <div className="flex items-center gap-2 text-[11px] text-neutral-400">
+          <span className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-100">{title}</span>
+          <div className="flex items-center gap-2 text-[11px] text-neutral-400 dark:text-neutral-500">
             {company && <span className="truncate">{company}</span>}
           </div>
         </div>
-        <span className="shrink-0 text-[11px] text-neutral-400">Expand</span>
+        <span className="shrink-0 text-[11px] text-neutral-400 dark:text-neutral-500">Expand</span>
       </button>
     )
   }
@@ -41,13 +41,13 @@ export function HistoryCard({
         <button
           type="button"
           onClick={onToggle}
-          className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-600"
+          className="text-[11px] text-neutral-400 transition-colors hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300"
         >
           Collapse
         </button>
       </div>
       <ResultCard result={result} onRemove={onRemove} />
-      <p className="truncate px-1 text-center text-[11px] text-neutral-400">
+      <p className="truncate px-1 text-center text-[11px] text-neutral-400 dark:text-neutral-500">
         {item.url}
       </p>
     </div>

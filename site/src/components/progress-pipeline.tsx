@@ -22,19 +22,19 @@ export function ProgressPipeline({
     platform && platform !== "unknown" ? getPlatformPresentation(platform) : null
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5">
+    <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="flex items-center gap-2">
         <Loader2
-          className="size-3.5 animate-spin text-neutral-400"
+          className="size-3.5 animate-spin text-neutral-400 dark:text-neutral-500"
           strokeWidth={2}
           aria-hidden
         />
-        <span className="text-[13px] font-medium text-neutral-700">
+        <span className="text-[13px] font-medium text-neutral-700 dark:text-neutral-200">
           Checking{platformUi ? ` \u00b7 ${platformUi.displayName}` : ""}
         </span>
       </div>
       {stages.length === 0 ? (
-        <p className="text-[13px] text-neutral-400">
+        <p className="text-[13px] text-neutral-400 dark:text-neutral-500">
           Detecting platform and loading the page…
         </p>
       ) : (
@@ -51,14 +51,14 @@ export function ProgressPipeline({
                 <span
                   className={
                     stage.status === "warn"
-                      ? "text-neutral-500"
-                      : "text-neutral-800"
+                      ? "text-neutral-500 dark:text-neutral-400"
+                      : "text-neutral-800 dark:text-neutral-100"
                   }
                 >
                   {stage.label}
                 </span>
                 {stage.status === "warn" && stage.detail && (
-                  <span className="text-[11px] text-neutral-400">
+                  <span className="text-[11px] text-neutral-400 dark:text-neutral-500">
                     {stage.detail}
                   </span>
                 )}
@@ -75,7 +75,7 @@ function StageIcon({ status }: { status: StageStatus }) {
   if (status === "running") {
     return (
       <Loader2
-        className="size-3.5 animate-spin text-neutral-400"
+        className="size-3.5 animate-spin text-neutral-400 dark:text-neutral-500"
         strokeWidth={2}
         aria-hidden
       />
@@ -84,7 +84,7 @@ function StageIcon({ status }: { status: StageStatus }) {
   if (status === "ok") {
     return (
       <Check
-        className="size-3.5 text-emerald-600"
+        className="size-3.5 text-emerald-600 dark:text-emerald-500"
         strokeWidth={2.5}
         aria-hidden
       />
@@ -92,7 +92,7 @@ function StageIcon({ status }: { status: StageStatus }) {
   }
   return (
     <AlertTriangle
-      className="size-3.5 text-amber-500"
+      className="size-3.5 text-amber-500 dark:text-amber-400"
       strokeWidth={2}
       aria-hidden
     />

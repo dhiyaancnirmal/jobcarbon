@@ -146,6 +146,7 @@ function usePrefersReducedMotion() {
 export function JobChecker() {
   const invalidShakeTimeoutRef = useRef<number>(0)
   const invalidShakeFrameRef = useRef<number>(0)
+  const autoRunUrlRef = useRef<string | null>(null)
   const [url, setUrl] = useState("")
   const [urlError, setUrlError] = useState<string | null>(null)
   const [urlShake, setUrlShake] = useState(false)
@@ -327,6 +328,37 @@ export function JobChecker() {
     }
   }, [pushToast])
 
+  const submitValidatedUrl = useCallback(
+    (validated: string, rawInput: string = validated) => {
+      const existing = history.find((item) => item.url === validated)
+      if (existing) {
+        setExpandedId(existing.id)
+        return
+      }
+
+      const matched = checkIntercept(rawInput)
+      if (matched) {
+        const spec = INTERCEPTS[matched]
+        setModalState({
+          kind: "intercept",
+          searchUrl: validated,
+          title: spec.title,
+          description: spec.body,
+          confirmText:
+            spec.mode === "blocked"
+              ? spec.dismissLabel
+              : (spec.continueLabel ?? "Continue"),
+          cancelText: spec.mode === "blocked" ? null : spec.dismissLabel,
+          action: spec.mode === "blocked" ? "close" : "continue",
+        })
+        return
+      }
+
+      runCheck(validated)
+    },
+    [history, runCheck],
+  )
+
   const confirmModal = useCallback(async () => {
     if (!modalState) return
 
@@ -374,31 +406,7 @@ export function JobChecker() {
       return
     }
     setUrlError(null)
-
-    const existing = history.find((item) => item.url === validated)
-    if (existing) {
-      setExpandedId(existing.id)
-      return
-    }
-
-    const matched = checkIntercept(trimmed)
-    if (matched) {
-      const spec = INTERCEPTS[matched]
-      setModalState({
-        kind: "intercept",
-        searchUrl: validated,
-        title: spec.title,
-        description: spec.body,
-        confirmText:
-          spec.mode === "blocked"
-            ? spec.dismissLabel
-            : (spec.continueLabel ?? "Continue"),
-        cancelText: spec.mode === "blocked" ? null : spec.dismissLabel,
-        action: spec.mode === "blocked" ? "close" : "continue",
-      })
-      return
-    }
-    runCheck(validated)
+    submitValidatedUrl(validated, trimmed)
   }
 
   function handleRemove(id: string) {
@@ -415,6 +423,28 @@ export function JobChecker() {
     PLACEHOLDER_URLS,
     prefersReducedMotion || !!url || loading || hasHistory,
   )
+
+  useEffect(() => {
+    if (loading || autoRunUrlRef.current !== null) return
+
+    const seeded = new URLSearchParams(window.location.search).get("url")?.trim()
+    if (!seeded) {
+      autoRunUrlRef.current = ""
+      return
+    }
+
+    autoRunUrlRef.current = seeded
+    setUrl(seeded)
+
+    const validated = validateHttpUrl(seeded)
+    if (!validated) {
+      triggerInvalidUrlFeedback()
+      return
+    }
+
+    setUrlError(null)
+    submitValidatedUrl(validated, seeded)
+  }, [loading, submitValidatedUrl, triggerInvalidUrlFeedback])
 
   return (
     <>
@@ -496,7 +526,11 @@ export function JobChecker() {
           </form>
           <div className="min-h-5 px-1">
             {urlError && (
-              <p id="job-url-error" role="alert" className="text-xs text-red-600">
+              <p
+                id="job-url-error"
+                role="alert"
+                className="text-xs text-red-600 dark:text-red-400"
+              >
                 {urlError}
               </p>
             )}
@@ -522,7 +556,7 @@ export function JobChecker() {
 
         {!hasHistory && !loading && (
           <div className="flex flex-col gap-4 -mx-6">
-            <p className="px-6 text-xs text-neutral-500">23+ platforms supported</p>
+            <p className="px-6 text-xs text-neutral-500 dark:text-neutral-400">23+ platforms supported</p>
             <PlatformCarousel />
           </div>
         )}

@@ -57,6 +57,10 @@ MAX_HTTP_ATTEMPTS = 3
 BACKOFF_BASE_SECONDS = 0.5
 RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 TOTAL_ANALYSIS_BUDGET_SECONDS = 30.0
+LEVER_API_TIMEOUT_SECONDS = 3.5
+GREENHOUSE_API_TIMEOUT_SECONDS = 4.0
+STRIPE_GREENHOUSE_API_TIMEOUT_SECONDS = 4.0
+WORKDAY_API_TIMEOUT_SECONDS = 4.0
 MIN_BUDGET_FOR_RENDER_SECONDS = 4.0
 MIN_BUDGET_FOR_SITEMAP_SECONDS = 2.5
 MIN_BUDGET_FOR_WAYBACK_SECONDS = 1.5
@@ -485,6 +489,7 @@ class HTTPRequestError(Exception):
 class HTTPResponse:
     text: str
     status_code: int
+    final_url: str | None = None
 
     def raise_for_status(self) -> None:
         if self.status_code >= 400:
@@ -504,7 +509,8 @@ class HTTPSession:
     ) -> None:
         self.headers = {
             "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/json;q=0.9,application/xml;q=0.8,*/*;q=0.7",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,application/json;q=0.8,*/*;q=0.7",
+            "Accept-Language": "en-US,en;q=0.9",
         }
         self.opener = opener
         self.sleeper = sleeper
@@ -530,7 +536,15 @@ class HTTPSession:
                     charset = response.headers.get_content_charset() or "utf-8"
                     body = response.read().decode(charset, errors="replace")
                     status_code = getattr(response, "status", response.getcode())
-                    return HTTPResponse(text=body, status_code=status_code)
+                    final_url = None
+                    if hasattr(response, "geturl"):
+                        try:
+                            final_url = response.geturl()
+                        except Exception:
+                            final_url = None
+                    return HTTPResponse(
+                        text=body, status_code=status_code, final_url=final_url
+                    )
             except HTTPError as exc:
                 last_error = HTTPRequestError(
                     f"{exc.code} {exc.reason} for url: {url}",
@@ -1521,7 +1535,7 @@ def extract_greenhouse_api(
         return
     api_url = f"https://boards-api.greenhouse.io/v1/boards/{metadata.org}/jobs/{metadata.job_id}"
     try:
-        payload = fetch_json(session, api_url)
+        payload = fetch_json(session, api_url, timeout=GREENHOUSE_API_TIMEOUT_SECONDS)
     except HTTPRequestError as exc:
         accumulator.add_warning(f"Greenhouse API fallback failed: {exc}")
         return
@@ -1555,7 +1569,7 @@ def extract_lever_api(
         f"https://api.lever.co/v0/postings/{metadata.org}/{metadata.job_id}?mode=json"
     )
     try:
-        payload = fetch_json(session, api_url)
+        payload = fetch_json(session, api_url, timeout=LEVER_API_TIMEOUT_SECONDS)
     except HTTPRequestError as exc:
         accumulator.add_warning(f"Lever API fallback failed: {exc}")
         return
@@ -2431,7 +2445,9 @@ def extract_stripe_greenhouse(
 
     api_url = f"https://boards-api.greenhouse.io/v1/boards/stripe/jobs/{quote(metadata.job_id, safe='')}"
     try:
-        payload = fetch_json(session, api_url)
+        payload = fetch_json(
+            session, api_url, timeout=STRIPE_GREENHOUSE_API_TIMEOUT_SECONDS
+        )
     except HTTPRequestError as exc:
         accumulator.add_warning(f"Stripe Greenhouse fallback failed: {exc}")
         return
@@ -2798,7 +2814,7 @@ def extract_workday_api(
     parsed = urlparse(original_url)
     api_url = f"{parsed.scheme}://{parsed.netloc}/wday/cxs/{metadata.org}/{site}/job/{job_path}"
     try:
-        payload = fetch_json(session, api_url)
+        payload = fetch_json(session, api_url, timeout=WORKDAY_API_TIMEOUT_SECONDS)
     except HTTPRequestError as exc:
         accumulator.add_warning(f"Workday CXS fallback failed: {exc}")
         return
@@ -3235,10 +3251,65 @@ def has_credible_posted_signal(accumulator: AnalysisAccumulator) -> bool:
     )
 
 
+def has_strong_native_posted_signal(accumulator: AnalysisAccumulator) -> bool:
+    return any(
+        candidate.kind in {"posted", "published"}
+        and candidate.reliability in {"high", "medium"}
+        and SOURCE_PRIORITY.get(candidate.source, 99) <= 1
+        for candidate in accumulator.all_dates
+    )
+
+
 def has_comparison_evidence(accumulator: AnalysisAccumulator) -> bool:
     return any(
         candidate.source in COMPARISON_SOURCES for candidate in accumulator.all_dates
     )
+
+
+def should_run_wayback_fallback(accumulator: AnalysisAccumulator) -> bool:
+    if has_comparison_evidence(accumulator):
+        return False
+
+    sorted_dates = sorted(
+        accumulator.all_dates,
+        key=lambda item: (
+            item.date,
+            DATE_KIND_PRIORITY[item.kind],
+            RELIABILITY_PRIORITY[item.reliability],
+        ),
+    )
+    best_date = choose_best_date(sorted_dates)
+
+    if best_date is None:
+        return True
+
+    strong_native_signal = has_strong_native_posted_signal(accumulator)
+
+    return not strong_native_signal
+
+
+def extract_workday_bootstrap(html: str) -> dict[str, Any]:
+    window_match = re.search(
+        r"window\.workday\s*=\s*window\.workday\s*\|\|\s*\{(.*?)\};",
+        html,
+        re.DOTALL,
+    )
+    if not window_match:
+        return {}
+
+    snippet = window_match.group(1)
+    data: dict[str, Any] = {}
+
+    for key in ("tenant", "siteId", "locale", "requestLocale", "token"):
+        match = re.search(rf'{key}\s*:\s*"([^"]+)"', snippet)
+        if match:
+            data[key] = match.group(1)
+
+    posting_available = re.search(r"postingAvailable\s*:\s*(true|false)", snippet)
+    if posting_available:
+        data["postingAvailable"] = posting_available.group(1) == "true"
+
+    return data
 
 
 def analyze_url(
@@ -3267,9 +3338,15 @@ def analyze_url(
 
     page_fetch_error: HTTPRequestError | None = None
     html = ""
+    page_url = validated_url
     _emit_progress({"type": "stage", "label": "Page fetch", "status": "start"})
     try:
-        html = fetch_text(session_with_budget, validated_url)
+        page_response = session_with_budget.get(
+            validated_url, timeout=DEFAULT_TIMEOUT_SECONDS
+        )
+        page_response.raise_for_status()
+        html = page_response.text
+        page_url = getattr(page_response, "final_url", None) or validated_url
         _emit_progress({"type": "stage", "label": "Page fetch", "status": "ok"})
     except HTTPRequestError as exc:
         page_fetch_error = exc
@@ -3286,8 +3363,13 @@ def analyze_url(
         )
 
     if html:
+        fetched_metadata = detect_platform(page_url)
+        if fetched_metadata.platform != "unknown":
+            metadata = fetched_metadata
+        elif urlparse(page_url).netloc.lower() != urlparse(validated_url).netloc.lower():
+            metadata = fetched_metadata
         previous_platform = metadata.platform
-        metadata = maybe_detect_html_platform(validated_url, html, metadata)
+        metadata = maybe_detect_html_platform(page_url, html, metadata)
         if metadata.platform != previous_platform:
             _emit_progress({"type": "platform", "platform": metadata.platform})
         run_extraction_stage(
@@ -3313,41 +3395,43 @@ def analyze_url(
         accumulator.platform = metadata.platform
 
     if metadata.platform == "lever":
-        run_extraction_stage(
-            accumulator,
-            "Lever API fallback",
-            extract_lever_api,
-            accumulator,
-            session_with_budget,
-            metadata,
-        )
+        if not has_strong_native_posted_signal(accumulator):
+            run_extraction_stage(
+                accumulator,
+                "Lever API fallback",
+                extract_lever_api,
+                accumulator,
+                session_with_budget,
+                metadata,
+            )
     elif metadata.platform == "greenhouse":
-        if metadata.extra.get("resolver") == "stripe":
+        if html:
             run_extraction_stage(
                 accumulator,
-                "Stripe Greenhouse fallback",
-                extract_stripe_greenhouse,
+                "Greenhouse HTML fallback",
+                detect_from_greenhouse_html,
                 accumulator,
-                session_with_budget,
+                html,
+                page_url,
                 metadata,
             )
-        else:
-            run_extraction_stage(
-                accumulator,
-                "Greenhouse API fallback",
-                extract_greenhouse_api,
-                accumulator,
-                session_with_budget,
-                metadata,
-            )
-            if html:
+        if not has_strong_native_posted_signal(accumulator):
+            if metadata.extra.get("resolver") == "stripe":
                 run_extraction_stage(
                     accumulator,
-                    "Greenhouse HTML fallback",
-                    detect_from_greenhouse_html,
+                    "Stripe Greenhouse fallback",
+                    extract_stripe_greenhouse,
                     accumulator,
-                    html,
-                    validated_url,
+                    session_with_budget,
+                    metadata,
+                )
+            elif metadata.org and metadata.job_id:
+                run_extraction_stage(
+                    accumulator,
+                    "Greenhouse API fallback",
+                    extract_greenhouse_api,
+                    accumulator,
+                    session_with_budget,
                     metadata,
                 )
     elif metadata.platform == "ashby":
@@ -3491,15 +3575,29 @@ def analyze_url(
                 metadata,
             )
     elif metadata.platform == "workday":
-        run_extraction_stage(
-            accumulator,
-            "Workday CXS fallback",
-            extract_workday_api,
-            accumulator,
-            session_with_budget,
-            metadata,
-            validated_url,
-        )
+        workday_bootstrap = extract_workday_bootstrap(html) if html else {}
+        if workday_bootstrap.get("tenant") and not metadata.org:
+            metadata.org = str(workday_bootstrap["tenant"])
+        if workday_bootstrap.get("siteId") and not metadata.extra.get("site"):
+            metadata.extra["site"] = str(workday_bootstrap["siteId"])
+        if "postingAvailable" in workday_bootstrap:
+            accumulator.add_hidden(
+                "workday_posting_available", workday_bootstrap["postingAvailable"]
+            )
+        if workday_bootstrap.get("postingAvailable") is False:
+            accumulator.add_warning(
+                "Workday page indicates the posting is no longer available."
+            )
+        else:
+            run_extraction_stage(
+                accumulator,
+                "Workday CXS fallback",
+                extract_workday_api,
+                accumulator,
+                session_with_budget,
+                metadata,
+                validated_url,
+            )
     elif metadata.platform == "oracle_hcm":
         if metadata.extra.get("resolver") == "goldman_sachs":
             run_extraction_stage(
@@ -3559,8 +3657,7 @@ def analyze_url(
     platform_capability = get_platform_capability(metadata.platform)
     skip_comparison_fallbacks = (
         platform_capability["integration"] == "direct"
-        and has_credible_posted_signal(accumulator)
-        and has_comparison_evidence(accumulator)
+        and has_strong_native_posted_signal(accumulator)
     ) or (
         metadata.platform == "successfactors"
         and has_credible_posted_signal(accumulator)
@@ -3582,9 +3679,11 @@ def analyze_url(
             "Skipped sitemap fallback due to remaining analysis budget."
         )
 
-    if skip_comparison_fallbacks:
-        pass
-    elif budget.can_run(MIN_BUDGET_FOR_WAYBACK_SECONDS):
+    should_run_wayback = not skip_comparison_fallbacks and should_run_wayback_fallback(
+        accumulator
+    )
+
+    if should_run_wayback and budget.can_run(MIN_BUDGET_FOR_WAYBACK_SECONDS):
         run_extraction_stage(
             accumulator,
             "Wayback fallback",
@@ -3592,7 +3691,7 @@ def analyze_url(
             accumulator,
             session_with_budget,
         )
-    else:
+    elif should_run_wayback:
         accumulator.add_warning(
             "Skipped Wayback fallback due to remaining analysis budget."
         )

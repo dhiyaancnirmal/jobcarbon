@@ -8,11 +8,11 @@ export default function Home() {
         <header className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <Logo size={48} />
-            <h1 className="text-[1.625rem] font-semibold leading-snug tracking-tight text-neutral-900 md:text-[1.6875rem]">
+            <h1 className="text-[1.625rem] font-semibold leading-snug tracking-tight text-neutral-900 md:text-[1.6875rem] dark:text-neutral-50">
               How Old Is This Job?
             </h1>
           </div>
-          <p className="max-w-2xl text-base leading-relaxed text-neutral-600">
+          <p className="max-w-2xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300">
             Paste a job posting URL and we&apos;ll tell you when it was really posted.
           </p>
         </header>

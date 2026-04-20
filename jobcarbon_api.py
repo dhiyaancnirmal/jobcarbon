@@ -7,6 +7,7 @@ import os
 import secrets
 import sqlite3
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from http import HTTPStatus
@@ -31,9 +32,51 @@ except ImportError:
     sentry_sdk = None  # type: ignore[assignment]
 
 
-def _capture_exception(exc: BaseException) -> None:
-    if sentry_sdk is not None:
+def _capture_exception(
+    exc: BaseException,
+    *,
+    url: str | None = None,
+    platform: str | None = None,
+) -> None:
+    if sentry_sdk is None:
+        return
+    with sentry_sdk.push_scope() as scope:
+        if url:
+            scope.set_tag("jobcarbon.url_present", True)
+            scope.set_extra("jobcarbon_url", url)
+        if platform:
+            scope.set_tag("jobcarbon.platform", platform)
         sentry_sdk.capture_exception(exc)
+
+
+def _capture_analysis_diagnostic(
+    url: str, result: dict[str, Any], elapsed_ms: float
+) -> None:
+    if sentry_sdk is None:
+        return
+    if elapsed_ms < 8000 and result.get("status") == "success":
+        return
+
+    chosen_source = result.get("chosen_source") or {}
+    with sentry_sdk.push_scope() as scope:
+        scope.set_tag("jobcarbon.platform", result.get("platform") or "unknown")
+        scope.set_tag("jobcarbon.status", result.get("status") or "unknown")
+        scope.set_tag(
+            "jobcarbon.chosen_source", chosen_source.get("source") or "none"
+        )
+        scope.set_tag("jobcarbon.slow", elapsed_ms >= 8000)
+        scope.set_context(
+            "jobcarbon_analysis",
+            {
+                "url": url,
+                "elapsed_ms": round(elapsed_ms, 1),
+                "likely_posted_date": result.get("likely_posted_date"),
+                "warning_count": len(result.get("warnings") or []),
+                "reposted_likely": result.get("reposted_likely"),
+                "chosen_source": chosen_source,
+            },
+        )
+        sentry_sdk.capture_message("jobcarbon.analysis.degraded", level="warning")
 
 
 DEFAULT_ALLOWED_ORIGINS = (
@@ -513,8 +556,10 @@ def handle_api_request(
             ),
         )
 
+    trimmed_url = url.strip()
+    started = time.perf_counter()
     try:
-        result = analyzer(url.strip())
+        result = analyzer(trimmed_url)
     except jobcarbon.InvalidURLError as exc:
         return (
             HTTPStatus.BAD_REQUEST,
@@ -534,13 +579,16 @@ def handle_api_request(
             json_bytes(error_payload("upstream_fetch_failed", str(exc))),
         )
     except Exception as exc:  # pragma: no cover - defensive HTTP guard
-        _capture_exception(exc)
+        _capture_exception(exc, url=trimmed_url)
         return (
             HTTPStatus.INTERNAL_SERVER_ERROR,
             headers,
             json_bytes(error_payload("internal_error", f"Unexpected error: {exc}")),
         )
 
+    _capture_analysis_diagnostic(
+        trimmed_url, result, (time.perf_counter() - started) * 1000
+    )
     return HTTPStatus.OK, headers, json_bytes(result)
 
 
@@ -567,6 +615,7 @@ def run_stream_estimate(
             pass
 
     token = jobcarbon.set_progress_emitter(emit)
+    started = time.perf_counter()
     try:
         try:
             result = analyzer(url)
@@ -592,7 +641,7 @@ def run_stream_estimate(
             )
             return
         except Exception as exc:  # pragma: no cover - defensive guard
-            _capture_exception(exc)
+            _capture_exception(exc, url=url)
             emit(
                 {
                     "type": "error",
@@ -601,6 +650,7 @@ def run_stream_estimate(
                 }
             )
             return
+        _capture_analysis_diagnostic(url, result, (time.perf_counter() - started) * 1000)
         emit({"type": "result", "result": result})
     finally:
         jobcarbon.reset_progress_emitter(token)

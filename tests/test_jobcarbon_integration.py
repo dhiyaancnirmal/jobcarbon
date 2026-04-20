@@ -73,6 +73,9 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertTrue(
             any(item["field"] == "datePosted" for item in result["all_dates"])
         )
+        self.assertFalse(
+            any("Lever API fallback failed" in warning for warning in result["warnings"])
+        )
 
     def test_greenhouse_api_beats_refresh_and_archive_signals(self) -> None:
         target_url = (
@@ -99,7 +102,36 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertTrue(
             any(item["field"] == "updated_at" for item in result["all_dates"])
         )
-        self.assertTrue(any(item["kind"] == "archive" for item in result["all_dates"]))
+        self.assertFalse(any(item["kind"] == "archive" for item in result["all_dates"]))
+
+    def test_greenhouse_html_short_circuits_api_when_page_has_published_at(self) -> None:
+        target_url = (
+            "https://job-boards.greenhouse.io/speechify/jobs/5058944004"
+        )
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text=load_text("greenhouse_board_page.html")),
+                "https://job-boards.greenhouse.io/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjob-boards.greenhouse.io%2Fspeechify%2Fjobs%2F5058944004&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 20)
+        )
+
+        self.assertEqual(result["platform"], "greenhouse")
+        self.assertEqual(result["chosen_source"]["source"], "greenhouse.html")
+        self.assertFalse(
+            any(
+                "Greenhouse API fallback failed" in warning
+                for warning in result["warnings"]
+            )
+        )
 
     def test_smartrecruiters_api_handles_js_blocked_page(self) -> None:
         target_url = "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer"
@@ -1192,7 +1224,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertTrue(
             any(item["source"] == "sitemap" for item in result["all_dates"])
         )
-        self.assertTrue(
+        self.assertFalse(
             any(item["source"] == "wayback.cdx" for item in result["all_dates"])
         )
 
@@ -1387,6 +1419,41 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                 for item in result["all_dates"]
             )
         )
+
+    def test_workday_skips_cxs_when_bootstrap_marks_posting_unavailable(self) -> None:
+        target_url = "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Closed-Role_JR1999999"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head><script>"
+                        "window.workday = window.workday || {"
+                        'tenant: "nvidia",'
+                        'siteId: "NVIDIAExternalCareerSite",'
+                        "postingAvailable: false"
+                        "};"
+                        "</script></head><body><div id='root'></div></body></html>"
+                    )
+                ),
+                "https://nvidia.wd5.myworkdayjobs.com/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fnvidia.wd5.myworkdayjobs.com%2Fen-US%2FNVIDIAExternalCareerSite%2Fjob%2FUS-CA-Santa-Clara%2FClosed-Role_JR1999999&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = jobcarbon.analyze_url(
+            target_url, session=session, today=jobcarbon.date(2026, 4, 20)
+        )
+
+        self.assertEqual(result["platform"], "workday")
+        self.assertEqual(result["status"], "no_date")
+        self.assertFalse(
+            any("Workday CXS fallback failed" in warning for warning in result["warnings"])
+        )
+        self.assertFalse(result["hidden_insights"]["workday_posting_available"])
 
     def test_oracle_hcm_api_returns_posted_start_date_and_hidden_insights(self) -> None:
         target_url = "https://eeho.fa.us2.oraclecloud.com/hcmUI/CandidateExperience/en/sites/CX_1/job/12345"

@@ -102,13 +102,13 @@ export function ConfirmModal({
         aria-modal="true"
         aria-labelledby="confirm-modal-title"
         tabIndex={-1}
-        className="gel-dialog-panel w-full max-w-sm rounded-xl border border-neutral-200 p-5"
+        className="gel-dialog-panel w-full max-w-sm rounded-xl border border-neutral-200 p-5 dark:border-neutral-800"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="confirm-modal-title" className="text-base font-semibold text-neutral-900">
+        <h2 id="confirm-modal-title" className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
           {title}
         </h2>
-        <p className="mt-2 whitespace-pre-line text-sm text-neutral-600">{description}</p>
+        <p className="mt-2 whitespace-pre-line text-sm text-neutral-600 dark:text-neutral-300">{description}</p>
         <div className="mt-5 flex justify-end gap-2">
           {cancelText ? (
             <button

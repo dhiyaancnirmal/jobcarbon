@@ -111,7 +111,7 @@ export function Toasts({
         {items.map((t) => (
           <div
             key={t.id}
-            className={`toast-card pointer-events-auto relative rounded-lg border border-neutral-200 bg-white px-3 pb-3 pt-2 shadow-sm ${closingIds.has(t.id) ? "toast-card--exit" : "toast-card--enter"}`}
+            className={`toast-card pointer-events-auto relative rounded-lg border border-neutral-200 bg-white px-3 pb-3 pt-2 shadow-sm dark:border-neutral-800 dark:bg-neutral-950 ${closingIds.has(t.id) ? "toast-card--exit" : "toast-card--enter"}`}
             role="status"
             aria-live="polite"
           >
@@ -126,11 +126,11 @@ export function Toasts({
 
             <div className="min-w-0 pr-6">
               {t.title && (
-                <div className="text-xs font-medium text-neutral-900">
+                <div className="text-xs font-medium text-neutral-900 dark:text-neutral-100">
                   {t.title}
                 </div>
               )}
-              <div className="text-xs leading-relaxed text-neutral-700">
+              <div className="text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
                 {t.message}
               </div>
             </div>
@@ -148,4 +148,3 @@ export function Toasts({
     document.body
   )
 }
-

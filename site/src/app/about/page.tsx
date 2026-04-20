@@ -96,10 +96,10 @@ export default function About() {
       <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-12">
         <section className="flex flex-col gap-4">
           <Logo size={40} />
-          <h1 className="text-[2rem] font-semibold tracking-tight text-neutral-900 sm:text-[2.3rem]">
+          <h1 className="text-[2rem] font-semibold tracking-tight text-neutral-900 sm:text-[2.3rem] dark:text-neutral-50">
             About &ldquo;How Old Is This Job?&rdquo;
           </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-[15px]">
+          <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-[15px] dark:text-neutral-300">
             A tool for finding the real posting date of a job listing. Best on direct employer ATS pages — Greenhouse, Lever, Ashby, Workday, and 20+ more.
           </p>
           <div>
@@ -113,10 +113,10 @@ export default function About() {
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold tracking-tight text-neutral-900">
+          <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
             How it works
           </h2>
-          <ol className="flex flex-col divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+          <ol className="flex flex-col divide-y divide-neutral-100 overflow-hidden rounded-xl border border-neutral-200 bg-white dark:divide-neutral-900 dark:border-neutral-800 dark:bg-neutral-950">
             {SIGNALS.map((s, i) => (
               <li
                 key={s.label}
@@ -126,27 +126,27 @@ export default function About() {
                   0{i + 1}
                 </span>
                 <div className="flex flex-1 flex-col gap-0.5">
-                  <span className="text-sm font-medium text-neutral-900">
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                     {s.label}
                   </span>
-                  <span className="text-xs text-neutral-500">{s.note}</span>
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">{s.note}</span>
                 </div>
               </li>
             ))}
           </ol>
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
             Sources are ranked by reliability. When they disagree, the chosen source wins and the rest show up as evidence.
           </p>
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold tracking-tight text-neutral-900">
+          <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
             Supported platforms
           </h2>
-          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+          <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] uppercase tracking-[0.12em] text-neutral-500">
+                <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] uppercase tracking-[0.12em] text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
                   <th className="px-4 py-2.5 text-left font-medium">
                     Platform
                   </th>
@@ -155,10 +155,10 @@ export default function About() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-100">
+              <tbody className="divide-y divide-neutral-100 dark:divide-neutral-900">
                 {PLATFORM_ROWS.map((row) => (
                   <tr key={row.name}>
-                    <td className="px-4 py-2.5 text-sm text-neutral-900">
+                    <td className="px-4 py-2.5 text-sm text-neutral-900 dark:text-neutral-100">
                       {row.name}
                     </td>
                     <td className="px-4 py-2.5 text-right">
@@ -174,13 +174,13 @@ export default function About() {
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold tracking-tight text-neutral-900">
+          <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
             FAQ
           </h2>
-          <div className="flex flex-col divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-200 bg-white">
+          <div className="flex flex-col divide-y divide-neutral-200 overflow-hidden rounded-xl border border-neutral-200 bg-white dark:divide-neutral-900 dark:border-neutral-800 dark:bg-neutral-950">
             {FAQ.map((item) => (
               <details key={item.q} className="group">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 text-sm font-medium text-neutral-900 marker:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3.5 text-sm font-medium text-neutral-900 marker:hidden dark:text-neutral-100">
                   <span>{item.q}</span>
                   <svg
                     aria-hidden
@@ -190,12 +190,12 @@ export default function About() {
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
-                    className="shrink-0 text-neutral-400 transition-transform group-open:rotate-180"
+                    className="shrink-0 text-neutral-400 transition-transform group-open:rotate-180 dark:text-neutral-500"
                   >
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
                 </summary>
-                <p className="px-4 pb-4 text-sm leading-relaxed text-neutral-600">
+                <p className="px-4 pb-4 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
                   {item.a}
                 </p>
               </details>
