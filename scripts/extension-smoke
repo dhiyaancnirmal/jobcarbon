@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPTS_DIR="$ROOT_DIR/scripts"
+
+if [ ! -x "$SCRIPTS_DIR/node_modules/.bin/playwright" ]; then
+  echo "Installing Playwright smoke test dependencies into scripts/ ..."
+  npm --prefix "$SCRIPTS_DIR" install --no-fund --no-audit
+fi
+
+exec npm --prefix "$SCRIPTS_DIR" exec -- playwright test --config "$SCRIPTS_DIR/playwright.extension-smoke.config.mjs" "$@"

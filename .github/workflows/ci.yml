@@ -20,7 +20,7 @@ jobs:
           python-version: "3.11"
 
       - name: Compile Python sources
-        run: python -m py_compile jobcarbon.py jobcarbon_api.py
+        run: python -m py_compile howoldisthisjob.py howoldisthisjob_api.py
 
       - name: Run test suite
         run: python -m unittest discover -s tests -v

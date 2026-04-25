@@ -1,12 +1,19 @@
 __pycache__/
 *.py[cod]
+*.egg-info/
+.venv/
 .DS_Store
 
 .env
 .env.*
 *.log
 .tmp/
+tmp/
+tmp-*.png
 output/
+test-results/
+.wrangler/
+.claude/
 
 node_modules/
 .next/

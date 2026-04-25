@@ -1,5 +1,5 @@
 [project]
-name = "jobcarbon"
+name = "howoldisthisjob"
 version = "0.1.0"
 description = "Estimate how old a job posting really is."
 readme = "README.md"
@@ -9,8 +9,11 @@ dependencies = [
 ]
 
 [project.scripts]
-jobcarbon = "jobcarbon:main"
-jobcarbon-api = "jobcarbon_api:main"
+howoldisthisjob = "howoldisthisjob:main"
+howoldisthisjob-api = "howoldisthisjob_api:main"
+
+[tool.setuptools]
+py-modules = ["howoldisthisjob", "howoldisthisjob_api"]
 
 [build-system]
 requires = ["setuptools>=68"]

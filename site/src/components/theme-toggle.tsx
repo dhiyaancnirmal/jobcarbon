@@ -1,35 +1,34 @@
 "use client"
 
-import { Moon } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
-const THEME_STORAGE_KEY = "jobcarbon-theme"
+const THEME_STORAGE_KEY = "howoldisthisjob-theme"
 
 function applyTheme(nextTheme: "light" | "dark") {
   document.documentElement.classList.toggle("dark", nextTheme === "dark")
   document.documentElement.style.colorScheme = nextTheme
 }
 
+function readInitialTheme(): "light" | "dark" {
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (stored === "light" || stored === "dark") return stored
+  } catch {}
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+}
+
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window === "undefined") {
-      return "light"
-    }
-    try {
-      const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
-      if (stored === "light" || stored === "dark") {
-        return stored
-      }
-    } catch {}
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light"
-  })
+  const [theme, setTheme] = useState<"light" | "dark">(() =>
+    typeof window === "undefined" ? "light" : readInitialTheme(),
+  )
+
+  useEffect(() => {
+    applyTheme(theme)
+  }, [theme])
 
   function toggleTheme() {
     const nextTheme = theme === "dark" ? "light" : "dark"
     setTheme(nextTheme)
-    applyTheme(nextTheme)
     try {
       window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
     } catch {}
@@ -39,12 +38,12 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="gel-btn gel-btn--sm gel-btn--neutral"
+      suppressHydrationWarning
+      className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
       aria-label="Toggle color theme"
       title="Toggle color theme"
     >
-      <Moon className="size-3.5 text-neutral-600 dark:text-neutral-200" strokeWidth={1.9} aria-hidden />
-      <span>Theme</span>
+      {theme === "dark" ? "Night" : "Day"}
     </button>
   )
 }

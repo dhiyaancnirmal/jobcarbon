@@ -1,0 +1,19 @@
+{
+  "name": "howoldisthisjob-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cf:check": "wrangler deploy --dry-run",
+    "cf:deploy": "wrangler deploy",
+    "cf:dev": "wrangler dev",
+    "cf:types": "wrangler types cloudflare/worker-configuration.d.ts"
+  },
+  "dependencies": {
+    "@cloudflare/containers": "^0.0.28"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260422.0",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.72.0"
+  }
+}

@@ -8,7 +8,7 @@ export type SupportedPlatform = {
   slug: string
   displayName: string
   gelClass: string
-  href: string
+  href: string | null
 }
 
 export const SUPPORTED_PLATFORMS: SupportedPlatform[] = [
@@ -16,8 +16,11 @@ export const SUPPORTED_PLATFORMS: SupportedPlatform[] = [
   { slug: "greenhouse", displayName: "Greenhouse", gelClass: "gel-btn--greenhouse", href: "https://www.greenhouse.io" },
   { slug: "ashby", displayName: "Ashby", gelClass: "gel-btn--ashby", href: "https://www.ashbyhq.com" },
   { slug: "smartrecruiters", displayName: "SmartRecruiters", gelClass: "gel-btn--smartrecruiters", href: "https://www.smartrecruiters.com" },
+  { slug: "dayforce", displayName: "Dayforce", gelClass: "gel-btn--dayforce", href: "https://www.dayforce.com" },
+  { slug: "pageup", displayName: "PageUp", gelClass: "gel-btn--pageup", href: "https://www.pageuppeople.com" },
   { slug: "workable", displayName: "Workable", gelClass: "gel-btn--workable", href: "https://www.workable.com" },
   { slug: "workday", displayName: "Workday", gelClass: "gel-btn--workday", href: "https://www.workday.com" },
+  { slug: "ukgpro", displayName: "UKG Pro", gelClass: "gel-btn--ukg-pro", href: "https://www.ukg.com" },
   { slug: "bamboohr", displayName: "BambooHR", gelClass: "gel-btn--bamboohr", href: "https://www.bamboohr.com" },
   { slug: "rippling", displayName: "Rippling", gelClass: "gel-btn--rippling", href: "https://www.rippling.com" },
   { slug: "icims", displayName: "iCIMS", gelClass: "gel-btn--icims", href: "https://www.icims.com" },
@@ -25,6 +28,7 @@ export const SUPPORTED_PLATFORMS: SupportedPlatform[] = [
   { slug: "jobvite", displayName: "Jobvite", gelClass: "gel-btn--jobvite", href: "https://www.jobvite.com" },
   { slug: "brassring", displayName: "Brassring", gelClass: "gel-btn--brassring", href: "https://www.ibm.com/products/brassring" },
   { slug: "successfactors", displayName: "SuccessFactors", gelClass: "gel-btn--successfactors", href: "https://www.successfactors.com" },
+  { slug: "taleo", displayName: "Taleo", gelClass: "gel-btn--taleo", href: "https://www.oracle.com/human-capital-management/taleo" },
   { slug: "avature", displayName: "Avature", gelClass: "gel-btn--avature", href: "https://www.avature.net" },
   { slug: "gem", displayName: "Gem", gelClass: "gel-btn--gem", href: "https://www.gem.com" },
   { slug: "teamtailor", displayName: "Teamtailor", gelClass: "gel-btn--teamtailor", href: "https://www.teamtailor.com" },
@@ -42,6 +46,7 @@ const PLATFORM_BY_SLUG = new Map(SUPPORTED_PLATFORMS.map((p) => [p.slug, p]))
 /** Detector / API may use a shorter slug than our canonical key */
 const PLATFORM_ALIASES: Record<string, string> = {
   breezy: "breezyhr",
+  ukg_pro: "ukgpro",
 }
 for (const [alias, canonical] of Object.entries(PLATFORM_ALIASES)) {
   const target = PLATFORM_BY_SLUG.get(canonical)
@@ -79,6 +84,13 @@ export type PlatformPresentation = {
  */
 export function getPlatformPresentation(platform: string): PlatformPresentation {
   const key = normalizePlatformKey(platform)
+  if (key === "custombackend") {
+    return {
+      displayName: "Employer site",
+      gelClass: "gel-btn--neutral",
+      href: null,
+    }
+  }
   const found = PLATFORM_BY_SLUG.get(key)
   if (found) {
     return { displayName: found.displayName, gelClass: found.gelClass, href: found.href }

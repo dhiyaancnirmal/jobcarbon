@@ -6,6 +6,24 @@ export const metadata: Metadata = {
 
 const ENTRIES = [
   {
+    version: "v0.1.2",
+    date: "April 2026",
+    changes: [
+      "Added PageUp support to the live platform set.",
+      "Added a local Chrome extension page and install flow.",
+      "Added browser-side aggregator assist for LinkedIn, Indeed, and Google Careers when source ATS links are exposed locally.",
+    ],
+  },
+  {
+    version: "v0.1.1",
+    date: "April 2026",
+    changes: [
+      "Added `?url=` homepage deep-link auto-run support.",
+      "Added day/night theme toggle and dark mode across the site.",
+      "Reduced unnecessary ATS fallback work on faster success paths.",
+    ],
+  },
+  {
     version: "v0.1.0",
     date: "April 2026",
     changes: [
@@ -17,15 +35,15 @@ const ENTRIES = [
 export default function Changelog() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col px-6 py-10">
-      <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-8">
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
           Changelog
         </h1>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-8">
           {ENTRIES.map((entry) => (
             <section
               key={entry.version}
-              className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-4 py-4 dark:border-neutral-800 dark:bg-neutral-950"
+              className="flex flex-col gap-2"
             >
               <div className="flex items-baseline gap-2">
                 <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
@@ -35,9 +53,9 @@ export default function Changelog() {
                   {entry.date}
                 </span>
               </div>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex list-disc flex-col gap-1 pl-5">
                 {entry.changes.map((change) => (
-                  <li key={change} className="text-sm text-neutral-500 dark:text-neutral-300">
+                  <li key={change} className="text-sm text-neutral-600 dark:text-neutral-300">
                     {change}
                   </li>
                 ))}

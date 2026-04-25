@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Move main content to top when history exists or check is in progress.
    Keyed off html[data-has-history] managed by the client UI. */
 html[data-has-history] main {
@@ -72,7 +74,7 @@ html[data-has-history] main {
   --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-:root.dark {
+html.dark {
   --background: #000000;
   --foreground: #f5f5f5;
   --card: #0a0a0a;
@@ -404,6 +406,18 @@ html[data-has-history] main {
     border-color: #2d6350;
   }
 
+  .gel-btn--dayforce {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #eb7a43, #d85722);
+    border-color: #a9441a;
+  }
+
+  .gel-btn--pageup {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #d8629d, #ba447f);
+    border-color: #923463;
+  }
+
   .gel-btn--workable {
     color: #ffffff;
     background: linear-gradient(to bottom, #2a8f82, #1d7267);
@@ -428,6 +442,12 @@ html[data-has-history] main {
     border-color: #2568b8;
   }
 
+  .gel-btn--taleo {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #d65b57, #bf3e3a);
+    border-color: #96312e;
+  }
+
   .gel-btn--rippling {
     color: #ffffff;
     background: linear-gradient(to bottom, #d4a832, #b8891a);
@@ -450,6 +470,12 @@ html[data-has-history] main {
     color: #ffffff;
     background: linear-gradient(to bottom, #d97d35, #b86220);
     border-color: #8f4e18;
+  }
+
+  .gel-btn--ukg-pro {
+    color: #ffffff;
+    background: linear-gradient(to bottom, #4a89d8, #2f6fc4);
+    border-color: #25589d;
   }
 
   .gel-btn--oracle-hcm {

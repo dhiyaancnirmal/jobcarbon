@@ -21,6 +21,7 @@ import {
 } from "@/components/progress-pipeline"
 import { SearchHistory } from "@/components/search-history"
 import { Toasts, type ToastItem, type ToastVariant } from "@/components/toasts"
+import { SUPPORTED_PLATFORMS } from "@/lib/supported-platforms"
 
 const PLACEHOLDER_URLS = [
   "https://jobs.lever.co/stripe/abc123",
@@ -97,12 +98,42 @@ function useTypingPlaceholder(urls: string[], paused: boolean) {
   return placeholder
 }
 
-const HISTORY_CACHE_KEY = "jobcarbon-history"
+const HISTORY_CACHE_KEY = "howoldisthisjob-history"
+
+function historyLookupKey(item: Pick<HistoryItem, "url" | "result">): string {
+  const normalized = item.result.normalized_url?.trim()
+  if (normalized) return normalized
+  return item.url.trim()
+}
+
+function dedupeHistory(items: HistoryItem[]): HistoryItem[] {
+  const seen = new Set<string>()
+  const deduped: HistoryItem[] = []
+
+  for (const item of items) {
+    const key = historyLookupKey(item)
+    if (seen.has(key)) continue
+    seen.add(key)
+    deduped.push(item)
+  }
+
+  return deduped
+}
+
+function mergeHistoryItem(items: HistoryItem[], nextItem: HistoryItem): HistoryItem[] {
+  const nextKey = historyLookupKey(nextItem)
+  const filtered = items.filter((item) => {
+    if (item.id === nextItem.id) return false
+    return historyLookupKey(item) !== nextKey
+  })
+
+  return [nextItem, ...filtered]
+}
 
 function readCachedHistory(): HistoryItem[] {
   try {
     const raw = localStorage.getItem(HISTORY_CACHE_KEY)
-    return raw ? (JSON.parse(raw) as HistoryItem[]) : []
+    return raw ? dedupeHistory(JSON.parse(raw) as HistoryItem[]) : []
   } catch {
     return []
   }
@@ -117,10 +148,6 @@ type ModalState =
       confirmText: string
       cancelText: string | null
       action: "close" | "continue"
-    }
-  | {
-      kind: "remove"
-      historyId: string
     }
   | {
       kind: "clear"
@@ -153,7 +180,34 @@ export function JobChecker() {
   const [loading, setLoading] = useState(false)
 
   const [history, setHistory] = useState<HistoryItem[]>([])
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set())
+
+  const expandId = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }, [])
+
+  const collapseId = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      if (!prev.has(id)) return prev
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+  }, [])
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const [modalState, setModalState] = useState<ModalState>(null)
   const [progressPlatform, setProgressPlatform] = useState<string | null>(null)
@@ -238,10 +292,10 @@ export function JobChecker() {
 
     async function loadHistory() {
       try {
-        const items = await fetchHistory()
+        const items = dedupeHistory(await fetchHistory())
         if (cancelled) return
         setHistory(items)
-        if (items.length > 0) setExpandedId(items[0].id)
+        if (items.length > 0) expandId(items[0].id)
       } catch {
         if (cancelled) return
         pushToast("Couldn’t load history.", "error")
@@ -316,8 +370,8 @@ export function JobChecker() {
         return
       }
       const item = await saveToHistory(searchUrl, result)
-      setHistory((current) => [item, ...current])
-      setExpandedId(item.id)
+      setHistory((current) => mergeHistoryItem(current, item))
+      expandId(item.id)
       setUrl("")
     } catch {
       pushToast("Couldn’t reach that URL.", "error")
@@ -326,13 +380,13 @@ export function JobChecker() {
       setProgressPlatform(null)
       setProgressStages([])
     }
-  }, [pushToast])
+  }, [expandId, pushToast])
 
   const submitValidatedUrl = useCallback(
     (validated: string, rawInput: string = validated) => {
       const existing = history.find((item) => item.url === validated)
       if (existing) {
-        setExpandedId(existing.id)
+        expandId(existing.id)
         return
       }
 
@@ -356,7 +410,7 @@ export function JobChecker() {
 
       runCheck(validated)
     },
-    [history, runCheck],
+    [expandId, history, runCheck],
   )
 
   const confirmModal = useCallback(async () => {
@@ -370,20 +424,6 @@ export function JobChecker() {
       return
     }
 
-    if (modalState.kind === "remove") {
-      const id = modalState.historyId
-      setModalState(null)
-      try {
-        await deleteHistoryItem(id)
-        setHistory((current) => current.filter((item) => item.id !== id))
-      } catch {
-        pushToast("Couldn’t remove that entry.", "error")
-        return
-      }
-      if (expandedId === id) setExpandedId(null)
-      return
-    }
-
     setModalState(null)
     try {
       await clearHistory()
@@ -392,8 +432,8 @@ export function JobChecker() {
       return
     }
     setHistory([])
-    setExpandedId(null)
-  }, [expandedId, modalState, pushToast, runCheck])
+    setExpandedIds(new Set())
+  }, [modalState, pushToast, runCheck])
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -409,9 +449,19 @@ export function JobChecker() {
     submitValidatedUrl(validated, trimmed)
   }
 
-  function handleRemove(id: string) {
-    setModalState({ kind: "remove", historyId: id })
-  }
+  const handleRemove = useCallback(
+    async (id: string) => {
+      try {
+        await deleteHistoryItem(id)
+        setHistory((current) => current.filter((item) => item.id !== id))
+      } catch {
+        pushToast("Couldn’t remove that entry.", "error")
+        return
+      }
+      collapseId(id)
+    },
+    [collapseId, pushToast],
+  )
 
   function handleClearAll() {
     setModalState({ kind: "clear" })
@@ -454,26 +504,20 @@ export function JobChecker() {
         title={
           modalState?.kind === "intercept"
             ? modalState.title
-            : modalState?.kind === "remove"
-              ? "Remove this result?"
-              : "Clear your search history?"
+            : "Clear your search history?"
         }
         description={
           modalState?.kind === "intercept"
             ? modalState.description
-            : modalState?.kind === "remove"
-              ? "This will remove the result from your history on this device."
-              : "This will permanently remove every saved result from your history on this device."
+            : "This will permanently remove every saved result from your history on this device."
         }
         confirmText={
           modalState?.kind === "intercept"
             ? modalState.confirmText
-            : modalState?.kind === "remove"
-              ? "Remove"
-              : "Clear all"
+            : "Clear all"
         }
         cancelText={modalState?.kind === "intercept" ? modalState.cancelText : "Cancel"}
-        destructive={modalState?.kind === "remove" || modalState?.kind === "clear"}
+        destructive={modalState?.kind === "clear"}
         onConfirm={confirmModal}
         onCancel={() => setModalState(null)}
       />
@@ -547,8 +591,8 @@ export function JobChecker() {
         {hasHistory && (
           <SearchHistory
             items={history}
-            expandedId={expandedId}
-            onToggleExpand={setExpandedId}
+            expandedIds={expandedIds}
+            onToggleExpand={toggleExpand}
             onRemove={handleRemove}
             onClearAll={handleClearAll}
           />
@@ -556,7 +600,9 @@ export function JobChecker() {
 
         {!hasHistory && !loading && (
           <div className="flex flex-col gap-4 -mx-6">
-            <p className="px-6 text-xs text-neutral-500 dark:text-neutral-400">23+ platforms supported</p>
+            <p className="px-6 text-xs text-neutral-500 dark:text-neutral-400">
+              {SUPPORTED_PLATFORMS.length}+ platforms supported
+            </p>
             <PlatformCarousel />
           </div>
         )}

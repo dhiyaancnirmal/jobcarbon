@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import Link from "next/link"
+import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
 import { ThemeToggle } from "@/components/theme-toggle"
 import "./globals.css"
@@ -18,11 +19,11 @@ const mono = JetBrains_Mono({
 const SITE_URL = "https://howoldisthisjob.com"
 const SITE_TITLE = "How Old Is This Job? - Find the real posting date"
 const SITE_DESCRIPTION =
-  "Paste any job posting URL and find out when it was really posted. Detect ghost jobs, reposts, and stale listings across Greenhouse, Lever, Ashby, Workday, and 20+ more platforms."
+  "Paste any job posting URL and find out when it was really posted. Detect ghost jobs, reposts, and stale listings across Greenhouse, Lever, Ashby, Workday, and 23+ more ATS platforms."
 
 const themeInitScript = `
   try {
-    var storedTheme = window.localStorage.getItem("jobcarbon-theme");
+    var storedTheme = window.localStorage.getItem("howoldisthisjob-theme");
     var theme = storedTheme === "dark" || storedTheme === "light"
       ? storedTheme
       : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
@@ -76,13 +77,13 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-svh flex-col bg-background text-foreground transition-colors">
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <div className="mx-auto w-full max-w-4xl px-6 pt-4">
-          <div className="mx-auto flex w-full max-w-[42rem] justify-end">
-            <ThemeToggle />
-          </div>
-        </div>
+      <body
+        suppressHydrationWarning
+        className="flex min-h-svh flex-col bg-white text-neutral-950 transition-colors dark:bg-black dark:text-neutral-50"
+      >
+        <Script id="theme-init" strategy="beforeInteractive">
+          {themeInitScript}
+        </Script>
         {children}
         <footer className="mx-auto mt-auto w-full max-w-4xl px-6 pb-5 pt-2 text-[11px] text-neutral-600 transition-colors dark:text-neutral-400">
           <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
@@ -100,12 +101,21 @@ export default function RootLayout({
               >
                 About
               </Link>
+              <span className="text-neutral-400 dark:text-neutral-600">·</span>
+              <Link
+                href="/extension"
+                className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
+              >
+                Extension
+              </Link>
+              <span className="text-neutral-400 dark:text-neutral-600">·</span>
+              <ThemeToggle />
             </div>
             <Link
               href="/changelog"
               className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
             >
-              v0.1.0
+              v0.1.2
             </Link>
           </div>
         </footer>

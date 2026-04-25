@@ -6,14 +6,14 @@ import { HistoryCard } from "@/components/history-card"
 
 export function SearchHistory({
   items,
-  expandedId,
+  expandedIds,
   onToggleExpand,
   onRemove,
   onClearAll,
 }: {
   items: HistoryItem[]
-  expandedId: string | null
-  onToggleExpand: (id: string | null) => void
+  expandedIds: Set<string>
+  onToggleExpand: (id: string) => void
   onRemove: (id: string) => void
   onClearAll: () => void
 }) {
@@ -70,10 +70,8 @@ export function SearchHistory({
             <HistoryCard
               key={item.id}
               item={item}
-              expanded={item.id === expandedId}
-              onToggle={() =>
-                onToggleExpand(item.id === expandedId ? null : item.id)
-              }
+              expanded={expandedIds.has(item.id)}
+              onToggle={() => onToggleExpand(item.id)}
               onRemove={() => onRemove(item.id)}
             />
           ))}

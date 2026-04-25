@@ -1,0 +1,715 @@
+[
+  {
+    "platform": "lever",
+    "employer": "Skio",
+    "url": "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 2261,
+      "status": "success",
+      "platform": "lever",
+      "likely_posted_date": "2021-10-21",
+      "title": "Software Engineer",
+      "summary": "Oldest credible posted date is 2021-10-21 from jsonld.jobposting.datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 4708,
+      "status": "success",
+      "likely_posted_date": "2021-10-21",
+      "title": "Software Engineer",
+      "company": "Skio",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2021-10-21",
+        "jsonLdDate": "2021-10-21",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "greenhouse",
+    "employer": "GreenSpark",
+    "url": "https://job-boards.greenhouse.io/applytogreenspark/jobs/4169702004",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 641,
+      "status": "success",
+      "platform": "greenhouse",
+      "likely_posted_date": "2021-11-03",
+      "title": "Software Engineer",
+      "summary": "Oldest credible posted date is 2021-11-03 from greenhouse.api.first_published. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 6710,
+      "status": "success",
+      "likely_posted_date": "2021-11-03",
+      "title": "Software Engineer",
+      "company": "GreenSpark",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2021-11-03T11:32:54-04:00",
+        "jsonLdDate": "2021-11-03",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": "2026-01-18T05:00:00.000Z"
+      }
+    }
+  },
+  {
+    "platform": "smartrecruiters",
+    "employer": "ServiceNow",
+    "url": "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1875,
+      "status": "success",
+      "platform": "smartrecruiters",
+      "likely_posted_date": "2026-02-13",
+      "title": "Software Engineer",
+      "summary": "Oldest credible posted date is 2026-02-13 from smartrecruiters.api.releasedDate.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 7717,
+      "status": "success",
+      "likely_posted_date": "2026-02-13",
+      "title": "Software Engineer",
+      "company": "ServiceNow",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-02-13T18:34:40.956Z",
+        "jsonLdDate": "2026-02-13",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "workable",
+    "employer": "Jiffy",
+    "url": "https://apply.workable.com/jiffyshirts/j/5D4758376C/",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 809,
+      "status": "success",
+      "platform": "workable",
+      "likely_posted_date": "2026-03-19",
+      "title": "Product Quality Engineer, Digital Printing",
+      "summary": "Oldest credible posted date is 2026-03-19 from workable.api.published.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 11736,
+      "status": "success",
+      "likely_posted_date": "2026-03-19",
+      "title": "Product Quality Engineer, Digital Printing",
+      "company": "Jiffyshirts",
+      "error": null,
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": "2026-03-19",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "ashby",
+    "employer": "AfterQuery",
+    "url": "https://jobs.ashbyhq.com/AfterQuery/489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3/application",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 2158,
+      "status": "success",
+      "platform": "ashby",
+      "likely_posted_date": "2026-04-13",
+      "title": "Strategic Projects Intern",
+      "summary": "Oldest credible posted date is 2026-04-13 from ashby.api.publishedAt.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 8774,
+      "status": "success",
+      "likely_posted_date": "2026-04-14",
+      "title": "Strategic Projects Intern",
+      "company": "AfterQuery",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-04-14",
+        "jsonLdDate": "2026-04-14",
+        "ogDate": null,
+        "updatedDate": "2026-04-14T04:43:33.355Z",
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "rippling",
+    "employer": "Rippling",
+    "url": "https://ats.rippling.com/rippling/jobs/9516d5f1-0abb-435d-93a4-c1a669852103",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 691,
+      "status": "success",
+      "platform": "rippling",
+      "likely_posted_date": "2026-04-14",
+      "title": "Business Operations Manager",
+      "summary": "Oldest credible posted date is 2026-04-14 from rippling.embedded.createdOn.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 11161,
+      "status": "success",
+      "likely_posted_date": "2026-04-14",
+      "title": "Business Operations Manager",
+      "company": "Rippling",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-04-14T13:46:15.501000-07:00",
+        "jsonLdDate": "2026-04-14",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "icims",
+    "employer": "DocuSign",
+    "url": "https://hubcareers-docusign.icims.com/jobs/28722/principal-engineer/job",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 4217,
+      "status": "success",
+      "platform": "icims",
+      "likely_posted_date": "2026-02-18",
+      "title": "Principal Engineer",
+      "summary": "Oldest credible posted date is 2026-02-18 from jsonld.jobposting.datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 9861,
+      "status": "success",
+      "likely_posted_date": "2024-02-05T19:10:51+0000",
+      "title": "Principal Engineer",
+      "company": "UNAVAILABLE",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2024-02-05T19:10:51+0000",
+        "jsonLdDate": "2026-02-18",
+        "ogDate": null,
+        "updatedDate": "2024-03-05T20:15:18+0000",
+        "sitemapDate": "2026-03-18",
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "dover",
+    "employer": "Netnow",
+    "url": "https://app.dover.com/apply/netnow/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 664,
+      "status": "success",
+      "platform": "dover",
+      "likely_posted_date": "2025-07-16",
+      "title": "Front-end Engineer",
+      "summary": "Oldest credible posted date is 2025-07-16 from dover.api.created.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 17650,
+      "status": "error",
+      "likely_posted_date": null,
+      "title": null,
+      "company": null,
+      "error": "This site blocks automated access. The posting date cannot be checked.",
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": null,
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "bamboohr",
+    "employer": "Signal Advisors",
+    "url": "https://signal1.bamboohr.com/careers/39",
+    "ours": {
+      "http": 502,
+      "elapsed_ms": 30270,
+      "status": "error",
+      "platform": null,
+      "likely_posted_date": null,
+      "title": null,
+      "summary": null,
+      "error": "<!DOCTYPE html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-js ie8 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if gt IE 8]><!--> <html class=\"no-js\" lang=\"en-US\"> <!--<![endif]-->\n<head>\n\n<title>howoldisthisjob.com | 502: Bad gateway</title>\n<meta charset=\"UTF-8\" />\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\" />\n<meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\" />\n<link rel=\"stylesheet\" id=\"cf_styles-css\" href=\"/cdn-cgi/styles/main.css\" />\n</head>\n<body>\n<div id=\"cf-wrapper\">\n    <div id=\"cf-error-details\" class=\"p-0\">\n        <header class=\"mx-auto pt-10 lg:pt-6 lg:px-8 w-240 lg:w-full mb-8\">\n            <h1 class=\"inline-block sm:block sm:mb-2 font-light text-60 lg:text-4xl text-black-dark leading-tight mr-2\">\n                <span class=\"inline-block\">Bad gateway</span>\n                <span class=\"code-label\">Error code 502</span>\n            </h1>\n            <div>\n                Visit <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=api.howoldisthisjob.com\" target=\"_blank\" rel=\"noopener noreferrer\">cloudflare.com</a> for more information.\n            </div>\n            <div class=\"mt-3\">2026-04-21 16:23:28 UTC</div>\n        </header>\n        <div class=\"my-8 bg-gradient-gray\">\n            <div class=\"w-240 lg:w-full mx-auto\">\n                <div class=\"clearfix md:px-8\">\n                    <div id=\"cf-browser-status\" class=\" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    \n    <span class=\"cf-icon-browser block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    \n  </div>\n  <span class=\"md:block w-full truncate\">You</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  \n    Browser\n  \n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-green-success\">Working</span>\n  \n</div>\n                    <div id=\"cf-cloudflare-status\" class=\" relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=api.howoldisthisjob.com\" target=\"_blank\" rel=\"noopener noreferrer\">\n    <span class=\"cf-icon-cloud block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-ok w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    </a>\n  </div>\n  <span class=\"md:block w-full truncate\">Chicago</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  <a href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&utm_campaign=api.howoldisthisjob.com\" target=\"_blank\" rel=\"noopener noreferrer\">\n    Cloudflare\n  </a>\n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-green-success\">Working</span>\n  \n</div>\n                    <div id=\"cf-host-status\" class=\"cf-error-source relative w-1/3 md:w-full py-15 md:p-0 md:py-8 md:text-left md:border-solid md:border-0 md:border-b md:border-gray-400 overflow-hidden float-left md:float-none text-center\">\n  <div class=\"relative mb-10 md:m-0\">\n    \n    <span class=\"cf-icon-server block md:hidden h-20 bg-center bg-no-repeat\"></span>\n    <span class=\"cf-icon-error w-12 h-12 absolute left-1/2 md:left-auto md:right-0 md:top-0 -ml-6 -bottom-4\"></span>\n    \n  </div>\n  <span class=\"md:block w-full truncate\">api.howoldisthisjob.com</span>\n  <h3 class=\"md:inline-block mt-3 md:mt-0 text-2xl text-gray-600 font-light leading-1.3\">\n  \n    Host\n  \n  </h3>\n  \n  <span class=\"leading-1.3 text-2xl text-red-error\">Error</span>\n  \n</div>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"w-240 lg:w-full mx-auto mb-8 lg:px-8\">\n            <div class=\"clearfix\">\n                <div class=\"w-1/2 md:w-full float-left pr-6 md:pb-10 md:pr-0 leading-relaxed\">\n                    <h2 class=\"text-3xl font-normal leading-1.3 mb-4\">What happened?</h2>\n                    <p>The web server reported a bad gateway error.</p>\n                </div>\n                <div class=\"w-1/2 md:w-full float-left leading-relaxed\">\n                    <h2 class=\"text-3xl font-normal leading-1.3 mb-4\">What can I do?</h2>\n                    <p class=\"mb-6\">Please try again in a few minutes.</p>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"cf-error-footer cf-wrapper w-240 lg:w-full py-10 sm:py-4 sm:px-8 mx-auto text-center sm:text-left border-solid border-0 border-t border-gray-300\">\n    <p class=\"text-13\">\n      <span class=\"cf-footer-item sm:block sm:mb-1\">Cloudflare Ray ID: <strong class=\"font-semibold\">9efdbb072a812c1d</strong></span>\n      <span class=\"cf-footer-separator sm:hidden\">&bull;</span>\n      <span id=\"cf-footer-item-ip\" class=\"cf-footer-item hidden sm:block sm:mb-1\">\n        Your IP:\n        <button type=\"button\" id=\"cf-footer-ip-reveal\" class=\"cf-footer-ip-reveal-btn\">Click to reveal</button>\n        <span class=\"hidden\" id=\"cf-footer-ip\">2607:ac80:40b:5:e94d:87d0:74e3:21e</span>\n        <span class=\"cf-footer-separator sm:hidden\">&bull;</span>\n      </span>\n      <span class=\"cf-footer-item sm:block sm:mb-1\"><span>Performance &amp; security by</span> <a rel=\"noopener noreferrer\" href=\"https://www.cloudflare.com/5xx-error-landing?utm_source=errorcode_502&#38;utm_campaign=api.howoldisthisjob.com\" id=\"brand_link\" target=\"_blank\">Cloudflare</a></span>\n      \n    </p>\n    <script>(function(){function d(){var b=a.getElementById(\"cf-footer-item-ip\"),c=a.getElementById(\"cf-footer-ip-reveal\");b&&\"classList\"in b&&(b.classList.remove(\"hidden\"),c.addEventListener(\"click\",function(){c.classList.add(\"hidden\");a.getElementById(\"cf-footer-ip\").classList.remove(\"hidden\")}))}var a=document;document.addEventListener&&a.addEventListener(\"DOMContentLoaded\",d)})();</script>\n  </div><!-- /.error-footer -->\n\n    </div>\n</div>\n</body>\n</html>"
+    },
+    "competitor": {
+      "elapsed_ms": 33260,
+      "status": "success",
+      "likely_posted_date": "2026-02-24",
+      "title": "Senior Full Stack Software Engineer ",
+      "company": "Signal 1",
+      "error": null,
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": "2026-02-24",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "jobvite",
+    "employer": "Versa Networks",
+    "url": "https://jobs.jobvite.com/versa-networks/job/ohCiufwp",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 695,
+      "status": "success",
+      "platform": "jobvite",
+      "likely_posted_date": "2024-08-09",
+      "title": "Software Engineer - Windows Application Developer",
+      "summary": "Oldest credible posted date is 2024-08-09 from jsonld.jobposting.datePosted. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 10915,
+      "status": "success",
+      "likely_posted_date": "2024-08-09",
+      "title": "Software Engineer - Windows Application Developer",
+      "company": "Versa Networks",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2024-08-09",
+        "jsonLdDate": "2024-08-09",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "brassring",
+    "employer": "Lockheed Martin",
+    "url": "https://sjobs.brassring.com/TGnewUI/Search/home/HomeWithPreLoad?PageType=JobDetails&jobid=844820&partnerid=25037&siteid=5010",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 21645,
+      "status": "success",
+      "platform": "brassring",
+      "likely_posted_date": "2026-04-21",
+      "title": "- Lockheed Martin - Job Details",
+      "summary": "Oldest credible posted date is 2026-04-21 from brassring.html.DC.Date.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 18289,
+      "status": "success",
+      "likely_posted_date": "2026-04-21",
+      "title": "- Lockheed Martin - Job Details",
+      "company": "Lockheed Martin",
+      "error": null,
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": "2026-04-21",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "successfactors",
+    "employer": "SAP",
+    "url": "https://jobs.sap.com/job/Bangalore-Senior-Developer/1380193433/",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 2430,
+      "status": "success",
+      "platform": "successfactors",
+      "likely_posted_date": "2026-04-02",
+      "title": "Senior Developer (Full Stack) SuccessFators: Devanahalli North Bengaluru",
+      "summary": "Oldest credible posted date is 2026-04-02 from successfactors.rss.itemprop:datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 23269,
+      "status": "error",
+      "likely_posted_date": "Thu Apr 02 00:00:00 UTC 2026",
+      "title": "Top jobs",
+      "company": "SAP",
+      "error": "ats-no-date",
+      "raw_dates": {
+        "regexDate": "Thu Apr 02 00:00:00 UTC 2026",
+        "jsonLdDate": null,
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "avature",
+    "employer": "Bloomberg",
+    "url": "https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-BQuant/4661",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 9177,
+      "status": "success",
+      "platform": "avature",
+      "likely_posted_date": "2025-12-14",
+      "title": null,
+      "summary": "Earliest archive snapshot is 2025-12-14; this is only a ceiling, not the true posting date.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 13202,
+      "status": "success",
+      "likely_posted_date": "2024-08-05",
+      "title": "Senior Software Engineer BQuant",
+      "company": "Bloomberg",
+      "error": null,
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": "2024-08-05",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "teamtailor",
+    "employer": "Teamtailor career host",
+    "url": "https://career.teamtailor.com/jobs/7217456-head-of-group-accounting",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 15251,
+      "status": "success",
+      "platform": "teamtailor",
+      "likely_posted_date": "2026-02-12",
+      "title": "Head of Group Accounting - Teamtailor",
+      "summary": "Oldest credible posted date is 2026-02-12 from html.regex.datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 9296,
+      "status": "success",
+      "likely_posted_date": "2026-02-12",
+      "title": "Head of Group Accounting",
+      "company": "Teamtailor",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-02-12T09:25:19+01:00",
+        "jsonLdDate": "2026-02-12T09:25:19+01:00",
+        "ogDate": "2026-02-12T09:25:19+01:00",
+        "updatedDate": "2026-04-16T11:14:24+02:00",
+        "sitemapDate": "2026-02-12",
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "recruitee",
+    "employer": "1X",
+    "url": "https://1x.recruitee.com/o/embedded-software-engineer-hands",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1328,
+      "status": "success",
+      "platform": "recruitee",
+      "likely_posted_date": "2026-01-29",
+      "title": "Embedded Software Engineer - Hands",
+      "summary": "Oldest credible posted date is 2026-01-29 from jsonld.jobposting.datePosted. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 8268,
+      "status": "success",
+      "likely_posted_date": "2026-01-16",
+      "title": "Embedded Software Engineer - Hands",
+      "company": "1X Technologies AS",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-01-29",
+        "jsonLdDate": "2026-01-29",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": "2026-01-16",
+        "waybackDate": "2026-04-05T04:00:00.000Z"
+      }
+    }
+  },
+  {
+    "platform": "personio",
+    "employer": "Contabo",
+    "url": "https://contabo.jobs.personio.de/job/2558937?language=en",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1764,
+      "status": "success",
+      "platform": "personio",
+      "likely_posted_date": "2026-04-08",
+      "title": "General Ledger Accountant (all genders)",
+      "summary": "Oldest credible posted date is 2026-04-08 from jsonld.jobposting.datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 6768,
+      "status": "success",
+      "likely_posted_date": "2026-04-08",
+      "title": "General Ledger Accountant (all genders)",
+      "company": "Contabo GmbH",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-04-08",
+        "jsonLdDate": "2026-04-08",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "breezy",
+    "employer": "Breezy HR",
+    "url": "https://jobs.breezy.hr/p/aed06a3baa44-senior-backend-product-engineer-node-js-llm-assistants-automation",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 855,
+      "status": "success",
+      "platform": "breezy",
+      "likely_posted_date": "2026-02-19",
+      "title": "Senior Backend Product Engineer (Node.js) - LLM Assistants & Automation",
+      "summary": "Oldest credible posted date is 2026-02-19 from jsonld.jobposting.datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 9023,
+      "status": "success",
+      "likely_posted_date": "2026-02-19",
+      "title": "Senior Backend Product Engineer (Node.js) - LLM Assistants & Automation",
+      "company": "Breezy HR",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-02-19",
+        "jsonLdDate": "2026-02-19",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "jazzhr",
+    "employer": "Public Citizen",
+    "url": "https://publiccitizen.applytojob.com/apply/VZj90FMXn0/Democracy-Team-Manager",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 784,
+      "status": "success",
+      "platform": "jazzhr",
+      "likely_posted_date": "2026-04-07",
+      "title": "Democracy Team Manager",
+      "summary": "Oldest credible posted date is 2026-04-07 from jsonld.jobposting.datePosted.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 8201,
+      "status": "success",
+      "likely_posted_date": "2026-04-07",
+      "title": "Democracy Team Manager",
+      "company": "Public Citizen",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-04-07",
+        "jsonLdDate": "2026-04-07",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "gem",
+    "employer": "Gem",
+    "url": "https://jobs.gem.com/gem/4965519002",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1042,
+      "status": "success",
+      "platform": "gem",
+      "likely_posted_date": "2020-11-17",
+      "title": "Software Engineer",
+      "summary": "Oldest credible posted date is 2020-11-17 from gem.api.first_published_at. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 16199,
+      "status": "success",
+      "likely_posted_date": "2020-11-17",
+      "title": "Software Engineer",
+      "company": "Gem",
+      "error": null,
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": "2020-11-17",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": "2026-03-21T04:00:00.000Z"
+      }
+    }
+  },
+  {
+    "platform": "workday",
+    "employer": "NVIDIA",
+    "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/US-TX-Austin/Senior-Software-Engineer---Compilers-and-Applied-AI_JR2016639",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1029,
+      "status": "success",
+      "platform": "workday",
+      "likely_posted_date": "2026-04-20",
+      "title": "Senior Software Engineer - Compilers and Applied AI",
+      "summary": "Oldest credible posted date is 2026-04-20 from workday.cxs.startDate.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 5203,
+      "status": "success",
+      "likely_posted_date": "2026-04-20",
+      "title": "Senior Software Engineer - Compilers and Applied AI",
+      "company": "NVIDIA USA",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-04-20",
+        "jsonLdDate": "2026-04-20",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "oracle_hcm",
+    "employer": "Goldman Sachs",
+    "url": "https://higher.gs.com/roles/161630",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1470,
+      "status": "success",
+      "platform": "oracle_hcm",
+      "likely_posted_date": "2026-04-12",
+      "title": "Software Engineer, Global Banking & Markets, Investment Banking",
+      "summary": "Oldest credible posted date is 2026-04-12 from goldman_sachs.oracle.PostedDate.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 10043,
+      "status": "success",
+      "likely_posted_date": "2026-04-12",
+      "title": "Software Engineer, Global Banking & Markets, Investment Banking",
+      "company": "Goldman Sachs",
+      "error": null,
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": "2026-04-12",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "adp",
+    "employer": "LIIF",
+    "url": "https://workforcenow.adp.com/mascsr/default/mdf/recruitment/recruitment.html?ccId=19000101_000001&cid=cb73ca7c-d700-429b-a6ab-bf50165187ec&lang=en_US&source=IN&jobId=588407",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1785,
+      "status": "success",
+      "platform": "adp",
+      "likely_posted_date": "2026-04-15",
+      "title": "Senior Loan Officer",
+      "summary": "Oldest credible posted date is 2026-04-15 from adp.api.postDate.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 16113,
+      "status": "success",
+      "likely_posted_date": "2026-04-08T05:56:09.000Z",
+      "title": "Senior Loan Officer",
+      "company": "sponsored events.",
+      "error": null,
+      "raw_dates": {
+        "regexDate": "2026-04-08T05:56:09.000Z",
+        "jsonLdDate": "2026-04-15",
+        "ogDate": null,
+        "updatedDate": null,
+        "sitemapDate": null,
+        "waybackDate": null
+      }
+    }
+  },
+  {
+    "platform": "paycor",
+    "employer": "Diocese of Green Bay",
+    "url": "https://www.gbdioc.org/careers?gnk=job&gni=8a7883ac9be7cb38019bf368c0720352&gns=Internal%20Applicant",
+    "ours": {
+      "http": 200,
+      "elapsed_ms": 1826,
+      "status": "success",
+      "platform": "paycor",
+      "likely_posted_date": "2024-10-14",
+      "title": "Careers | Diocese of Green Bay",
+      "summary": "Oldest credible posted date is 2024-10-14 from open_graph.article:published_time.",
+      "error": null
+    },
+    "competitor": {
+      "elapsed_ms": 6154,
+      "status": "error",
+      "likely_posted_date": "2024-10-14T18:58:24",
+      "title": "Career Opportunities",
+      "company": null,
+      "error": "ats-no-date",
+      "raw_dates": {
+        "regexDate": null,
+        "jsonLdDate": null,
+        "ogDate": "2024-10-14T18:58:24",
+        "updatedDate": null,
+        "sitemapDate": "2026-01-21",
+        "waybackDate": null
+      }
+    }
+  }
+]

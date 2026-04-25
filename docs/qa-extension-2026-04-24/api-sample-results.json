@@ -1,0 +1,389 @@
+{
+  "results": [
+    {
+      "url": "https://jobs.ashbyhq.com/openai/38ddaa2c-a490-427a-8457-0e92bf00138c",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.ashbyhq.com/openai/38ddaa2c-a490-427a-8457-0e92bf00138c",
+        "normalized_url": "https://jobs.ashbyhq.com/openai/38ddaa2c-a490-427a-8457-0e92bf00138c",
+        "platform": "ashby",
+        "status": "success",
+        "title": "ChatGPT Performance Engineer",
+        "company": "OpenAI",
+        "location": "San Francisco",
+        "employment_type": "FullTime",
+        "likely_posted_date": "2026-04-15",
+        "likely_age_days": 10,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-04-15 from jsonld.jobposting.datePosted.",
+        "chosen_source": {
+          "date": "2026-04-15",
+          "source": "jsonld.jobposting",
+          "field": "datePosted",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-04-15",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-15",
+            "source": "html.regex",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-15",
+            "source": "ashby.api",
+            "field": "publishedAt",
+            "kind": "posted",
+            "reliability": "high",
+            "note": "Normalized from 2026-04-15T16:18:29.991+00:00 using posting timezone America/Los_Angeles."
+          },
+          {
+            "date": "2026-04-15",
+            "source": "html.regex",
+            "field": "updatedAt",
+            "kind": "refresh",
+            "reliability": "medium"
+          }
+        ],
+        "hidden_insights": {
+          "identifier_name": "OpenAI",
+          "identifier_value": "38ddaa2c-a490-427a-8457-0e92bf00138c",
+          "salary_range": "USD 325000 - 405000 YEAR",
+          "direct_apply": true,
+          "posting_timezone": "America/Los_Angeles",
+          "department": "Applied AI"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://job-boards.greenhouse.io/vercel/jobs/5848322004",
+      "ok": true,
+      "result": {
+        "url": "https://job-boards.greenhouse.io/vercel/jobs/5848322004",
+        "normalized_url": "https://job-boards.greenhouse.io/vercel/jobs/5848322004",
+        "platform": "greenhouse",
+        "status": "success",
+        "title": "Majors Account Executive, Berlin",
+        "company": null,
+        "location": "Hybrid - Berlin",
+        "employment_type": null,
+        "likely_posted_date": "2026-04-10",
+        "likely_age_days": 15,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-04-10 from greenhouse.api.first_published.",
+        "chosen_source": {
+          "date": "2026-04-10",
+          "source": "greenhouse.api",
+          "field": "first_published",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-04-10",
+            "source": "greenhouse.api",
+            "field": "first_published",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-10",
+            "source": "html.regex",
+            "field": "published_at",
+            "kind": "published",
+            "reliability": "medium"
+          },
+          {
+            "date": "2026-04-10",
+            "source": "embedded.json",
+            "field": "published_at",
+            "kind": "published",
+            "reliability": "medium"
+          },
+          {
+            "date": "2026-04-16",
+            "source": "greenhouse.api",
+            "field": "updated_at",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "Greenhouse updated_at reflects edits or freshness, not original posting time."
+          }
+        ],
+        "hidden_insights": {},
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694",
+        "normalized_url": "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694",
+        "platform": "lever",
+        "status": "success",
+        "title": "Software Engineer",
+        "company": "Skio",
+        "location": "San Francisco, New York, or Remote",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2021-10-21",
+        "likely_age_days": 1647,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2021-10-21 from jsonld.jobposting.datePosted.",
+        "chosen_source": {
+          "date": "2021-10-21",
+          "source": "jsonld.jobposting",
+          "field": "datePosted",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2021-10-21",
+            "source": "lever.api",
+            "field": "createdAt",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2021-10-21",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2021-10-21",
+            "source": "html.regex",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          }
+        ],
+        "hidden_insights": {
+          "team": "Engineering",
+          "lever_hosted_url": "https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer",
+        "normalized_url": "https://jobs.smartrecruiters.com/ServiceNow/744000103790775-software-engineer",
+        "platform": "smartrecruiters",
+        "status": "success",
+        "title": "Software Engineer",
+        "company": "ServiceNow",
+        "location": ",",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2026-02-13",
+        "likely_age_days": 71,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-02-13 from smartrecruiters.api.releasedDate.",
+        "chosen_source": {
+          "date": "2026-02-13",
+          "source": "smartrecruiters.api",
+          "field": "releasedDate",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-02-13",
+            "source": "smartrecruiters.api",
+            "field": "releasedDate",
+            "kind": "posted",
+            "reliability": "high"
+          }
+        ],
+        "hidden_insights": {
+          "department": "Customer Outcomes",
+          "recruiting_team": "Professional",
+          "employee_type": "Regular",
+          "country/region": "United States",
+          "brands": "ServiceNow",
+          "region": "AMS - North America and Canada",
+          "cost_center": "6190 Sec Ops Engineering",
+          "job_location": "4810 Eastgate Mall, San Diego, California, 92121, United States of America(L_SAN003)",
+          "work_persona": "Flexible",
+          "job_posting_type": "Early Career"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://jobs.smartrecruiters.com/ServiceNow/744000122552779--technical-lead-site-reliability-engineer-veza-",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.smartrecruiters.com/ServiceNow/744000122552779--technical-lead-site-reliability-engineer-veza-",
+        "normalized_url": "https://jobs.smartrecruiters.com/ServiceNow/744000122552779--technical-lead-site-reliability-engineer-veza-",
+        "platform": "smartrecruiters",
+        "status": "success",
+        "title": "Technical Lead Site Reliability Engineer - Veza",
+        "company": "ServiceNow",
+        "location": "Santa Clara, California, United States",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2026-04-23",
+        "likely_age_days": 2,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-04-23 from smartrecruiters.api.releasedDate.",
+        "chosen_source": {
+          "date": "2026-04-23",
+          "source": "smartrecruiters.api",
+          "field": "releasedDate",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-04-23",
+            "source": "smartrecruiters.api",
+            "field": "releasedDate",
+            "kind": "posted",
+            "reliability": "high"
+          }
+        ],
+        "hidden_insights": {
+          "department": "Engineering, Infrastructure and Operations",
+          "recruiting_team": "Professional",
+          "employee_type": "Regular",
+          "country/region": "United States",
+          "brands": "ServiceNow",
+          "region": "AMS - North America and Canada",
+          "cost_center": "6019 Veza Engineering",
+          "job_location": "2225 Lawson Lane, Santa Clara, California, 95054, United States of America(L_SJC005)",
+          "work_persona": "Flexible or Remote"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://apply.workable.com/jiffyshirts/j/5D4758376C/",
+      "ok": true,
+      "result": {
+        "url": "https://apply.workable.com/jiffyshirts/j/5D4758376C/",
+        "normalized_url": "https://apply.workable.com/jiffyshirts/j/5D4758376C",
+        "platform": "workable",
+        "status": "success",
+        "title": "Product Quality Engineer, Digital Printing",
+        "company": "Jiffy",
+        "location": "Irvine, California, United States",
+        "employment_type": "full",
+        "likely_posted_date": "2026-03-19",
+        "likely_age_days": 37,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-03-19 from workable.api.published.",
+        "chosen_source": {
+          "date": "2026-03-19",
+          "source": "workable.api",
+          "field": "published",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-03-19",
+            "source": "workable.api",
+            "field": "published",
+            "kind": "posted",
+            "reliability": "high"
+          }
+        ],
+        "hidden_insights": {
+          "workable_account_uid": "ee96982c-578e-401d-9e0a-d6c83d0cecf8",
+          "company_url": "https://www.jiffyshirts.com",
+          "workplace": "hybrid",
+          "department": "Operations",
+          "approval_status": "approved"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://mcdugaldsteele.recruitee.com/o/project-landscape-architect-high-end-residential-design-build",
+      "ok": true,
+      "result": {
+        "url": "https://mcdugaldsteele.recruitee.com/o/project-landscape-architect-high-end-residential-design-build",
+        "normalized_url": "https://mcdugaldsteele.recruitee.com/o/project-landscape-architect-high-end-residential-design-build",
+        "platform": "recruitee",
+        "status": "success",
+        "title": "Project Landscape Architect | High End Residential Design - Build",
+        "company": "McDugald Steele",
+        "location": "houston, Texas, United States",
+        "employment_type": "On-site",
+        "likely_posted_date": "2025-09-30",
+        "likely_age_days": 207,
+        "confidence": "high",
+        "reposted_likely": true,
+        "summary": "Oldest credible posted date is 2025-09-30 from jsonld.jobposting.datePosted. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+        "chosen_source": {
+          "date": "2025-09-30",
+          "source": "jsonld.jobposting",
+          "field": "datePosted",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-09-30",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-09-30",
+            "source": "html.regex",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-09-30",
+            "source": "recruitee.api",
+            "field": "published_at",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-03-24",
+            "source": "recruitee.api",
+            "field": "updated_at",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "Recruitee updated_at reflects edits or freshness, not original posting time."
+          }
+        ],
+        "hidden_insights": {
+          "identifier_name": "McDugald Steele",
+          "identifier_value": 2282846,
+          "recruitee_offer_id": 2282846,
+          "department": "Design",
+          "employment_type_code": "fulltime_permanent",
+          "experience_code": "mid_level",
+          "category_code": "architectural_services",
+          "guid": "9s3or"
+        },
+        "warnings": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "howoldisthisjob-extension-smoke",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "extension-smoke": "playwright test --config ./playwright.extension-smoke.config.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
+  }
+}

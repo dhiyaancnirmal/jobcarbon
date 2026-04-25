@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>How Old Is This Job?</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="popup">
+      <div class="popup__header">
+        <img class="popup__logo" src="logo-badge.svg" alt="" />
+        <div class="popup__title">How Old Is This Job?</div>
+      </div>
+      <div class="popup__section">
+        <div class="popup__label">Current page</div>
+        <div id="scan-summary" class="popup__summary">Ready to scan this site for supported job links.</div>
+        <button type="button" id="scan-button" class="popup__scan-button">Scan current page</button>
+        <div id="scan-status" class="popup__status" role="status" aria-live="polite"></div>
+        <div id="scan-results" class="popup__results" hidden></div>
+        <button type="button" id="load-more-button" class="popup__secondary-button" hidden>Load more</button>
+      </div>
+      <div class="popup__section">
+        <div class="popup__label">Appearance</div>
+        <div class="popup__toggle" role="radiogroup" aria-label="Appearance">
+          <button type="button" data-theme="light" class="popup__option" role="radio" aria-checked="false">
+            <span class="popup__swatch popup__swatch--light" aria-hidden="true"></span>
+            Day
+          </button>
+          <button type="button" data-theme="dark" class="popup__option" role="radio" aria-checked="false">
+            <span class="popup__swatch popup__swatch--dark" aria-hidden="true"></span>
+            Night
+          </button>
+        </div>
+      </div>
+      <div class="popup__footnote">Badges appear next to supported ATS job links, and this popup can scan the current page manually.</div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

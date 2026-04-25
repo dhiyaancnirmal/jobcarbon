@@ -1,0 +1,52 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "howoldisthisjob-api",
+  "main": "cloudflare/src/index.ts",
+  "compatibility_date": "2026-04-22",
+  "workers_dev": false,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "HOWOLDISTHISJOB_ALLOWED_ORIGINS": "http://localhost:3000,https://howoldisthisjob.com,https://www.howoldisthisjob.com",
+    "HOWOLDISTHISJOB_ALLOWED_EXTENSION_ORIGINS": "chrome-extension://efdbbcgmlpnildldcnalbdfhpndhmmcl,chrome-extension://nhaadlmaijnkebibldhidgdgghnehfea",
+    "HOWOLDISTHISJOB_COOKIE_DOMAIN": ""
+  },
+  "routes": [
+    {
+      "pattern": "api.howoldisthisjob.com",
+      "custom_domain": true
+    }
+  ],
+  "containers": [
+    {
+      "class_name": "ApiBackend",
+      "image": "./Dockerfile.cloudflare",
+      "max_instances": 3
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "API_BACKEND",
+        "class_name": "ApiBackend"
+      }
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "HISTORY_DB",
+      "database_name": "howoldisthisjob-history",
+      "database_id": "4d56c8fd-df4f-4ec4-9fa5-52914cbba759"
+    }
+  ],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "ApiBackend"
+      ]
+    }
+  ]
+}

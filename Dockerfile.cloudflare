@@ -1,0 +1,16 @@
+FROM python:3.14-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PORT=8080 \
+    HOWOLDISTHISJOB_ALLOWED_EXTENSION_ORIGINS=chrome-extension://efdbbcgmlpnildldcnalbdfhpndhmmcl,chrome-extension://nhaadlmaijnkebibldhidgdgghnehfea
+
+WORKDIR /app
+
+COPY requirements.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt
+
+COPY howoldisthisjob.py howoldisthisjob_api.py ./
+
+EXPOSE 8080
+
+CMD ["python", "howoldisthisjob_api.py"]

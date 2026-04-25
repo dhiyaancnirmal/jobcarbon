@@ -66,27 +66,27 @@ const STATUS_PILL: Record<PlatformStatus, string> = {
 const FAQ = [
   {
     q: "What counts as a ghost job?",
-    a: "A listing that still looks active but has been up far longer than the employer advertises. Old URLs, repost loops, and stale entries all qualify.",
+    a: "A listing that still looks active but has been open, refreshed, or reposted for much longer than it appears at first glance.",
   },
   {
     q: "How are reposts flagged?",
-    a: "The detector compares multiple timestamps. If a page looks fresh but the URL has existed much longer, it is treated as a refresh.",
+    a: "The detector compares original posting fields with newer refresh or modification fields. If newer timestamps conflict with an older credible posting date, the result calls that out.",
   },
   {
-    q: "Why are LinkedIn and Indeed blocked?",
-    a: "Those aggregator pages do not reliably expose the posting signals needed. Use the employer's direct careers URL instead.",
+    q: "Why are LinkedIn, Indeed, and Google Careers different?",
+    a: "Those are aggregators, not the employer's source ATS page. Direct aggregator lookups are blocked or too weak, so use the employer careers URL or the extension when it can recover the source apply link.",
   },
   {
     q: "How accurate are the dates?",
-    a: "Direct platform fields are strongest. Page metadata is weaker since employers can edit it. Archive dates are ceilings, not proof.",
+    a: "Direct ATS fields are strongest. Page metadata is weaker because employers can edit it. Archive dates are only fallback evidence and are treated as ceilings, not proof of the original post date.",
   },
   {
     q: "What if no date is found?",
-    a: "The result still returns title, company, platform, and any weaker evidence — just without a confident posted date.",
+    a: "The result reports no confident date instead of guessing. When available, it still shows the title, company, platform, warnings, and any weaker evidence.",
   },
   {
     q: "Do you store any data?",
-    a: "No accounts and no third-party tracking pixels. One HttpOnly cookie holds a hashed session token so your search history follows you back, and Sentry receives anonymized error and performance traces. That's it.",
+    a: "Search history is tied to a session cookie so the app can show your recent checks. The site also uses lightweight analytics and error monitoring to keep the product working.",
   },
 ]
 
@@ -100,7 +100,7 @@ export default function About() {
             About &ldquo;How Old Is This Job?&rdquo;
           </h1>
           <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-[15px] dark:text-neutral-300">
-            A tool for finding the real posting date of a job listing. Best on direct employer ATS pages — Greenhouse, Lever, Ashby, Workday, and 20+ more.
+            A tool for finding the real posting date of a job listing.
           </p>
           <div>
             <Link

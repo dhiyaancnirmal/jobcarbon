@@ -1,5 +1,6 @@
 import { JobChecker } from "@/components/job-checker"
 import { Logo } from "@/components/logo"
+import Link from "next/link"
 
 export default function Home() {
   return (
@@ -14,6 +15,13 @@ export default function Home() {
           </div>
           <p className="max-w-2xl text-base leading-relaxed text-neutral-600 dark:text-neutral-300">
             Paste a job posting URL and we&apos;ll tell you when it was really posted.
+          </p>
+          <p className="max-w-2xl text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+            For LinkedIn, Indeed, and Google Careers pages, use the{" "}
+            <Link href="/extension" className="underline decoration-neutral-300 underline-offset-4 hover:text-neutral-700 dark:decoration-neutral-700 dark:hover:text-neutral-200">
+              Chrome extension
+            </Link>{" "}
+            to recover the original employer ATS link when it&apos;s available.
           </p>
         </header>
 

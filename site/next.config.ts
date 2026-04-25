@@ -1,5 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs"
 import type { NextConfig } from "next"
+import { dirname } from "node:path"
+import { fileURLToPath } from "node:url"
+
+const SITE_ROOT = dirname(fileURLToPath(import.meta.url))
 
 const SECURITY_HEADERS = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -14,6 +18,9 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost"],
+  turbopack: {
+    root: SITE_ROOT,
+  },
   async headers() {
     return [
       {
@@ -28,7 +35,7 @@ const hasSentryReleaseAuth = Boolean(process.env.SENTRY_AUTH_TOKEN)
 
 const sentryWrappedConfig = withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG ?? "dhiyaan",
-  project: process.env.SENTRY_PROJECT ?? "jobcarbon",
+  project: process.env.SENTRY_PROJECT ?? "howoldisthisjob",
   authToken: process.env.SENTRY_AUTH_TOKEN,
   silent: !process.env.CI,
   widenClientFileUpload: true,

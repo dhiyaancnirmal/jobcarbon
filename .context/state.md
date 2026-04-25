@@ -35,6 +35,14 @@
   - Live ATS sweep executed against 24 ATS buckets/URLs (real company pages where available): `0` exceptions, `20` success, `4` no_date (Workday/ADP/Paycor/Workable edge case).
   - Repeated Peraton iCIMS checks now return success with warnings (no 500/parser crash).
 
+## Recently Completed (2026-04-21)
+- Bumped `site/` dependencies: `next` 16.2.3 → 16.2.4, `react`/`react-dom` 19.2.4 → 19.2.5, `eslint-config-next` 16.2.3 → 16.2.4. `npm install` + `npm run build` clean.
+- Fixed Next.js 16 "scripts inside React components are never executed" error in `site/src/app/layout.tsx` by switching inline `<script dangerouslySetInnerHTML>` to `next/script` with `strategy="beforeInteractive"`.
+- Fixed hydration mismatch: theme-init script was mutating `document.body.classList` before hydration but `<body>` lacked `suppressHydrationWarning`. Dropped the body toggle (Tailwind `dark:` reads from `<html>`) and added `suppressHydrationWarning` to `<body>` as belt-and-suspenders.
+- Site history UX: multi-expand (expandedIds: Set<string> replacing single expandedId) + always-visible age chip on collapsed `history-card.tsx`.
+- Chrome extension redesign shipped: outlined blue calendar logo, `float: right` placement into title whitespace, `width: max-content` fix for host flex-stretch, `chrome.storage.sync`-driven Light/Dark theme with popup toggle, default Light. 24/24 ATS smoke pass.
+- Known open bugs: Breezy badge color leaks (host page CSS beats `!important` for fill/stroke), Recruitee detail badge lands over hero photo.
+
 ## In Progress
 - Progress-pipeline visual polish per user feedback: removed uppercase tracking on the "Checking · {platform}" header (user rule: "NEVER do capitalized text"), tightened card padding (`p-4` → `px-3 py-2.5`), reduced inner gap (`gap-3` → `gap-2`), and tightened stage-row gap (`gap-1.5` → `gap-1`). User had two concerns: stage highlighting behavior was correct but visually undercooked, and vertical spacing felt too airy.
 - Scrollbar-gutter fix in `globals.css` (third pass): Chrome still tinted the reserved gutter under the modal dim. Added custom scrollbar styling — `scrollbar-color: #d4d4d4 transparent` + WebKit rules making the track transparent and the thumb a rounded gray pill. Combined with `scrollbar-gutter: stable` + white html bg + modal overlay at `width: 100vw`, the gutter is now invisible on short pages and under the dim.

@@ -1,0 +1,161 @@
+{
+  "results": [
+    {
+      "url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508",
+        "normalized_url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508",
+        "platform": "dayforce",
+        "status": "success",
+        "title": "Audio Visual Engineer",
+        "company": "The Cook & Boardman",
+        "location": "Hutto, TX 78634, USA",
+        "employment_type": null,
+        "likely_posted_date": "2025-06-06",
+        "likely_age_days": 323,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2025-06-06 from dayforce.next.postingStartTimestampUTC.",
+        "chosen_source": {
+          "date": "2025-06-06",
+          "source": "dayforce.next",
+          "field": "postingStartTimestampUTC",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-06-06",
+            "source": "dayforce.next",
+            "field": "postingStartTimestampUTC",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-06-27",
+            "source": "dayforce.next",
+            "field": "lastModifiedTimestampUTC",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "Dayforce last-modified timestamps reflect page edits or repost freshness, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "paytype": "Salary",
+          "job_req_id": 790,
+          "dayforce_job_posting_id": 9508,
+          "iso_country_code": "US",
+          "state_code": "TX"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://careers.pageuppeople.com/346/cdw/en/job/678381/senior-software-engineer-javaapi",
+      "ok": true,
+      "result": {
+        "url": "https://careers.pageuppeople.com/346/cdw/en/job/678381/senior-software-engineer-javaapi",
+        "normalized_url": "https://careers.pageuppeople.com/346/cdw/en/job/678381/senior-software-engineer-javaapi",
+        "platform": "pageup",
+        "status": "no_date",
+        "title": null,
+        "company": null,
+        "location": null,
+        "employment_type": null,
+        "likely_posted_date": null,
+        "likely_age_days": null,
+        "confidence": "unknown",
+        "reposted_likely": false,
+        "summary": "No credible posting date was found.",
+        "chosen_source": null,
+        "all_dates": [],
+        "hidden_insights": {},
+        "warnings": [
+          "Wayback fallback failed: timed out for url: https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fcareers.pageuppeople.com%2F346%2Fcdw%2Fen%2Fjob%2F678381%2Fsenior-software-engineer-javaapi&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending"
+        ]
+      }
+    },
+    {
+      "url": "https://php.taleo.net/careersection/40/jobdetail.ftl?job=106780",
+      "ok": true,
+      "result": {
+        "url": "https://php.taleo.net/careersection/40/jobdetail.ftl?job=106780",
+        "normalized_url": "https://php.taleo.net/careersection/40/jobdetail.ftl",
+        "platform": "taleo",
+        "status": "no_date",
+        "title": "LEAD MEDICAL BILLING SPEC-REMOTE",
+        "company": null,
+        "location": null,
+        "employment_type": null,
+        "likely_posted_date": null,
+        "likely_age_days": null,
+        "confidence": "unknown",
+        "reposted_likely": false,
+        "summary": "No credible posting date was found.",
+        "chosen_source": null,
+        "all_dates": [],
+        "hidden_insights": {},
+        "warnings": [
+          "Wayback fallback failed: timed out for url: https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fphp.taleo.net%2Fcareersection%2F40%2Fjobdetail.ftl%3Fjob%3D106780&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending"
+        ]
+      }
+    },
+    {
+      "url": "https://recruiting.ultipro.com/AME1108AMRL/JobBoard/3391213d-67ca-497b-be36-e41affd954f7/OpportunityDetail?opportunityId=b330caec-91c7-4200-85cb-48a13027d347",
+      "ok": true,
+      "result": {
+        "url": "https://recruiting.ultipro.com/AME1108AMRL/JobBoard/3391213d-67ca-497b-be36-e41affd954f7/OpportunityDetail?opportunityId=b330caec-91c7-4200-85cb-48a13027d347",
+        "normalized_url": "https://recruiting.ultipro.com/AME1108AMRL/JobBoard/3391213d-67ca-497b-be36-e41affd954f7/OpportunityDetail",
+        "platform": "ukg_pro",
+        "status": "success",
+        "title": "Certified Clinician Hemodialysis Technician",
+        "company": "West Jax 210",
+        "location": "IRC West Jacksonville Dialysis Center",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2025-02-25",
+        "likely_age_days": 424,
+        "confidence": "high",
+        "reposted_likely": true,
+        "summary": "Oldest credible posted date is 2025-02-25 from ukg_pro.embedded.JobBoardMemberships. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+        "chosen_source": {
+          "date": "2025-02-25",
+          "source": "ukg_pro.embedded",
+          "field": "JobBoardMemberships",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-02-25",
+            "source": "ukg_pro.embedded",
+            "field": "PostedDate",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-02-25",
+            "source": "ukg_pro.embedded",
+            "field": "JobBoardMemberships",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-06-12",
+            "source": "ukg_pro.embedded",
+            "field": "UpdatedDate",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "UKG updated timestamps reflect edits or refresh activity, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "location_name": "IRC West Jacksonville Dialysis Center",
+          "requisition_number": "CERTI010997",
+          "job_category": "Clinic Employee"
+        },
+        "warnings": []
+      }
+    }
+  ]
+}

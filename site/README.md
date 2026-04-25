@@ -1,4 +1,4 @@
-# jobcarbon site
+# howoldisthisjob site
 
 Next.js frontend for `howoldisthisjob.com`.
 
@@ -13,10 +13,10 @@ The app runs on `http://localhost:3000` by default.
 
 API base:
 
-- `NEXT_PUBLIC_JOBCARBON_API` when set
+- `NEXT_PUBLIC_HOWOLDISTHISJOB_API` when set
 - otherwise `https://api.howoldisthisjob.com`
 
 ## Production
 
 - Frontend: Vercel
-- API: Railway / `api.howoldisthisjob.com`
+- API: Cloudflare Worker + container / `api.howoldisthisjob.com`

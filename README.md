@@ -1,6 +1,6 @@
-# jobcarbon
+# howoldisthisjob
 
-`jobcarbon` estimates how old a job posting really is by collecting multiple signals, classifying them, and choosing the oldest credible posted date.
+`howoldisthisjob` estimates how old a job posting really is by collecting multiple signals, classifying them, and choosing the oldest credible posted date.
 
 Current backend layers:
 
@@ -25,14 +25,15 @@ Blocked / limited handling:
 ## CLI
 
 ```bash
-python3 jobcarbon.py https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
+python3 howoldisthisjob.py https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
 ```
 
-Or install the console script locally:
+To install the console scripts in a repo-local virtualenv:
 
 ```bash
-pip install -e .
-jobcarbon https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
+python3 -m venv .venv
+./.venv/bin/python -m pip install -e .
+./.venv/bin/howoldisthisjob https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
 ```
 
 ## HTTP API
@@ -40,13 +41,13 @@ jobcarbon https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
 Run the local API server:
 
 ```bash
-python3 jobcarbon_api.py --host 127.0.0.1 --port 8000
+python3 howoldisthisjob_api.py --host 127.0.0.1 --port 8000
 ```
 
 Or via the console script after editable install:
 
 ```bash
-jobcarbon-api --host 127.0.0.1 --port 8000
+./.venv/bin/howoldisthisjob-api --host 127.0.0.1 --port 8000
 ```
 
 Endpoints:
@@ -86,28 +87,40 @@ Response shape:
 }
 ```
 
-## Railway
+## Cloudflare Deployment
 
-This repo is set up for Railway with config-as-code in `railway.json`.
+This repo is set up to run the production API on Cloudflare:
 
-Deployment shape:
-
-- Railway starts the API with `python3 jobcarbon_api.py`
-- Railway provides `PORT`
-- The API automatically binds to `0.0.0.0` when `PORT` is present
-- Railway healthchecks use `GET /healthz`
+- a Cloudflare Worker handles routing, CORS, and history endpoints
+- a Cloudflare-managed container runs the existing Python API server
+- D1 stores anonymous per-session search history
+- the Worker is attached to `api.howoldisthisjob.com`
 
 Expected production topology:
 
 - Website: `https://howoldisthisjob.com`
 - API: `https://api.howoldisthisjob.com`
 
-Suggested Railway flow:
+CORS / cookie configuration:
 
-1. Create a new Railway project from this repo.
-2. Deploy the service as-is.
-3. Add a custom domain for the API service, ideally `api.howoldisthisjob.com`.
-4. Keep the website on its own service later, calling this API.
+- `HOWOLDISTHISJOB_ALLOWED_ORIGINS` controls allowed web origins for the Worker history routes.
+- `HOWOLDISTHISJOB_ALLOWED_EXTENSION_ORIGINS` controls allowed Chrome extension origins for API and history routes. Keep both unpacked development IDs allowed while the old `jobcarbon` path is being phased out.
+- the Python container keeps the same default allowlist used by the old Railway deployment path
+- `HOWOLDISTHISJOB_COOKIE_DOMAIN` is optional; leaving it empty keeps the history cookie host-only on `api.howoldisthisjob.com`
+
+Cloudflare files:
+
+- Worker config: `wrangler.jsonc`
+- Worker source: `cloudflare/src/index.ts`
+- D1 schema: `cloudflare/migrations/0001_history.sql`
+- Python container image: `Dockerfile.cloudflare`
+
+Suggested Cloudflare flow:
+
+1. `npm install`
+2. `npm run cf:types`
+3. `wrangler d1 execute howoldisthisjob-history --remote --file=cloudflare/migrations/0001_history.sql`
+4. `npm run cf:deploy`
 
 ## Testing
 

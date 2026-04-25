@@ -1,0 +1,591 @@
+{
+  "results": [
+    {
+      "url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508",
+        "normalized_url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508",
+        "platform": "dayforce",
+        "status": "success",
+        "title": "Audio Visual Engineer",
+        "company": "The Cook & Boardman",
+        "location": "Hutto, TX 78634, USA",
+        "employment_type": null,
+        "likely_posted_date": "2025-06-06",
+        "likely_age_days": 323,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2025-06-06 from dayforce.next.postingStartTimestampUTC.",
+        "chosen_source": {
+          "date": "2025-06-06",
+          "source": "dayforce.next",
+          "field": "postingStartTimestampUTC",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-06-06",
+            "source": "dayforce.next",
+            "field": "postingStartTimestampUTC",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-06-27",
+            "source": "dayforce.next",
+            "field": "lastModifiedTimestampUTC",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "Dayforce last-modified timestamps reflect page edits or repost freshness, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "paytype": "Salary",
+          "job_req_id": 790,
+          "dayforce_job_posting_id": 9508,
+          "iso_country_code": "US",
+          "state_code": "TX"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/14035",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/14035",
+        "normalized_url": "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/14035",
+        "platform": "dayforce",
+        "status": "success",
+        "title": "Claims Analyst",
+        "company": "The Cook & Boardman",
+        "location": "3064 Salem Industrial Dr, Winston-Salem, NC 27127, USA",
+        "employment_type": null,
+        "likely_posted_date": "2025-12-12",
+        "likely_age_days": 134,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2025-12-12 from dayforce.next.postingStartTimestampUTC.",
+        "chosen_source": {
+          "date": "2025-12-12",
+          "source": "dayforce.next",
+          "field": "postingStartTimestampUTC",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-12-12",
+            "source": "dayforce.next",
+            "field": "postingStartTimestampUTC",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-12-16",
+            "source": "dayforce.next",
+            "field": "lastModifiedTimestampUTC",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "Dayforce last-modified timestamps reflect page edits or repost freshness, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "paytype": "Hourly",
+          "job_req_id": 1448,
+          "dayforce_job_posting_id": 14035,
+          "iso_country_code": "US",
+          "state_code": "NC"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://jobs.dayforcehcm.com/cookboardman/CANDIDATEPORTAL/jobs/11951",
+      "ok": true,
+      "result": {
+        "url": "https://jobs.dayforcehcm.com/cookboardman/CANDIDATEPORTAL/jobs/11951",
+        "normalized_url": "https://jobs.dayforcehcm.com/cookboardman/CANDIDATEPORTAL/jobs/11951",
+        "platform": "dayforce",
+        "status": "success",
+        "title": "Inside Sales Representative",
+        "company": "The Cook & Boardman",
+        "location": "Houston, TX, USA",
+        "employment_type": null,
+        "likely_posted_date": "2025-09-02",
+        "likely_age_days": 235,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2025-09-02 from dayforce.next.postingStartTimestampUTC.",
+        "chosen_source": {
+          "date": "2025-09-02",
+          "source": "dayforce.next",
+          "field": "postingStartTimestampUTC",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-09-02",
+            "source": "dayforce.next",
+            "field": "postingStartTimestampUTC",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-09-29",
+            "source": "dayforce.next",
+            "field": "lastModifiedTimestampUTC",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "Dayforce last-modified timestamps reflect page edits or repost freshness, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "paytype": "Salary",
+          "job_req_id": 1247,
+          "dayforce_job_posting_id": 11951,
+          "iso_country_code": "US",
+          "state_code": "TX"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://careers.pageuppeople.com/1091/cw/en-us/job/495860/carpenter-updated-2182026",
+      "ok": false,
+      "error": {
+        "code": "upstream_fetch_failed",
+        "message": "Unable to fetch job page: https://careers.pageuppeople.com/1091/cw/en-us/job/495860/carpenter-updated-2182026"
+      }
+    },
+    {
+      "url": "https://careers.pageuppeople.com/873/cw/en-us/job/556173/2627-ay-temporary-faculty-pool-lecturer-information-systems",
+      "ok": true,
+      "result": {
+        "url": "https://careers.pageuppeople.com/873/cw/en-us/job/556173/2627-ay-temporary-faculty-pool-lecturer-information-systems",
+        "normalized_url": "https://careers.pageuppeople.com/873/cw/en-us/job/556173/2627-ay-temporary-faculty-pool-lecturer-information-systems",
+        "platform": "pageup",
+        "status": "success",
+        "title": "CSU Careers",
+        "company": null,
+        "location": null,
+        "employment_type": null,
+        "likely_posted_date": "2026-03-24",
+        "likely_age_days": 32,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-03-24 from pageup.html.Advertised.",
+        "chosen_source": {
+          "date": "2026-03-24",
+          "source": "pageup.html",
+          "field": "Advertised",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-03-24",
+            "source": "pageup.html",
+            "field": "Advertised",
+            "kind": "posted",
+            "reliability": "high"
+          }
+        ],
+        "hidden_insights": {},
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://careers.pageuppeople.com/977/cw/en-us/job/497147/registered-nurse-1-ns26-coronary-care-unit-nights",
+      "ok": true,
+      "result": {
+        "url": "https://careers.pageuppeople.com/977/cw/en-us/job/497147/registered-nurse-1-ns26-coronary-care-unit-nights",
+        "normalized_url": "https://careers.pageuppeople.com/977/cw/en-us/job/497147/registered-nurse-1-ns26-coronary-care-unit-nights",
+        "platform": "pageup",
+        "status": "success",
+        "title": null,
+        "company": null,
+        "location": null,
+        "employment_type": null,
+        "likely_posted_date": "2026-02-11",
+        "likely_age_days": 73,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-02-11 from pageup.html.Advertised.",
+        "chosen_source": {
+          "date": "2026-02-11",
+          "source": "pageup.html",
+          "field": "Advertised",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-02-11",
+            "source": "pageup.html",
+            "field": "Advertised",
+            "kind": "posted",
+            "reliability": "high"
+          }
+        ],
+        "hidden_insights": {},
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp?cws=45&org=TCHC&rid=10531",
+      "ok": true,
+      "result": {
+        "url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp?cws=45&org=TCHC&rid=10531",
+        "normalized_url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp",
+        "platform": "taleo",
+        "status": "success",
+        "title": "Program Supervisor, Insurance & Claims",
+        "company": "Toronto Community Housing Corporation",
+        "location": "Toronto/Downtown",
+        "employment_type": null,
+        "likely_posted_date": "2026-04-21",
+        "likely_age_days": 4,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-04-21 from jsonld.jobposting.datePosted.",
+        "chosen_source": {
+          "date": "2026-04-21",
+          "source": "jsonld.jobposting",
+          "field": "datePosted",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-04-21",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-21",
+            "source": "html.regex",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-05-06",
+            "source": "jsonld.jobposting",
+            "field": "validThrough",
+            "kind": "expiry",
+            "reliability": "medium"
+          },
+          {
+            "date": "2026-05-06",
+            "source": "html.regex",
+            "field": "validThrough",
+            "kind": "expiry",
+            "reliability": "medium"
+          }
+        ],
+        "hidden_insights": {
+          "identifier_name": "Toronto Community Housing Corporation",
+          "identifier_value": "10531"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp?cws=45&org=TCHC&rid=10526",
+      "ok": true,
+      "result": {
+        "url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp?cws=45&org=TCHC&rid=10526",
+        "normalized_url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp",
+        "platform": "taleo",
+        "status": "success",
+        "title": "IT Scrum Master",
+        "company": "Toronto Community Housing Corporation",
+        "location": "Toronto/Downtown",
+        "employment_type": null,
+        "likely_posted_date": "2026-04-22",
+        "likely_age_days": 3,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-04-22 from jsonld.jobposting.datePosted.",
+        "chosen_source": {
+          "date": "2026-04-22",
+          "source": "jsonld.jobposting",
+          "field": "datePosted",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-04-22",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-22",
+            "source": "html.regex",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-05-07",
+            "source": "jsonld.jobposting",
+            "field": "validThrough",
+            "kind": "expiry",
+            "reliability": "medium"
+          },
+          {
+            "date": "2026-05-07",
+            "source": "html.regex",
+            "field": "validThrough",
+            "kind": "expiry",
+            "reliability": "medium"
+          }
+        ],
+        "hidden_insights": {
+          "identifier_name": "Toronto Community Housing Corporation",
+          "identifier_value": "10526"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp?cws=45&org=TCHC&rid=10530",
+      "ok": true,
+      "result": {
+        "url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp?cws=45&org=TCHC&rid=10530",
+        "normalized_url": "https://tre.tbe.taleo.net/tre01/ats/careers/requisition.jsp",
+        "platform": "taleo",
+        "status": "success",
+        "title": "Corporate Controller",
+        "company": "Toronto Community Housing Corporation",
+        "location": "Toronto/Downtown",
+        "employment_type": null,
+        "likely_posted_date": "2026-04-17",
+        "likely_age_days": 8,
+        "confidence": "high",
+        "reposted_likely": false,
+        "summary": "Oldest credible posted date is 2026-04-17 from jsonld.jobposting.datePosted.",
+        "chosen_source": {
+          "date": "2026-04-17",
+          "source": "jsonld.jobposting",
+          "field": "datePosted",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-04-17",
+            "source": "jsonld.jobposting",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-17",
+            "source": "html.regex",
+            "field": "datePosted",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-05-05",
+            "source": "jsonld.jobposting",
+            "field": "validThrough",
+            "kind": "expiry",
+            "reliability": "medium"
+          },
+          {
+            "date": "2026-05-05",
+            "source": "html.regex",
+            "field": "validThrough",
+            "kind": "expiry",
+            "reliability": "medium"
+          }
+        ],
+        "hidden_insights": {
+          "identifier_name": "Toronto Community Housing Corporation",
+          "identifier_value": "10530"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://recruiting.ultipro.com/AME1108AMRL/JobBoard/3391213d-67ca-497b-be36-e41affd954f7/OpportunityDetail?opportunityId=b330caec-91c7-4200-85cb-48a13027d347",
+      "ok": true,
+      "result": {
+        "url": "https://recruiting.ultipro.com/AME1108AMRL/JobBoard/3391213d-67ca-497b-be36-e41affd954f7/OpportunityDetail?opportunityId=b330caec-91c7-4200-85cb-48a13027d347",
+        "normalized_url": "https://recruiting.ultipro.com/AME1108AMRL/JobBoard/3391213d-67ca-497b-be36-e41affd954f7/OpportunityDetail",
+        "platform": "ukg_pro",
+        "status": "success",
+        "title": "Certified Clinician Hemodialysis Technician",
+        "company": "West Jax 210",
+        "location": "IRC West Jacksonville Dialysis Center",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2025-02-25",
+        "likely_age_days": 424,
+        "confidence": "high",
+        "reposted_likely": true,
+        "summary": "Oldest credible posted date is 2025-02-25 from ukg_pro.embedded.JobBoardMemberships. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+        "chosen_source": {
+          "date": "2025-02-25",
+          "source": "ukg_pro.embedded",
+          "field": "JobBoardMemberships",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2025-02-25",
+            "source": "ukg_pro.embedded",
+            "field": "PostedDate",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-02-25",
+            "source": "ukg_pro.embedded",
+            "field": "JobBoardMemberships",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2025-06-12",
+            "source": "ukg_pro.embedded",
+            "field": "UpdatedDate",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "UKG updated timestamps reflect edits or refresh activity, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "location_name": "IRC West Jacksonville Dialysis Center",
+          "requisition_number": "CERTI010997",
+          "job_category": "Clinic Employee"
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://recruiting.ultipro.com/ACT1002ACTS/JobBoard/73856c51-3afd-4794-a61e-077a4b32a17d/OpportunityDetail?opportunityId=a5ff9485-2f8f-4876-83c1-24d512d9492d",
+      "ok": true,
+      "result": {
+        "url": "https://recruiting.ultipro.com/ACT1002ACTS/JobBoard/73856c51-3afd-4794-a61e-077a4b32a17d/OpportunityDetail?opportunityId=a5ff9485-2f8f-4876-83c1-24d512d9492d",
+        "normalized_url": "https://recruiting.ultipro.com/ACT1002ACTS/JobBoard/73856c51-3afd-4794-a61e-077a4b32a17d/OpportunityDetail",
+        "platform": "ukg_pro",
+        "status": "success",
+        "title": "Airport Security Officer - CLT Airport (VALID SECURITY LICENSE or 16 HR CERT COURSE FROM THE STATE OF NC REQUIRED)",
+        "company": "CLT2-Airport Services",
+        "location": "Charlotte, NC, United States",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2026-03-16",
+        "likely_age_days": 40,
+        "confidence": "high",
+        "reposted_likely": true,
+        "summary": "Oldest credible posted date is 2026-03-16 from ukg_pro.embedded.JobBoardMemberships. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+        "chosen_source": {
+          "date": "2026-03-16",
+          "source": "ukg_pro.embedded",
+          "field": "JobBoardMemberships",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-03-16",
+            "source": "ukg_pro.embedded",
+            "field": "PostedDate",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-03-16",
+            "source": "ukg_pro.embedded",
+            "field": "JobBoardMemberships",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-15",
+            "source": "ukg_pro.embedded",
+            "field": "UpdatedDate",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "UKG updated timestamps reflect edits or refresh activity, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "requisition_number": "AIRPO005569",
+          "job_category": "Non Union",
+          "hours_per_week": 40.0
+        },
+        "warnings": []
+      }
+    },
+    {
+      "url": "https://recruiting.ultipro.com/PAC1009/JobBoard/37e95049-80e2-145c-b48c-f826b780e4d6/OpportunityDetail?opportunityId=0725ff83-f983-4196-ae6b-b6d46682c9f6",
+      "ok": true,
+      "result": {
+        "url": "https://recruiting.ultipro.com/PAC1009/JobBoard/37e95049-80e2-145c-b48c-f826b780e4d6/OpportunityDetail?opportunityId=0725ff83-f983-4196-ae6b-b6d46682c9f6",
+        "normalized_url": "https://recruiting.ultipro.com/PAC1009/JobBoard/37e95049-80e2-145c-b48c-f826b780e4d6/OpportunityDetail",
+        "platform": "ukg_pro",
+        "status": "success",
+        "title": "Card Services Specialist (Temporary up to 6 months)",
+        "company": "Escondido, CA",
+        "location": "Escondido, CA",
+        "employment_type": "Full-time",
+        "likely_posted_date": "2026-03-11",
+        "likely_age_days": 45,
+        "confidence": "high",
+        "reposted_likely": true,
+        "summary": "Oldest credible posted date is 2026-03-11 from ukg_pro.embedded.JobBoardMemberships. Newer visible or refresh timestamps conflict with older durable evidence, so reposting or refreshing is likely.",
+        "chosen_source": {
+          "date": "2026-03-11",
+          "source": "ukg_pro.embedded",
+          "field": "JobBoardMemberships",
+          "kind": "posted",
+          "reliability": "high"
+        },
+        "all_dates": [
+          {
+            "date": "2026-03-11",
+            "source": "ukg_pro.embedded",
+            "field": "PostedDate",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-03-11",
+            "source": "ukg_pro.embedded",
+            "field": "JobBoardMemberships",
+            "kind": "posted",
+            "reliability": "high"
+          },
+          {
+            "date": "2026-04-21",
+            "source": "ukg_pro.embedded",
+            "field": "UpdatedDate",
+            "kind": "refresh",
+            "reliability": "medium",
+            "note": "UKG updated timestamps reflect edits or refresh activity, not the original posting date."
+          }
+        ],
+        "hidden_insights": {
+          "location_name": "Escondido, CA",
+          "requisition_number": "CARDS004777",
+          "job_category": "Administrative Support",
+          "job_location_type": 1
+        },
+        "warnings": []
+      }
+    }
+  ]
+}

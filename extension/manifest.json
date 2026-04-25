@@ -1,0 +1,132 @@
+{
+  "manifest_version": 3,
+  "name": "How Old Is This Job?",
+  "version": "0.1.0",
+  "description": "Shows job age badges on supported ATS pages and recovers direct source links from aggregator pages.",
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://api.howoldisthisjob.com/*"
+  ],
+  "action": {
+    "default_title": "How Old Is This Job?",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "logo-badge.svg"
+      ],
+      "matches": [
+        "https://jobs.lever.co/*",
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://apply.workable.com/*",
+        "https://jobs.workable.com/*",
+        "https://jobs.dayforcehcm.com/*",
+        "https://*.pageuppeople.com/*",
+        "https://*.teamtailor.com/*",
+        "https://*.recruitee.com/*",
+        "https://*.jobs.personio.de/*",
+        "https://jobs.breezy.hr/*",
+        "https://*.breezy.hr/*",
+        "https://*.applytojob.com/*",
+        "https://app.dover.com/*",
+        "https://ats.rippling.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.bamboohr.com/*",
+        "https://*.brassring.com/*",
+        "https://jobs.sap.com/*",
+        "https://*.successfactors.com/*",
+        "https://workforcenow.adp.com/*",
+        "https://careers.paycor.com/*",
+        "https://newton.newtonsoftware.com/*",
+        "https://*.recruitingbypaycor.com/*",
+        "https://jobs.gem.com/*",
+        "https://*.taleo.net/*",
+        "https://*.ultipro.com/*",
+        "https://*.icims.com/*",
+        "https://*.avature.net/*",
+        "https://*.oraclecloud.com/*",
+        "https://*.jobvite.com/*",
+        "https://jobs.jobvite.com/*",
+        "https://linkedin.com/*",
+        "https://*.linkedin.com/*",
+        "https://indeed.com/*",
+        "https://*.indeed.com/*",
+        "https://careers.google.com/*"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://jobs.lever.co/*",
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://apply.workable.com/*",
+        "https://jobs.workable.com/*",
+        "https://jobs.dayforcehcm.com/*",
+        "https://*.pageuppeople.com/*",
+        "https://*.teamtailor.com/*",
+        "https://*.recruitee.com/*",
+        "https://*.jobs.personio.de/*",
+        "https://jobs.breezy.hr/*",
+        "https://*.breezy.hr/*",
+        "https://*.applytojob.com/*",
+        "https://app.dover.com/*",
+        "https://ats.rippling.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.bamboohr.com/*",
+        "https://*.brassring.com/*",
+        "https://jobs.sap.com/*",
+        "https://*.successfactors.com/*",
+        "https://workforcenow.adp.com/*",
+        "https://careers.paycor.com/*",
+        "https://newton.newtonsoftware.com/*",
+        "https://*.recruitingbypaycor.com/*",
+        "https://jobs.gem.com/*",
+        "https://*.taleo.net/*",
+        "https://*.ultipro.com/*",
+        "https://*.icims.com/*",
+        "https://*.avature.net/*",
+        "https://*.oraclecloud.com/*",
+        "https://*.jobvite.com/*",
+        "https://jobs.jobvite.com/*",
+        "https://linkedin.com/*",
+        "https://*.linkedin.com/*",
+        "https://indeed.com/*",
+        "https://*.indeed.com/*",
+        "https://careers.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

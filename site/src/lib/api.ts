@@ -66,15 +66,71 @@ export type HistoryItem = {
   result: EstimateResult
 }
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_JOBCARBON_API ??
-  (process.env.NODE_ENV === "development"
-    ? "http://localhost:8000"
-    : "https://api.howoldisthisjob.com")
+export type BatchEstimateItem =
+  | {
+      url: string
+      ok: true
+      result: EstimateResult
+    }
+  | {
+      url: string
+      ok: false
+      error: {
+        code: string
+        message: string
+      }
+    }
+
+export type BatchEstimateResponse = {
+  results: BatchEstimateItem[]
+}
+
+const DEFAULT_PROD_API_BASES = ["https://api.howoldisthisjob.com"]
+
+const API_BASES = (() => {
+  if (process.env.NODE_ENV === "development") {
+    return ["http://localhost:8000"]
+  }
+
+  const configured = process.env.NEXT_PUBLIC_HOWOLDISTHISJOB_API?.trim()
+  if (!configured) return DEFAULT_PROD_API_BASES
+
+  return Array.from(new Set([...DEFAULT_PROD_API_BASES, configured]))
+})()
+
+function isRetryableApiStatus(status: number): boolean {
+  return [502, 503, 504, 522, 523, 524, 530].includes(status)
+}
+
+async function fetchApi(path: string, init?: RequestInit): Promise<Response> {
+  let lastError: unknown = null
+
+  for (let index = 0; index < API_BASES.length; index += 1) {
+    const base = API_BASES[index]
+
+    try {
+      const response = await fetch(`${base}${path}`, init)
+      if (response.ok || !isRetryableApiStatus(response.status) || index === API_BASES.length - 1) {
+        return response
+      }
+    } catch (error) {
+      lastError = error
+      if (index === API_BASES.length - 1) {
+        throw error
+      }
+      continue
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("Could not reach the howoldisthisjob API.")
+}
 
 export async function estimateJobAge(url: string): Promise<EstimateResult> {
-  const endpoint = `${API_BASE}/api/v1/estimate?url=${encodeURIComponent(url)}`
-  const response = await fetch(endpoint, { method: "GET" })
+  const response = await fetchApi(`/api/v1/estimate?url=${encodeURIComponent(url)}`, {
+    method: "GET",
+  })
   const payload = await response.json()
 
   if (!response.ok) {
@@ -102,8 +158,7 @@ export async function streamEstimateJobAge(
   onEvent: (event: StreamEvent) => void,
   options?: { signal?: AbortSignal },
 ): Promise<EstimateResult> {
-  const endpoint = `${API_BASE}/api/v1/estimate/stream?url=${encodeURIComponent(url)}`
-  const response = await fetch(endpoint, {
+  const response = await fetchApi(`/api/v1/estimate/stream?url=${encodeURIComponent(url)}`, {
     method: "GET",
     signal: options?.signal,
   })
@@ -161,8 +216,7 @@ export async function streamEstimateJobAge(
 }
 
 export async function fetchPlatforms(): Promise<PlatformsResponse> {
-  const endpoint = `${API_BASE}/api/v1/platforms`
-  const response = await fetch(endpoint, { method: "GET" })
+  const response = await fetchApi("/api/v1/platforms", { method: "GET" })
   const payload = await response.json()
 
   if (!response.ok) {
@@ -171,6 +225,20 @@ export async function fetchPlatforms(): Promise<PlatformsResponse> {
   }
 
   return payload as PlatformsResponse
+}
+
+export async function batchEstimateJobAge(
+  urls: string[],
+): Promise<BatchEstimateResponse> {
+  const response = await fetchApi("/api/v1/batch-estimate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ urls }),
+  })
+
+  return parseApiResponse<BatchEstimateResponse>(response)
 }
 
 async function parseApiResponse<T>(response: Response): Promise<T> {
@@ -185,7 +253,7 @@ async function parseApiResponse<T>(response: Response): Promise<T> {
 }
 
 export async function fetchHistory(): Promise<HistoryItem[]> {
-  const response = await fetch(`${API_BASE}/api/v1/history`, {
+  const response = await fetchApi("/api/v1/history", {
     method: "GET",
     credentials: "include",
   })
@@ -197,7 +265,7 @@ export async function saveToHistory(
   url: string,
   result: EstimateResult,
 ): Promise<HistoryItem> {
-  const response = await fetch(`${API_BASE}/api/v1/history`, {
+  const response = await fetchApi("/api/v1/history", {
     method: "POST",
     credentials: "include",
     headers: {
@@ -210,7 +278,7 @@ export async function saveToHistory(
 }
 
 export async function deleteHistoryItem(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/v1/history/${encodeURIComponent(id)}`, {
+  const response = await fetchApi(`/api/v1/history/${encodeURIComponent(id)}`, {
     method: "DELETE",
     credentials: "include",
   })
@@ -223,7 +291,7 @@ export async function deleteHistoryItem(id: string): Promise<void> {
 }
 
 export async function clearHistory(): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/v1/history`, {
+  const response = await fetchApi("/api/v1/history", {
     method: "DELETE",
     credentials: "include",
   })

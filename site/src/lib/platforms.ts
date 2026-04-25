@@ -19,7 +19,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "linkedin",
     title: "LinkedIn URL Detected",
     body:
-      "LinkedIn blocks automated access to their job pages, so we cannot extract posting dates from LinkedIn URLs.\n\nTip: if you see an \"Apply\" button (not \"Easy Apply\"), click it to get the company's own careers page URL. That will give much better results.",
+      "LinkedIn blocks automated access to direct job-page lookups.\n\nTip: if you see an \"Apply\" button (not \"Easy Apply\"), use the employer careers URL instead. The Chrome extension can also recover source ATS links from some LinkedIn pages when the page exposes them locally.",
     mode: "blocked",
     dismissLabel: "Got it",
   },
@@ -27,7 +27,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "indeed",
     title: "Indeed URL Detected",
     body:
-      "Indeed blocks automated access to their job pages, so we cannot extract posting dates from Indeed URLs.\n\nTip: look for the original company careers page link on the Indeed listing. That will give much better results.",
+      "Indeed blocks automated access to direct job-page lookups.\n\nTip: use the original company careers URL instead. The Chrome extension can also recover source ATS links from some Indeed pages when the page exposes them locally.",
     mode: "blocked",
     dismissLabel: "Got it",
   },
@@ -35,7 +35,7 @@ export const INTERCEPTS: Record<InterceptPlatform, InterceptSpec> = {
     id: "google",
     title: "Google Careers Detected",
     body:
-      "Google Careers pages do not contain posting dates or last-modified timestamps.\n\nWe can extract the job title and company name, but cannot determine when this job was posted.",
+      "Google Careers pages do not contain reliable posting dates.\n\nIf the page exposes the original employer apply URL, the Chrome extension can recover that source link and run the normal ATS lookup there.",
     mode: "warn",
     continueLabel: "Continue Anyway",
     dismissLabel: "Cancel",

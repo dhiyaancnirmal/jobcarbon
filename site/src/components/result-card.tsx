@@ -36,6 +36,17 @@ function formatDate(iso: string | null): string | null {
   })
 }
 
+function getLatestRefreshDate(result: EstimateResult): string | null {
+  const candidates = (result.all_dates ?? [])
+    .filter((item) => item.kind === "refresh" || item.kind === "updated" || item.kind === "modified")
+    .map((item) => item.date)
+    .filter(Boolean)
+    .sort()
+
+  const latest = candidates.at(-1) ?? null
+  return latest && latest !== result.likely_posted_date ? latest : null
+}
+
 const reliabilityDot: Record<string, string> = {
   high: "gel-dot--high",
   medium: "gel-dot--medium",
@@ -58,8 +69,10 @@ function buildCopyText(result: EstimateResult): string {
   if (result.title) lines.push(result.title)
   if (result.company) lines.push(`at ${result.company}`)
   const date = formatDate(result.likely_posted_date)
+  const refreshedDate = formatDate(getLatestRefreshDate(result))
   const ageDays = localCalendarAgeDays(result.likely_posted_date) ?? result.likely_age_days
-  if (date) lines.push(`Posted ${date} (${formatAge(ageDays)})`)
+  if (date) lines.push(`${refreshedDate ? "Originally posted" : "Posted"} ${date} (${formatAge(ageDays)})`)
+  if (refreshedDate) lines.push(`Last refreshed ${refreshedDate}`)
   if (result.chosen_source) {
     lines.push(
       `Source: ${result.chosen_source.source}${
@@ -126,7 +139,7 @@ function StatusMessage({ result }: { result: EstimateResult }) {
           <span className="text-sm font-medium text-amber-800 dark:text-amber-200">Platform blocks automated access</span>
         </div>
         <p className="text-xs text-amber-700 leading-relaxed dark:text-amber-300">
-          {`${result.platform} blocks automated access. Try the original company careers page URL instead.`}
+          {`${result.platform} blocks automated access. Try the original company careers page URL instead, or use the extension to recover the source ATS link from supported aggregator pages.`}
         </p>
       </div>
     )
@@ -200,6 +213,7 @@ export function ResultCard({
   }
 
   const dateStr = formatDate(result.likely_posted_date)
+  const refreshedDate = formatDate(getLatestRefreshDate(result))
   const displayAgeDays =
     localCalendarAgeDays(result.likely_posted_date) ?? result.likely_age_days
   const hasMeta =
@@ -207,6 +221,7 @@ export function ResultCard({
   const hasInsights = Object.keys(result.hidden_insights ?? {}).length > 0
   const copyText = buildCopyText(result)
   const platformUi = getPlatformPresentation(result.platform)
+  const showRepostWarning = result.reposted_likely && !refreshedDate
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
@@ -217,7 +232,14 @@ export function ResultCard({
             {formatAge(displayAgeDays)}
           </span>
           {dateStr && (
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">Posted {dateStr}</span>
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+              {refreshedDate ? "Originally posted" : "Posted"} {dateStr}
+            </span>
+          )}
+          {refreshedDate && (
+            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+              Last refreshed {refreshedDate}
+            </span>
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -236,7 +258,7 @@ export function ResultCard({
         </div>
       </div>
 
-      {result.reposted_likely && (
+      {showRepostWarning && (
         <div className="flex items-center gap-2 border-t border-amber-100 bg-amber-50/60 px-5 py-2.5 dark:border-amber-950 dark:bg-amber-950/40">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="shrink-0 text-amber-600">
             <polyline points="23 4 23 10 17 10" />
@@ -244,7 +266,7 @@ export function ResultCard({
             <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
           </svg>
           <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
-            Likely reposted - original listing may be older than shown
+            Newer listing timestamps were detected; age shown uses the earliest credible posting date
           </span>
         </div>
       )}
