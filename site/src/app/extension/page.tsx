@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Image from "next/image"
 import Link from "next/link"
 import { Logo } from "@/components/logo"
 
@@ -49,13 +48,17 @@ export default function ExtensionPage() {
             Extension in Chrome
           </h2>
           <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-            <Image
-              src="/extension-screenshots/ashby-openai-popup-scanned.png"
-              alt="How Old Is This Job? Chrome extension showing scanned job ages on an Ashby job board."
-              width={1920}
-              height={1200}
-              priority
-              className="h-auto w-full"
+            <video
+              className="h-auto w-full bg-white dark:bg-black"
+              src="/extension-demo/job-checker-extension-demo.mp4"
+              poster="/extension-demo/job-checker-extension-demo-poster.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+              aria-label="Demo of the How Old Is This Job Chrome extension badging job ages on an Ashby job board."
             />
           </div>
         </section>
