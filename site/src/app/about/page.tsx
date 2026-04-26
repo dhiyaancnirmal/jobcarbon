@@ -112,6 +112,26 @@ export default function About() {
           </div>
         </section>
 
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+            Demo
+          </h2>
+          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100 shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
+            <video
+              className="h-auto w-full bg-white dark:bg-black"
+              src="/demo/how-old-is-this-job-demo.mp4"
+              poster="/demo/how-old-is-this-job-demo-poster.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              controls
+              preload="metadata"
+              aria-label="Demo of How Old Is This Job checking a Replit job post and returning an age estimate."
+            />
+          </div>
+        </section>
+
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
             How it works

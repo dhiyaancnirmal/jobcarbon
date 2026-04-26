@@ -1,0 +1,4 @@
+file '/Users/dhiyaan/Code/howoldisthisjob/demo-output/title-extension-ats.mp4'
+file '/Users/dhiyaan/Code/howoldisthisjob/demo-output/extension-ats-body.mp4'
+file '/Users/dhiyaan/Code/howoldisthisjob/demo-output/title-extension-scan.mp4'
+file '/Users/dhiyaan/Code/howoldisthisjob/demo-output/extension-scan-body.mp4'
