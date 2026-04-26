@@ -9,10 +9,11 @@ export const metadata: Metadata = {
 }
 
 const STEPS = [
+  "Download and unzip the extension.",
   "Open chrome://extensions.",
   "Enable Developer Mode.",
   'Click "Load unpacked".',
-  "Select /Users/dhiyaan/Code/howoldisthisjob/extension.",
+  "Select the unzipped extension folder.",
 ]
 
 export default function ExtensionPage() {
@@ -28,9 +29,16 @@ export default function ExtensionPage() {
             Badge job ages on supported ATS pages and scan visible job links from the browser.
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <a
+              href="/downloads/how-old-is-this-job-extension.zip"
+              download
+              className="gel-btn gel-btn--sm gel-btn--save no-underline"
+            >
+              Download extension
+            </a>
             <Link
               href="/"
-              className="gel-btn gel-btn--sm gel-btn--save no-underline"
+              className="gel-btn gel-btn--sm gel-btn--neutral no-underline"
             >
               Check a job URL
             </Link>
