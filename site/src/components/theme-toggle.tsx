@@ -34,6 +34,16 @@ function nextPreference(preference: ThemePreference): ThemePreference {
   return "system"
 }
 
+function persistPreference(preference: ThemePreference) {
+  try {
+    if (preference === "system") {
+      window.localStorage.removeItem(THEME_STORAGE_KEY)
+    } else {
+      window.localStorage.setItem(THEME_STORAGE_KEY, preference)
+    }
+  } catch {}
+}
+
 function preferenceLabel(preference: ThemePreference) {
   if (preference === "system") return "System"
   return preference === "dark" ? "Night" : "Day"
@@ -59,15 +69,12 @@ export function ThemeToggle() {
   }, [preference])
 
   function toggleTheme() {
-    const next = nextPreference(preference)
-    setPreference(next)
-    try {
-      if (next === "system") {
-        window.localStorage.removeItem(THEME_STORAGE_KEY)
-      } else {
-        window.localStorage.setItem(THEME_STORAGE_KEY, next)
-      }
-    } catch {}
+    setPreference((current) => {
+      const next = nextPreference(current)
+      persistPreference(next)
+      applyTheme(resolveTheme(next))
+      return next
+    })
   }
 
   return (
