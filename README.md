@@ -28,6 +28,12 @@ Blocked / limited handling:
 python3 howoldisthisjob.py https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
 ```
 
+To run through npm:
+
+```bash
+npx howoldisthisjob https://jobs.lever.co/skio/bbdd5a7b-652a-43ad-b92e-58f4e970c694
+```
+
 To install the console scripts in a repo-local virtualenv:
 
 ```bash
@@ -48,6 +54,12 @@ Or via the console script after editable install:
 
 ```bash
 ./.venv/bin/howoldisthisjob-api --host 127.0.0.1 --port 8000
+```
+
+Or through npm:
+
+```bash
+npx --package howoldisthisjob howoldisthisjob-api --host 127.0.0.1 --port 8000
 ```
 
 Endpoints:

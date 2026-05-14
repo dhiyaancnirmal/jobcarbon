@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
-import Link from "next/link"
 import Script from "next/script"
 import { Analytics } from "@vercel/analytics/next"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { FooterNav } from "@/components/footer-nav"
+import { PageTransition } from "@/components/page-transition"
 import "./globals.css"
 
 const inter = Inter({
@@ -84,41 +84,8 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
-        {children}
-        <footer className="mx-auto mt-auto w-full max-w-4xl px-6 pb-5 pt-2 text-[11px] text-neutral-600 transition-colors dark:text-neutral-400">
-          <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <Link
-                href="/"
-                className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
-              >
-                Home
-              </Link>
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-              <Link
-                href="/about"
-                className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
-              >
-                About
-              </Link>
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-              <Link
-                href="/extension"
-                className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
-              >
-                Extension
-              </Link>
-              <span className="text-neutral-400 dark:text-neutral-600">·</span>
-              <ThemeToggle />
-            </div>
-            <Link
-              href="/changelog"
-              className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
-            >
-              v0.1.2
-            </Link>
-          </div>
-        </footer>
+        <PageTransition>{children}</PageTransition>
+        <FooterNav />
         <Analytics />
       </body>
     </html>

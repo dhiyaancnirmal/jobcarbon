@@ -224,7 +224,7 @@ export function ResultCard({
   const showRepostWarning = result.reposted_likely && !refreshedDate
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="result-card motion-card-enter flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
       {/* Header — primary content, most breathing room */}
       <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
         <div className="flex min-w-0 flex-col gap-1">
@@ -326,7 +326,7 @@ export function ResultCard({
           <button
             type="button"
             onClick={() => setEvidenceExpanded((open) => !open)}
-            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className="disclosure-toggle flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
           >
             <span>
               Evidence ({result.all_dates!.length} date
@@ -335,11 +335,11 @@ export function ResultCard({
             <span className="text-neutral-500 dark:text-neutral-400">{evidenceExpanded ? "Hide" : "Show"}</span>
           </button>
           {evidenceExpanded && (
-            <div className="flex flex-col gap-3 px-5 pb-4 pt-1">
+            <div className="disclosure-content flex flex-col gap-3 px-5 pb-4 pt-1">
               {result.all_dates!.map((item, i) => (
                 <div
                   key={i}
-                  className="flex items-start gap-3 text-[11px]"
+                  className="evidence-row flex items-start gap-3 text-[11px]"
                 >
                   <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
                     <span
@@ -373,7 +373,7 @@ export function ResultCard({
           <button
             type="button"
             onClick={() => setInsightsExpanded((open) => !open)}
-            className="flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+            className="disclosure-toggle flex w-full items-center justify-between px-5 py-2.5 text-left text-[11px] font-medium text-neutral-500 transition-colors hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
           >
             <span>
               Hidden insights ({Object.keys(result.hidden_insights ?? {}).length})
@@ -381,11 +381,11 @@ export function ResultCard({
             <span className="text-neutral-500 dark:text-neutral-400">{insightsExpanded ? "Hide" : "Show"}</span>
           </button>
           {insightsExpanded && (
-            <div className="flex flex-col gap-3 px-5 pb-4 pt-1">
+            <div className="disclosure-content flex flex-col gap-3 px-5 pb-4 pt-1">
               {Object.entries(result.hidden_insights ?? {}).map(([key, value]) => (
                 <div
                   key={key}
-                  className="flex items-baseline gap-2 text-[11px]"
+                  className="evidence-row flex items-baseline gap-2 text-[11px]"
                 >
                   <span className="shrink-0 text-neutral-500 dark:text-neutral-400">{key}</span>
                   <span className="truncate font-mono text-neutral-700 dark:text-neutral-200">

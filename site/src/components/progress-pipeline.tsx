@@ -22,7 +22,7 @@ export function ProgressPipeline({
     platform && platform !== "unknown" ? getPlatformPresentation(platform) : null
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="motion-card-enter flex flex-col gap-2 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="flex items-center gap-2">
         <Loader2
           className="size-3.5 animate-spin text-neutral-400 dark:text-neutral-500"
@@ -42,7 +42,7 @@ export function ProgressPipeline({
           {stages.map((stage, i) => (
             <li
               key={`${stage.label}-${i}`}
-              className="flex items-baseline gap-2.5 text-[13px]"
+              className="pipeline-row flex items-baseline gap-2.5 text-[13px]"
             >
               <span className="mt-0.5 inline-flex size-3.5 shrink-0 items-center justify-center self-start">
                 <StageIcon status={stage.status} />

@@ -521,7 +521,7 @@ export function JobChecker() {
         onConfirm={confirmModal}
         onCancel={() => setModalState(null)}
       />
-      <div className="flex w-full flex-col gap-6">
+      <div className="site-reveal site-reveal--delay-3 flex w-full flex-col gap-6">
         <div className="flex flex-col gap-2">
           <form
             onSubmit={onSubmit}
@@ -599,7 +599,7 @@ export function JobChecker() {
         )}
 
         {!hasHistory && !loading && (
-          <div className="flex flex-col gap-4 -mx-6">
+          <div className="site-reveal flex flex-col gap-4 -mx-6">
             <p className="px-6 text-xs text-neutral-500 dark:text-neutral-400">
               {SUPPORTED_PLATFORMS.length}+ platforms supported
             </p>

@@ -6,6 +6,15 @@ export const metadata: Metadata = {
 
 const ENTRIES = [
   {
+    version: "v0.1.3",
+    date: "May 2026",
+    changes: [
+      "Published the `howoldisthisjob` CLI on npm.",
+      "Added the CLI site page with install, run, and API commands.",
+      "Smoothed page transitions, footer navigation, result cards, and page layouts.",
+    ],
+  },
+  {
     version: "v0.1.2",
     date: "April 2026",
     changes: [

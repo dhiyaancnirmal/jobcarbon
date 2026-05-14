@@ -34,7 +34,7 @@ export function SearchHistory({
   }, [items, filter])
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="motion-card-enter flex flex-col gap-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-xs text-neutral-600 dark:text-neutral-300">
@@ -61,7 +61,7 @@ export function SearchHistory({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-neutral-200 bg-white px-5 py-6 text-center text-xs text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-500">
+        <p className="motion-card-enter rounded-xl border border-dashed border-neutral-200 bg-white px-5 py-6 text-center text-xs text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-500">
           No results match &ldquo;{filter}&rdquo;.
         </p>
       ) : (

@@ -46,7 +46,7 @@ export function HistoryCard({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left transition-colors hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900"
+        className="interactive-card flex w-full items-center gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-left dark:border-neutral-800 dark:bg-neutral-950"
       >
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="truncate text-sm font-medium text-neutral-800 dark:text-neutral-100">{title}</span>
@@ -67,7 +67,7 @@ export function HistoryCard({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="motion-card-enter flex flex-col gap-2">
       <div className="flex items-center justify-end px-1">
         <button
           type="button"

@@ -93,15 +93,12 @@ const FAQ = [
 export default function About() {
   return (
     <main className="mx-auto flex w-full max-w-4xl flex-col px-6 py-10">
-      <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-12">
+      <div className="mx-auto flex w-full max-w-[42rem] flex-col gap-8">
         <section className="flex flex-col gap-4">
           <Logo size={40} />
           <h1 className="text-[2rem] font-semibold tracking-tight text-neutral-900 sm:text-[2.3rem] dark:text-neutral-50">
-            About &ldquo;How Old Is This Job?&rdquo;
+            About
           </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-[15px] dark:text-neutral-300">
-            A tool for finding the real posting date of a job listing.
-          </p>
           <div>
             <Link
               href="/"

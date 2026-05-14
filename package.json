@@ -1,17 +1,27 @@
 {
-  "name": "howoldisthisjob-cloudflare",
-  "private": true,
+  "name": "howoldisthisjob",
+  "version": "0.1.0",
+  "description": "Estimate how old a job posting really is.",
   "type": "module",
+  "bin": {
+    "howoldisthisjob": "bin/howoldisthisjob.js",
+    "howoldisthisjob-api": "bin/howoldisthisjob-api.js"
+  },
+  "files": [
+    "README.md",
+    "bin/",
+    "howoldisthisjob.py",
+    "howoldisthisjob_api.py",
+    "pyproject.toml"
+  ],
   "scripts": {
     "cf:check": "wrangler deploy --dry-run",
     "cf:deploy": "wrangler deploy",
     "cf:dev": "wrangler dev",
     "cf:types": "wrangler types cloudflare/worker-configuration.d.ts"
   },
-  "dependencies": {
-    "@cloudflare/containers": "^0.0.28"
-  },
   "devDependencies": {
+    "@cloudflare/containers": "^0.0.28",
     "@cloudflare/workers-types": "^4.20260422.0",
     "typescript": "^5.9.3",
     "wrangler": "^4.72.0"

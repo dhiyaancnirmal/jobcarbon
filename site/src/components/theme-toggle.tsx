@@ -4,33 +4,69 @@ import { useEffect, useState } from "react"
 
 const THEME_STORAGE_KEY = "howoldisthisjob-theme"
 
-function applyTheme(nextTheme: "light" | "dark") {
+type ThemePreference = "system" | "light" | "dark"
+type ResolvedTheme = "light" | "dark"
+
+function systemTheme(): ResolvedTheme {
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+}
+
+function applyTheme(nextTheme: ResolvedTheme) {
   document.documentElement.classList.toggle("dark", nextTheme === "dark")
   document.documentElement.style.colorScheme = nextTheme
 }
 
-function readInitialTheme(): "light" | "dark" {
+function readInitialPreference(): ThemePreference {
   try {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
     if (stored === "light" || stored === "dark") return stored
   } catch {}
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+  return "system"
+}
+
+function resolveTheme(preference: ThemePreference): ResolvedTheme {
+  return preference === "system" ? systemTheme() : preference
+}
+
+function nextPreference(preference: ThemePreference): ThemePreference {
+  if (preference === "system") return "light"
+  if (preference === "light") return "dark"
+  return "system"
+}
+
+function preferenceLabel(preference: ThemePreference) {
+  if (preference === "system") return "System"
+  return preference === "dark" ? "Night" : "Day"
 }
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    typeof window === "undefined" ? "light" : readInitialTheme(),
+  const [preference, setPreference] = useState<ThemePreference>(() =>
+    typeof window === "undefined" ? "system" : readInitialPreference(),
   )
 
   useEffect(() => {
-    applyTheme(theme)
-  }, [theme])
+    applyTheme(resolveTheme(preference))
+
+    if (preference !== "system") return
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
+    function onSystemThemeChange() {
+      applyTheme(resolveTheme("system"))
+    }
+
+    media.addEventListener("change", onSystemThemeChange)
+    return () => media.removeEventListener("change", onSystemThemeChange)
+  }, [preference])
 
   function toggleTheme() {
-    const nextTheme = theme === "dark" ? "light" : "dark"
-    setTheme(nextTheme)
+    const next = nextPreference(preference)
+    setPreference(next)
     try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme)
+      if (next === "system") {
+        window.localStorage.removeItem(THEME_STORAGE_KEY)
+      } else {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next)
+      }
     } catch {}
   }
 
@@ -40,10 +76,10 @@ export function ThemeToggle() {
       onClick={toggleTheme}
       suppressHydrationWarning
       className="transition-colors hover:text-neutral-800 dark:hover:text-neutral-200"
-      aria-label="Toggle color theme"
-      title="Toggle color theme"
+      aria-label={`Color theme: ${preferenceLabel(preference)}`}
+      title={`Color theme: ${preferenceLabel(preference)}`}
     >
-      {theme === "dark" ? "Night" : "Day"}
+      {preferenceLabel(preference)}
     </button>
   )
 }

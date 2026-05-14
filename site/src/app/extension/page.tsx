@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { Logo } from "@/components/logo"
 
 export const metadata: Metadata = {
@@ -25,9 +24,6 @@ export default function ExtensionPage() {
           <h1 className="text-[2rem] font-semibold tracking-tight text-neutral-900 sm:text-[2.3rem] dark:text-neutral-50">
             Chrome Extension
           </h1>
-          <p className="max-w-2xl text-sm leading-relaxed text-neutral-600 sm:text-[15px] dark:text-neutral-300">
-            Badge job ages on supported ATS pages and scan visible job links from the browser.
-          </p>
           <div className="flex flex-wrap items-center gap-2">
             <a
               href="/downloads/how-old-is-this-job-extension.zip"
@@ -36,25 +32,10 @@ export default function ExtensionPage() {
             >
               Download extension
             </a>
-            <Link
-              href="/"
-              className="gel-btn gel-btn--sm gel-btn--neutral no-underline"
-            >
-              Check a job URL
-            </Link>
-            <Link
-              href="/about"
-              className="gel-btn gel-btn--sm gel-btn--neutral no-underline"
-            >
-              Supported platforms
-            </Link>
           </div>
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
-            Extension in Chrome
-          </h2>
           <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
             <video
               className="h-auto w-full bg-white dark:bg-black"
