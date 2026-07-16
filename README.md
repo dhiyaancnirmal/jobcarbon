@@ -117,7 +117,7 @@ CORS / cookie configuration:
 
 - `HOWOLDISTHISJOB_ALLOWED_ORIGINS` controls allowed web origins for the Worker history routes.
 - `HOWOLDISTHISJOB_ALLOWED_EXTENSION_ORIGINS` controls allowed Chrome extension origins for API and history routes. Keep both unpacked development IDs allowed while the old `jobcarbon` path is being phased out.
-- the Python container keeps the same default allowlist used by the old Railway deployment path
+- the Python container (Cloudflare-managed, see `Dockerfile.cloudflare`) keeps its default extension-origin allowlist
 - `HOWOLDISTHISJOB_COOKIE_DOMAIN` is optional; leaving it empty keeps the history cookie host-only on `api.howoldisthisjob.com`
 
 Cloudflare files:

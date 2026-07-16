@@ -350,6 +350,11 @@ def _history_item_from_row(row: sqlite3.Row) -> dict[str, Any]:
     }
 
 
+# Production note: /api/v1/history is served by the Cloudflare Worker + D1
+# (HISTORY_DB) in cloudflare/src/index.ts at api.howoldisthisjob.com. Production
+# never routes history to this Python server. The Python history path below is
+# exercised only by local dev, where the Next.js site in development mode
+# targets http://localhost:8000 (see site/src/lib/api.ts).
 def _handle_history_route(
     *,
     method: str,
@@ -980,6 +985,10 @@ class JobcarbonAPIHandler(BaseHTTPRequestHandler):
 
 
 def default_host() -> str:
+    # Cloudflare-managed container sets PORT=8080 (see Dockerfile.cloudflare)
+    # and runs this server with no --host override, so PORT being set means we
+    # must bind 0.0.0.0 to be reachable. Local dev leaves PORT unset and binds
+    # the loopback 127.0.0.1.
     return "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
 
 
