@@ -659,7 +659,7 @@ class JobcarbonAPITests(unittest.TestCase):
         self.assertEqual(headers["Access-Control-Allow-Credentials"], "true")
         self.assertEqual(body, b"")
 
-    def test_default_host_uses_railway_binding_when_port_is_present(self) -> None:
+    def test_default_host_uses_cloudflare_binding_when_port_is_present(self) -> None:
         with mock.patch.dict(os.environ, {"PORT": "8080"}, clear=False):
             self.assertEqual(howoldisthisjob_api.default_host(), "0.0.0.0")
             self.assertEqual(howoldisthisjob_api.default_port(), 8080)
