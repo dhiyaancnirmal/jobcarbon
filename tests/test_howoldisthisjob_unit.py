@@ -1,5 +1,4 @@
 import json
-import runpy
 import socket
 import unittest
 import warnings
@@ -8,6 +7,7 @@ from email.message import Message
 from urllib.error import HTTPError, URLError
 
 import howoldisthisjob
+from scripts.ats_matrix import MATRIX
 
 
 class FakeHTTPStream:
@@ -32,8 +32,7 @@ class FakeHTTPStream:
 
 class JobcarbonUnitTests(unittest.TestCase):
     def test_production_matrix_covers_every_supported_platform_bucket(self) -> None:
-        matrix_module = runpy.run_path("scripts/run_prod_estimate_matrix.py")
-        matrix_platforms = [row[0] for row in matrix_module["MATRIX"]]
+        matrix_platforms = [row[0] for row in MATRIX]
         supported_platforms = {
             key
             for key, capability in howoldisthisjob.PLATFORM_CAPABILITIES.items()
