@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "howoldisthisjob-api-test",
+  "main": "./src/index.ts",
+  "compatibility_date": "2026-04-22",
+  "vars": {
+    "HOWOLDISTHISJOB_ALLOWED_ORIGINS": "http://localhost:3000,https://howoldisthisjob.com,https://www.howoldisthisjob.com",
+    "HOWOLDISTHISJOB_ALLOWED_EXTENSION_ORIGINS": "chrome-extension://efdbbcgmlpnildldcnalbdfhpndhmmcl,chrome-extension://nhaadlmaijnkebibldhidgdgghnehfea",
+    "HOWOLDISTHISJOB_COOKIE_DOMAIN": ""
+  },
+  "d1_databases": [
+    {
+      "binding": "HISTORY_DB",
+      "database_name": "howoldisthisjob-history-test"
+    }
+  ]
+}

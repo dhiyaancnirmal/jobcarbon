@@ -1,0 +1,22 @@
+{
+  "name": "howoldisthisjob-cloudflare-worker",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker entry point for howoldisthisjob (production routing + history API).",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@cloudflare/containers": "0.0.28",
+    "@cloudflare/vitest-pool-workers": "0.18.5",
+    "@cloudflare/workers-types": "^5.20260710.1",
+    "typescript": "^5.9.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.111.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "workerd@1.20260710.1": true
+  }
+}
