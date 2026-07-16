@@ -1,0 +1,126 @@
+name: Live drift
+
+# Scheduled checks against the real internet + production API.
+# Deliberately NOT triggered by push/PR: network flakiness must never
+# block development. Run manually via workflow_dispatch, or daily.
+on:
+  schedule:
+    # 09:10 UTC daily (off-peak, ~01:10 PT / 02:10 ET).
+    - cron: "10 9 * * *"
+  workflow_dispatch:
+
+jobs:
+  live-tier:
+    name: Direct extractor drift tier
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile Python sources
+        run: python -m py_compile howoldisthisjob.py howoldisthisjob_api.py
+
+      - name: Run live extractor drift tier
+        env:
+          HOWOLDISTHISJOB_LIVE_TESTS: "1"
+        run: |
+          set +e
+          python -m unittest tests.live.test_live_extractors -v 2>&1 | tee live.log
+          status=${PIPESTATUS[0]}
+          echo "unittest exit status: $status"
+
+          # Build a readable pass/skip/fail summary table.
+          python - "$status" <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import re, sys
+          status = int(sys.argv[1])
+          # unittest -v lines look like:
+          #   test_live_lever (tests.live.test_live_extractors.TestLiveExtractors.test_live_lever) ... ok
+          #   ... skipped "reason"
+          #   ... FAIL
+          pat = re.compile(r"^(test_live_\w+)\b.*?\.\.\.\s+(ok|skipped|FAIL|ERROR)", re.M)
+          rows = {"ok": [], "skipped": [], "FAIL": [], "ERROR": []}
+          log = open("live.log", encoding="utf-8", errors="replace").read()
+          for name, res in pat.findall(log):
+              rows.setdefault(res, []).append(name)
+
+          def fmt(res):
+              xs = sorted(rows.get(res, []))
+              return ", ".join(xs) if xs else "—"
+
+          out = ["## Live extractor drift tier",
+                 "",
+                 f"- **Exit status:** `{status}`",
+                 f"- **Pass (ok):** {len(rows['ok'])}",
+                 f"- **Skipped:** {len(rows['skipped'])}",
+                 f"- **FAIL:** {len(rows['FAIL'])}",
+                 f"- **ERROR:** {len(rows['ERROR'])}",
+                 "",
+                 "| Result | Count | Tests |",
+                 "| --- | ---: | --- |"]
+          for res in ("ok", "skipped", "FAIL", "ERROR"):
+              xs = rows.get(res, [])
+              out.append(f"| {res} | {len(xs)} | {fmt(res)} |")
+          out.append("")
+          out.append("_Each FAIL is a platform whose native extractor stopped "
+                     "producing the chosen date — actionable drift. Skips are "
+                     "inconclusive (job churn / blocked / removed) and are not failures._")
+          sys.stdout.write("\n".join(out) + "\n")
+          PY
+
+          # Also keep the full verbose log as a workflow artifact for debugging.
+          exit "$status"
+
+      - name: Upload full log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-drift-log
+          path: live.log
+          if-no-files-found: warn
+
+  prod-smoke:
+    name: Production API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Pick a smoke URL from the ATS matrix
+        id: url
+        run: |
+          # First MATRIX entry — a stable, direct-platform URL.
+          url="$(python -c 'from scripts.ats_matrix import MATRIX; print(MATRIX[0][2])')"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Smoke URL: $url"
+
+      - name: Probe /healthz
+        run: |
+          code="$(curl -s -o /dev/null -w '%{http_code}' https://api.howoldisthisjob.com/healthz)"
+          echo "healthz HTTP status: $code"
+          test "$code" = "200"
+
+      - name: Probe /api/v1/estimate
+        env:
+          SMOKE_URL: ${{ steps.url.outputs.url }}
+        run: |
+          set -euo pipefail
+          endpoint="https://api.howoldisthisjob.com/api/v1/estimate?url=${SMOKE_URL}"
+          tmp="$(mktemp)"
+          code="$(curl -s -o "$tmp" -w '%{http_code}' \
+            --max-time 30 "$endpoint")"
+          echo "estimate HTTP status: $code"
+          echo "--- response body ---"
+          cat "$tmp"
+          echo
+          test "$code" = "200"
+          # Valid JSON and a non-null .status field.
+          jq -e '.status' "$tmp" > /dev/null
