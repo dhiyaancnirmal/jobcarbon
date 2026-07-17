@@ -301,7 +301,22 @@ async function handleHistoryRequest(
         headers,
       });
     }
-    itemId = decodeURIComponent(url.pathname.slice(basePath.length + 1).trim());
+    const rawItemId = url.pathname.slice(basePath.length + 1).trim();
+    if (!rawItemId) {
+      return jsonResponse(errorPayload("not_found", "Route not found."), {
+        status: 404,
+        headers,
+      });
+    }
+    try {
+      itemId = decodeURIComponent(rawItemId);
+    } catch {
+      // Malformed percent-encoding (e.g. /%zz) must not surface as a 500.
+      return jsonResponse(errorPayload("not_found", "Route not found."), {
+        status: 404,
+        headers,
+      });
+    }
     if (!itemId) {
       return jsonResponse(errorPayload("not_found", "Route not found."), {
         status: 404,
