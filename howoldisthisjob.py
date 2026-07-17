@@ -104,12 +104,12 @@ SOURCE_PRIORITY = {
     "workday.cxs": 1,
     "adp.api": 1,
     "oracle_hcm.api": 1,
-    "jobvite.xml": 1,
+    "jobvite.xml": 0,
     "avature.feed": 1,
     "avature.sitemap": 1,
     "gem.api": 1,
     "recruitee.api": 1,
-    "breezy.embedded": 1,
+    "breezy.embedded": 0,
     "personio.xml": 1,
     "amazon_jobs.api": 1,
     "stripe.greenhouse": 1,
@@ -2704,6 +2704,24 @@ def extract_jobvite_xml(
     metadata: URLMetadata,
     html: str,
 ) -> None:
+    # Authoritative posting date on the public Jobvite XML feed
+    # (CompanyJobs/Xml.aspx). The detail page also emits a JobPosting JSON-LD
+    # block whose `datePosted` is a schema.org mirror; we surface it under the
+    # same native source so a missing/stale XML entry still yields a credible
+    # date, and bump jobvite.xml to priority 0 so it outranks the generic
+    # jsonld.jobposting parse. When the XML feed is reachable it carries the
+    # true (typically later) posting date and wins the date-first sort.
+    if html:
+        for posting in extract_job_postings_from_html(html):
+            accumulator.add_date(
+                posting.get("datePosted"),
+                source="jobvite.xml",
+                field="datePosted",
+                kind="posted",
+                reliability="high",
+            )
+            break
+
     if not metadata.job_id:
         return
 
@@ -3510,7 +3528,101 @@ def extract_personio_xml_fallback(
         return
 
 
-def extract_breezy_data_position(accumulator: AnalysisAccumulator, html: str) -> None:
+def extract_breezy_data_position(
+    accumulator: AnalysisAccumulator, html: str, metadata: URLMetadata
+) -> None:
+    # Primary path (current Breezy portal, 2025+): the public career portal is an
+    # AngularJS app whose server render emits a JobPosting JSON-LD block with
+    # `datePosted` (and, when set, `validThrough`). The earlier `data-position`
+    # attribute is no longer emitted by the portal template.
+    if _extract_breezy_jsonld(accumulator, html, metadata):
+        return
+    # Legacy path: older/custom Breezy portals still embed a `data-position`
+    # JSON blob carrying `first_publish_date` / `last_publish_date`.
+    _extract_breezy_legacy_data_position(accumulator, html)
+
+
+def _extract_breezy_jsonld(
+    accumulator: AnalysisAccumulator, html: str, metadata: URLMetadata
+) -> bool:
+    postings = extract_job_postings_from_html(html)
+    if not postings:
+        return False
+
+    job = _select_breezy_posting(postings, metadata)
+    if not isinstance(job, dict):
+        return False
+
+    accumulator.set_preferred("title", job.get("title"))
+
+    hiring_org = job.get("hiringOrganization")
+    if isinstance(hiring_org, dict):
+        accumulator.set_preferred("company", hiring_org.get("name"))
+
+    location_text = extract_location_text(job.get("jobLocation"))
+    if location_text:
+        accumulator.set_preferred("location", location_text)
+
+    employment_type = job.get("employmentType")
+    if isinstance(employment_type, str):
+        normalized = {
+            "FULL_TIME": "Full-Time",
+            "PART_TIME": "Part-Time",
+            "CONTRACTOR": "Contract",
+            "TEMPORARY": "Temporary",
+            "INTERN": "Internship",
+        }.get(employment_type.strip().upper(), employment_type)
+        accumulator.set_preferred("employment_type", normalized)
+
+    identifier = job.get("identifier")
+    if isinstance(identifier, dict):
+        value = identifier.get("value") or identifier.get("name")
+        if isinstance(value, str) and value.strip():
+            accumulator.add_hidden("requisition_id", value.strip())
+
+    accumulator.add_date(
+        job.get("datePosted"),
+        source="breezy.embedded",
+        field="datePosted",
+        kind="posted",
+        reliability="high",
+    )
+    accumulator.add_date(
+        job.get("validThrough"),
+        source="breezy.embedded",
+        field="validThrough",
+        kind="expiry",
+        reliability="medium",
+        note="Breezy validThrough reflects the application close date.",
+    )
+    return True
+
+
+def _select_breezy_posting(
+    postings: list[dict[str, Any]], metadata: URLMetadata
+) -> dict[str, Any] | None:
+    """Pick the JSON-LD JobPosting whose URL matches this career page.
+
+    Breezy portals can embed more than one ld+json block (a WebSite block plus
+    the JobPosting). We match on the posting's `url` suffix; when the friendly
+    id is unavailable we fall back to the only/first JobPosting found.
+    """
+    friendly_id = (metadata.job_id or "").strip()
+    for posting in postings:
+        if not isinstance(posting, dict):
+            continue
+        url = posting.get("url")
+        if isinstance(url, str) and friendly_id and friendly_id in url:
+            return posting
+    for posting in postings:
+        if isinstance(posting, dict) and posting.get("datePosted"):
+            return posting
+    return None
+
+
+def _extract_breezy_legacy_data_position(
+    accumulator: AnalysisAccumulator, html: str
+) -> None:
     match = re.search(r'data-position="([^"]+)"', html, re.IGNORECASE | re.DOTALL)
     if not match:
         return
@@ -4407,6 +4519,7 @@ def analyze_url(
             extract_breezy_data_position,
             accumulator,
             html,
+            metadata,
         )
     elif metadata.platform == "workable":
         if html:
