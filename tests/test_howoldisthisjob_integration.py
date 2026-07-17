@@ -111,7 +111,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                                     "location": "Remote",
                                     "commitment": "Full-time",
                                 },
-                                "createdAt": "2026-04-01T15:32:00.000Z",
+                                "createdAt": 1775057520000,
                                 "hostedUrl": target_url,
                             }
                         )
@@ -1344,26 +1344,33 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                 target_url: FakeResponse(
                     text="<html><head><title>Start your Career with McDugald Steele!</title></head><body></body></html>"
                 ),
-                "https://mcdugaldsteele.recruitee.com/api/offers/start-your-career-with-mcdugald-steele": FakeResponse(
+                # Recruitee removed its /api/offers/{slug} detail endpoint (now
+                # 404s); the public /api/offers list endpoint returns a flat
+                # `offers` array and the extractor resolves the matching offer by
+                # slug. Trimmed real payload.
+                "https://mcdugaldsteele.recruitee.com/api/offers": FakeResponse(
                     text=json.dumps(
                         {
-                            "offer": {
-                                "id": 769154,
-                                "title": "Start your Career with McDugald Steele!",
-                                "company_name": "McDugald Steele",
-                                "location": "Houston, Texas, United States",
-                                "guid": "ts23s",
-                                "department": "Operations",
-                                "employment_type_code": "part_time",
-                                "experience_code": "internship",
-                                "category_code": "other",
-                                "created_at": "2021-09-22 14:34:26 UTC",
-                                "published_at": "2021-09-22 14:35:23 UTC",
-                                "updated_at": "2026-03-24 05:22:27 UTC",
-                                "remote": False,
-                                "hybrid": False,
-                                "on_site": True,
-                            }
+                            "offers": [
+                                {
+                                    "id": 769154,
+                                    "title": "Start your Career with McDugald Steele!",
+                                    "company_name": "McDugald Steele",
+                                    "location": "Houston, Texas, United States",
+                                    "slug": "start-your-career-with-mcdugald-steele",
+                                    "guid": "ts23s",
+                                    "department": "Paid Internship & Training Opportunities",
+                                    "employment_type_code": "seasonal",
+                                    "experience_code": "internship",
+                                    "category_code": "other",
+                                    "created_at": "2021-09-22 14:34:26 UTC",
+                                    "published_at": "2021-09-22 14:35:23 UTC",
+                                    "updated_at": "2026-03-24 05:22:27 UTC",
+                                    "remote": False,
+                                    "hybrid": False,
+                                    "on_site": True,
+                                }
+                            ]
                         }
                     )
                 ),
@@ -1386,7 +1393,10 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["employment_type"], "On-site")
         self.assertEqual(result["likely_posted_date"], "2021-09-22")
         self.assertEqual(result["chosen_source"]["source"], "recruitee.api")
-        self.assertEqual(result["hidden_insights"]["department"], "Operations")
+        self.assertEqual(
+            result["hidden_insights"]["department"],
+            "Paid Internship & Training Opportunities",
+        )
 
     def test_personio_xml_fallback_returns_created_at(self) -> None:
         target_url = "https://contabo.jobs.personio.de/job/2563171?language=en"
