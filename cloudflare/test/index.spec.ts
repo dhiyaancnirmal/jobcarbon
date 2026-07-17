@@ -64,6 +64,15 @@ const WEB_ORIGIN = "http://localhost:3000";
 const EXT_ORIGIN = "chrome-extension://efdbbcgmlpnildldcnalbdfhpndhmmcl";
 const BAD_ORIGIN = "https://evil.example.com";
 
+// INSTANCE_COUNT is a private const in src/index.ts (not exported), so the test
+// mirrors it here and derives the routing assertion below from it. If the
+// production constant is bumped, this mirror MUST be updated in lockstep — the
+// routing test will fail until it is, which is exactly the safety we want.
+const TEST_INSTANCE_COUNT = 2;
+const INSTANCE_NAME_RE = new RegExp(
+  `^instance-(?:${Array.from({ length: TEST_INSTANCE_COUNT }, (_, i) => i).join("|")})$`,
+);
+
 async function runSchema() {
   // D1's `.exec()` splits multi-statement SQL naively and breaks on
   // multi-line statements with parentheses; run each statement separately.
@@ -155,6 +164,34 @@ async function historyCount(url: string, sessionId: string): Promise<number> {
     .bind(sessionId, url)
     .first<{ n: number }>();
   return row?.n ?? 0;
+}
+
+/** Resolve the anonymous_sessions.id that owns a given history row url. */
+async function sessionIdForUrl(url: string): Promise<string | undefined> {
+  const row = await env.HISTORY_DB.prepare(
+    "SELECT s.id AS sid FROM anonymous_sessions s JOIN search_history h ON h.session_id = s.id WHERE h.url = ? LIMIT 1",
+  )
+    .bind(url)
+    .first<{ sid: string }>();
+  return row?.sid;
+}
+
+/** Count all search_history rows for a session id (across all urls). */
+async function historyCountForSession(sessionId: string): Promise<number> {
+  const row = await env.HISTORY_DB.prepare(
+    "SELECT COUNT(*) AS n FROM search_history WHERE session_id = ?",
+  )
+    .bind(sessionId)
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+
+/** Read the Worker's standard error body shape `{ error: { code, message } }`. */
+async function errorBody(
+  res: Response,
+): Promise<{ code: string; message: string }> {
+  const body = (await res.json()) as { error: { code: string; message: string } };
+  return body.error;
 }
 
 // ===========================================================================
@@ -398,9 +435,9 @@ describe("proxy routing to the container binding", () => {
     expect(await res.text()).toBe("hello from container");
     expect(res.headers.get("x-routed-by")).toBe("container-stub");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    // getRandom(env.API_BACKEND, INSTANCE_COUNT=2) -> "instance-0" | "instance-1".
+    // getRandom(env.API_BACKEND, INSTANCE_COUNT) -> "instance-0".."instance-(N-1)".
     const chosenName = idFromNameSpy.mock.calls[0]?.[0];
-    expect(chosenName).toMatch(/^instance-[01]$/);
+    expect(chosenName).toMatch(INSTANCE_NAME_RE);
   });
 
   it("routes /healthz GET to the container binding", async () => {
@@ -423,6 +460,190 @@ describe("proxy routing to the container binding", () => {
     // History is served locally; container is never consulted.
     expect(res.status).toBe(200);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
+// 8. DELETE cross-session isolation (review finding #1)
+// ===========================================================================
+describe("DELETE cross-session isolation", () => {
+  it("a full-clear DELETE on one session leaves another session's rows intact", async () => {
+    // Seed session A with two items.
+    const firstA = await postHistory("https://a.test/1", { n: 1 });
+    const cookieA = extractSessionCookie(firstA.headers.get("Set-Cookie"));
+    await postHistory("https://a.test/2", { n: 2 }, cookieA);
+
+    // Seed an independent session B with two items.
+    const firstB = await postHistory("https://b.test/1", { n: 1 });
+    const cookieB = extractSessionCookie(firstB.headers.get("Set-Cookie"));
+    await postHistory("https://b.test/2", { n: 2 }, cookieB);
+
+    // Resolve both session ids from the DB BEFORE clearing — the JOIN below
+    // would return nothing for A's urls once its rows are gone.
+    const sidA = await sessionIdForUrl("https://a.test/1");
+    const sidB = await sessionIdForUrl("https://b.test/1");
+    expect(sidA).toBeTruthy();
+    expect(sidB).toBeTruthy();
+    expect(sidA).not.toBe(sidB);
+    expect(await historyCountForSession(sidA!)).toBe(2);
+    expect(await historyCountForSession(sidB!)).toBe(2);
+
+    // Full-clear session A only (DELETE scopes WHERE session_id = caller).
+    const cleared = await deleteHistory(BASE, cookieA);
+    expect(cleared.status).toBe(204);
+
+    // Session A is empty via the API (A's cookie) ...
+    const afterA = await getHistory(cookieA);
+    expect(((await afterA.json()) as { history: unknown[] }).history).toEqual([]);
+    // ... and via a direct D1 COUNT.
+    expect(await historyCountForSession(sidA!)).toBe(0);
+
+    // Session B is untouched via the API (B's cookie) ...
+    const afterB = await getHistory(cookieB);
+    expect(
+      ((await afterB.json()) as { history: { url: string }[] }).history
+        .map((h) => h.url)
+        .sort(),
+    ).toEqual(["https://b.test/1", "https://b.test/2"]);
+    // ... and via a direct D1 COUNT.
+    expect(await historyCountForSession(sidB!)).toBe(2);
+  });
+});
+
+// ===========================================================================
+// 9. Error branches (review finding #2)
+// ===========================================================================
+describe("error branches", () => {
+  it("rejects unsupported methods on /api/v1/history with 405 and still sends CORS headers for an allowed origin", async () => {
+    for (const method of ["PUT", "PATCH"]) {
+      const res = await callWorker(
+        historyRequest(method, undefined, { origin: WEB_ORIGIN }),
+      );
+      expect(res.status).toBe(405);
+      const err = await errorBody(res);
+      expect(err.code).toBe("method_not_allowed");
+      expect(err.message).toContain("GET, POST, DELETE, or OPTIONS");
+      // Errors for an allowed origin still carry ACAO + credentials.
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBe(WEB_ORIGIN);
+      expect(res.headers.get("Access-Control-Allow-Credentials")).toBe("true");
+    }
+  });
+
+  it("rejects a malformed JSON body on POST with 400 invalid_json (does NOT 500)", async () => {
+    // Broken bytes that are not parseable as JSON.
+    const broken = await callWorker(
+      new Request(BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Origin: WEB_ORIGIN },
+        body: "{this is : not valid json",
+      }),
+    );
+    expect(broken.status).toBe(400);
+    expect((await errorBody(broken)).code).toBe("invalid_json");
+    expect(broken.headers.get("Access-Control-Allow-Origin")).toBe(WEB_ORIGIN);
+
+    // Valid JSON but not an object (array) -> same invalid_json path.
+    const arr = await callWorker(
+      historyRequest("POST", [1, 2, 3], { origin: WEB_ORIGIN }),
+    );
+    expect(arr.status).toBe(400);
+    expect((await errorBody(arr)).code).toBe("invalid_json");
+  });
+
+  it("rejects POST missing required fields with 400 and a specific code; no CORS header without an Origin", async () => {
+    // No url / whitespace-only url -> missing_url.
+    const noUrl = await callWorker(historyRequest("POST", { result: { ok: 1 } }));
+    expect(noUrl.status).toBe(400);
+    expect((await errorBody(noUrl)).code).toBe("missing_url");
+
+    const blankUrl = await callWorker(
+      historyRequest("POST", { url: "   ", result: { ok: 1 } }),
+    );
+    expect(blankUrl.status).toBe(400);
+    expect((await errorBody(blankUrl)).code).toBe("missing_url");
+
+    // No result / non-object result -> missing_result.
+    const noResult = await callWorker(
+      historyRequest("POST", { url: "https://x.test/1" }),
+    );
+    expect(noResult.status).toBe(400);
+    expect((await errorBody(noResult)).code).toBe("missing_result");
+
+    const strResult = await callWorker(
+      historyRequest("POST", { url: "https://x.test/1", result: "nope" }),
+    );
+    expect(strResult.status).toBe(400);
+    expect((await errorBody(strResult)).code).toBe("missing_result");
+
+    // No Origin header on any of these -> ACAO is origin-gated, so absent.
+    for (const res of [noUrl, blankUrl, noResult, strResult]) {
+      expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+    }
+  });
+
+  it("single-item DELETE is idempotent for unknown/oversized ids and 404s for an empty id", async () => {
+    const first = await postHistory("https://e.test/1", { n: 1 });
+    const cookie = extractSessionCookie(first.headers.get("Set-Cookie"));
+
+    // Baseline: one item present.
+    const before = await getHistory(cookie);
+    expect(((await before.json()) as { history: unknown[] }).history).toHaveLength(1);
+
+    // Unknown but well-formed uuid -> 204, nothing deleted.
+    const unknown = await deleteHistory(`${BASE}/${crypto.randomUUID()}`, cookie);
+    expect(unknown.status).toBe(204);
+    const afterUnknown = await getHistory(cookie);
+    expect(
+      ((await afterUnknown.json()) as { history: unknown[] }).history,
+    ).toHaveLength(1);
+
+    // Oversized (valid-char) id -> 204, nothing deleted.
+    const oversized = await deleteHistory(`${BASE}/${"x".repeat(200)}`, cookie);
+    expect(oversized.status).toBe(204);
+    const afterOversized = await getHistory(cookie);
+    expect(
+      ((await afterOversized.json()) as { history: unknown[] }).history,
+    ).toHaveLength(1);
+
+    // Empty id (trailing slash) -> 404 not_found (distinct branch).
+    const empty = await deleteHistory(`${BASE}/`, cookie);
+    expect(empty.status).toBe(404);
+    expect((await errorBody(empty)).code).toBe("not_found");
+  });
+
+  it("GET with a syntactically valid but unknown session token returns 200 {history: []} (not an error)", async () => {
+    const res = await getHistory(
+      "howoldisthisjob_session=definitely-not-a-real-session-token",
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ history: [] });
+    // GET never creates a session, so no Set-Cookie is issued.
+    expect(res.headers.get("Set-Cookie")).toBeNull();
+  });
+});
+
+// ===========================================================================
+// 10. Cookie domain attribute (review finding #4)
+// ===========================================================================
+describe("cookie domain attribute", () => {
+  it("includes Domain= when HOWOLDISTHISJOB_COOKIE_DOMAIN is set (per-test env override)", async () => {
+    const res = await callWorker(
+      historyRequest("POST", { url: "https://d.test/1", result: { ok: 1 } }),
+      { HOWOLDISTHISJOB_COOKIE_DOMAIN: "howoldisthisjob.com" },
+    );
+    expect(res.status).toBe(201);
+    const setCookie = res.headers.get("Set-Cookie");
+    expect(setCookie).toContain("Domain=howoldisthisjob.com");
+    // The rest of the cookie shape is unchanged.
+    for (const attr of [
+      "HttpOnly",
+      "Secure",
+      "SameSite=None",
+      "Path=/",
+      "Max-Age=2592000",
+    ]) {
+      expect(setCookie).toContain(attr);
+    }
   });
 });
 
