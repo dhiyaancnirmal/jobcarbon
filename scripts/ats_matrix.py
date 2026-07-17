@@ -69,7 +69,15 @@ MATRIX: list[tuple[str, str, str]] = [
     ("avature", "Bloomberg", "https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-ETL-Pipeline-Orchestration-Platform/14228"),
     ("avature", "Bloomberg", "https://bloomberg.avature.net/careers/JobDetail/Senior-Software-Engineer-Service-Mesh-Security-and-Configuration/14248"),
     ("avature", "Bloomberg", "https://bloomberg.avature.net/careers/JobDetail/Senior-Quantitative-Analyst-Interest-Rate-Modeling-Risk-Analytics/13711"),
-    ("teamtailor", "Teamtailor career host", "https://career.teamtailor.com/jobs/7217456-head-of-group-accounting"),
+    # NOTE: the prior teamtailor first row (job/7217456-head-of-group-
+    # accounting on career.teamtailor.com) was removed after the posting was
+    # taken down and returned HTTP 410 Gone. analyze_url raised PageFetchError on
+    # it, which the live tier catches as an inconclusive skipTest — permanently
+    # silencing the teamtailor drift signal. Replaced with a verified-live
+    # Teamtailor posting (Legal Counsel) on the same career.teamtailor.com host
+    # that still serves a native date (analyze_url chosen_source.source ==
+    # 'html.regex', field='datePosted').
+    ("teamtailor", "Teamtailor career host", "https://career.teamtailor.com/jobs/7952282-legal-counsel"),
     ("teamtailor", "Flower", "https://flower.teamtailor.com/en-GB/jobs/7498746-senior-software-engineer"),
     ("teamtailor", "Unleash", "https://unleash.teamtailor.com/jobs/7358005-senior-software-engineer"),
     ("recruitee", "Sioux", "https://sioux.recruitee.com/o/electrical-engineer"),
