@@ -20,7 +20,11 @@ MATRIX: list[tuple[str, str, str]] = [
     ("dayforce", "Cook & Boardman", "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/9508"),
     ("dayforce", "Cook & Boardman", "https://jobs.dayforcehcm.com/en-US/cookboardman/CANDIDATEPORTAL/jobs/14035"),
     ("dayforce", "Cook & Boardman", "https://jobs.dayforcehcm.com/cookboardman/CANDIDATEPORTAL/jobs/11951"),
-    ("pageup", "George Mason University", "https://careers.pageuppeople.com/1128/cw/en-us/job/10003873/personal-trainer"),
+    # NOTE: the prior GMU row (org 1128, job/10003873) was removed after the
+    # posting was taken down and 302-redirected to listings.jobs.gmu.edu, a
+    # generic search page that has no PageUp markup. Replaced with a verified
+    # live Virginia Tech requisition that still serves the pageup.html date.
+    ("pageup", "Virginia Tech", "https://careers.pageuppeople.com/968/cw/en-us/job/537012"),
     ("pageup", "CSU Careers", "https://careers.pageuppeople.com/873/cw/en-us/job/556173/2627-ay-temporary-faculty-pool-lecturer-information-systems"),
     ("pageup", "SUNY Upstate", "https://careers.pageuppeople.com/977/cw/en-us/job/497147/registered-nurse-1-ns26-coronary-care-unit-nights"),
     ("workable", "Jiffy", "https://apply.workable.com/jiffyshirts/j/5D4758376C/"),
@@ -29,8 +33,13 @@ MATRIX: list[tuple[str, str, str]] = [
     ("ashby", "AfterQuery", "https://jobs.ashbyhq.com/AfterQuery/489d6180-c2e4-4dcf-ae8b-5a9f3b84b8c3/application"),
     ("ashby", "OpenAI", "https://jobs.ashbyhq.com/openai/e8558280-69dc-438a-b905-623f75ae6d62"),
     ("ashby", "LangChain", "https://jobs.ashbyhq.com/langchain/c75915ba-a32b-4e17-873d-19b47564170d/"),
-    ("rippling", "Rippling", "https://ats.rippling.com/rippling/jobs/9516d5f1-0abb-435d-93a4-c1a669852103"),
-    ("rippling", "Rippling", "https://ats.rippling.com/rippling/jobs/0c59f357-3095-40e9-a27b-d02039906c19"),
+    # NOTE: two prior Rippling rows (jobs/9516d5f1... and jobs/0c59f357...) were
+    # removed after those postings were taken down and 302-redirected to
+    # www.rippling.com/careers/open-roles, a generic Next.js page whose
+    # __NEXT_DATA__ has no jobPost.createdOn. Replaced with verified live
+    # postings that still serve the rippling.embedded createdOn date.
+    ("rippling", "Routeware", "https://ats.rippling.com/routeware-careers/jobs/8ef5cce4-e963-47f9-a8b8-2494a25af370"),
+    ("rippling", "Just Appraised", "https://ats.rippling.com/just-appraised-jobs/jobs/c224bc39-251f-47ba-b6f8-45b187c40471"),
     ("rippling", "Rippling", "https://ats.rippling.com/rippling/jobs/84d388b6-7656-434c-8862-0312eb6b97ac"),
     ("icims", "DocuSign", "https://hubcareers-docusign.icims.com/jobs/28722/principal-engineer/job"),
     ("icims", "HealthEdge", "https://careers-healthedge.icims.com/jobs/7356/senior-software-engineer/job"),
