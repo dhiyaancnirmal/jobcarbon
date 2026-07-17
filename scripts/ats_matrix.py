@@ -83,9 +83,18 @@ MATRIX: list[tuple[str, str, str]] = [
     ("recruitee", "Sioux", "https://sioux.recruitee.com/o/electrical-engineer"),
     ("recruitee", "Sioux", "https://sioux.recruitee.com/o/electrical-lead-engineer"),
     ("recruitee", "McDugald Steele", "https://mcdugaldsteele.recruitee.com/o/start-your-career-with-mcdugald-steele"),
-    ("personio", "Contabo", "https://contabo.jobs.personio.de/job/2558937?language=en"),
+    # NOTE: two prior Contabo personio rows (job/2558937 and job/2563171)
+    # were removed after those postings were taken down and return HTTP 404.
+    # The live tier catches that as an inconclusive skipTest, permanently
+    # silencing the personio drift signal (and masking the fact that the prior
+    # NATIVE_SOURCES=("personio.xml",) entry was unsatisfiable on healthy pages
+    # — see tests/live/test_live_extractors.py). Replaced with verified-live
+    # Contabo postings (job/2627040 and job/2650536) sourced from the Contabo
+    # personio XML feed; both resolve via analyze_url with platform=personio,
+    # chosen_source.source='jsonld.jobposting' field='datePosted'.
+    ("personio", "Contabo", "https://contabo.jobs.personio.de/job/2627040?language=en"),
     ("personio", "Contabo", "https://contabo.jobs.personio.de/job/2552882?language=en"),
-    ("personio", "Contabo", "https://contabo.jobs.personio.de/job/2563171?language=en"),
+    ("personio", "Contabo", "https://contabo.jobs.personio.de/job/2650536?language=en"),
     ("breezy", "Betclic Group", "https://betclic-group.breezy.hr/p/34f0c1c3981801-senior-hr-business-partner-f-m"),
     ("breezy", "Betclic Group", "https://betclic-group.breezy.hr/p/8bf5c2979a7601-senior-software-engineer-f-m"),
     ("breezy", "Betclic Group", "https://betclic-group.breezy.hr/p/e78310f01f5e01-ai-augmented-data-engineer-f-m"),
