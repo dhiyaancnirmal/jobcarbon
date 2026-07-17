@@ -118,7 +118,14 @@ NATIVE_SOURCES: dict[str, tuple[str, ...]] = {
     # signal, not a platform-extractor death check.
     "teamtailor": ("jsonld.jobposting", "open_graph", "html.regex"),
     "recruitee": ("recruitee.api",),
-    "personio": ("personio.xml",),
+    # personio.xml is a deliberate fallback: extract_personio_xml_fallback
+    # early-returns once ANY posted/published candidate exists, and every
+    # healthy personio job page emits JSON-LD datePosted, so the XML path never
+    # runs on healthy pages (personio.xml never appears in all_dates). The
+    # honest signal for the healthy path is therefore jsonld.jobposting, a
+    # generic-path health check; personio.xml remains listed for the degraded-
+    # page case where the fallback legitimately produces the chosen date.
+    "personio": ("personio.xml", "jsonld.jobposting"),
     "breezy": ("breezy.embedded",),
     # No dedicated extractor; jsonld.jobposting is a generic-path health signal
     # that can't distinguish jazzhr JSON-LD death from a generic parser regression.
