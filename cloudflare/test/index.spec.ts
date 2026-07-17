@@ -647,5 +647,28 @@ describe("cookie domain attribute", () => {
   });
 });
 
+// ===========================================================================
+// 11. Malformed path-encoding must not 500 (review finding #2 / error branches)
+// ===========================================================================
+// A malformed percent-encoded item id (e.g. /api/v1/history/%zz) currently
+// throws an UNCAUGHT URIError out of decodeURIComponent in
+// handleHistoryRequest, surfacing as an opaque worker 500. This pins the
+// desired, controlled behavior (a 404 not_found) so the regression is
+// visible from a test run.
+describe("malformed path-encoding", () => {
+  it("a malformed percent-encoded item id returns a controlled 404, not a 500", async () => {
+    const res = await callWorker(
+      new Request(`${BASE}/%zz`, {
+        method: "DELETE",
+        headers: { Origin: WEB_ORIGIN },
+      }),
+    );
+    expect(res.status).toBe(404);
+    expect((await errorBody(res)).code).toBe("not_found");
+    // CORS headers are still sent for an allowed origin on this error path.
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(WEB_ORIGIN);
+  });
+});
+
 // Compile-time anchor: the exported class is the one wired in wrangler.jsonc.
 void ApiBackend;
