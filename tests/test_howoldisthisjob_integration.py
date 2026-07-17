@@ -2113,6 +2113,41 @@ class JobcarbonIntegrationTests(unittest.TestCase):
             )
         )
 
+    def test_cross_host_redirect_does_not_downgrade_known_platform(self) -> None:
+        """Regression: analyze_url must NOT reset a detected platform to "unknown".
+
+        Both live MATRIX URLs (pageup George Mason org 1128 and rippling org
+        "rippling") were taken down and 302-redirected to a *different host*
+        that detect_platform returns "unknown" for
+        (listings.jobs.gmu.edu/jobs/search, www.rippling.com/careers/open-roles).
+        analyze_url had an unconditional `elif netlocs_differ` branch that
+        adopted the unknown detection and overwrote the pageup/rippling result,
+        so the reported platform became "unknown" even though detect_platform
+        on the original URL was correct.
+        """
+        target_url = (
+            "https://careers.pageuppeople.com/968/cw/en-us/job/537012"
+        )
+        redirect_target = "https://listings.jobs.gmu.edu/jobs/search"
+        # The redirect page itself carries no PageUp markup and is detected
+        # as "unknown", yet the platform must remain "pageup".
+        redirect_response = FakeResponse(
+            text="<html><body><h1>Search jobs</h1></body></html>"
+        )
+        redirect_response.final_url = redirect_target
+        session = FakeSession({target_url: redirect_response})
+
+        result = howoldisthisjob.analyze_url(
+            target_url, session=session, today=howoldisthisjob.date(2026, 4, 21)
+        )
+
+        self.assertEqual(result["platform"], "pageup")
+        self.assertNotIn(
+            "unknown",
+            result.get("platform", ""),
+            "cross-host redirect downgraded a known platform to unknown",
+        )
+
     def test_blocked_platform_returns_blocked_status(self) -> None:
         result = howoldisthisjob.analyze_url("https://www.indeed.com/viewjob?jk=123")
 

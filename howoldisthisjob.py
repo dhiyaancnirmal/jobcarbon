@@ -4170,7 +4170,16 @@ def analyze_url(
         fetched_metadata = detect_platform(page_url)
         if fetched_metadata.platform != "unknown":
             metadata = fetched_metadata
-        elif urlparse(page_url).netloc.lower() != urlparse(validated_url).netloc.lower():
+        elif (
+            metadata.platform == "unknown"
+            and urlparse(page_url).netloc.lower()
+            != urlparse(validated_url).netloc.lower()
+        ):
+            # Only adopt an unknown detection from a cross-host redirect when we
+            # started out unknown too (e.g. a vanity shortlink resolving to an ATS
+            # host detect_platform does not model). A redirect away from an ALREADY
+            # detected platform (a removed posting that 302s to a generic careers
+            # page) must NOT downgrade the platform to "unknown".
             metadata = fetched_metadata
         previous_platform = metadata.platform
         metadata = maybe_detect_html_platform(page_url, html, metadata)

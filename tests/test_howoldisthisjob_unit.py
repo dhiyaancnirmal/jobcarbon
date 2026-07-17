@@ -63,8 +63,18 @@ class JobcarbonUnitTests(unittest.TestCase):
         pageup = howoldisthisjob.detect_platform(
             "https://careers.pageuppeople.com/739/fb/en/job/574141/entry-level-marketing-coordinator"
         )
+        # Regression: the live matrix uses the /<org>/cw/en-us/job/<id>/<slug>
+        # path shape (e.g. Virginia Tech). It must still detect as pageup.
+        pageup_cw_live = howoldisthisjob.detect_platform(
+            "https://careers.pageuppeople.com/968/cw/en-us/job/537012"
+        )
         rippling = howoldisthisjob.detect_platform(
             "https://ats.rippling.com/rippling/jobs/bda12f6a-6afc-45af-8e6a-b0056facf15c"
+        )
+        # Regression: rippling tenants other than the "rippling" org must still
+        # detect as rippling (live matrix now includes routeware-careers).
+        rippling_tenant_live = howoldisthisjob.detect_platform(
+            "https://ats.rippling.com/routeware-careers/jobs/8ef5cce4-e963-47f9-a8b8-2494a25af370"
         )
         dover = howoldisthisjob.detect_platform(
             "https://app.dover.com/apply/netnow/2bfb58ac-c3f9-46c6-8f94-ceb6b4950cff"
@@ -146,10 +156,22 @@ class JobcarbonUnitTests(unittest.TestCase):
             (pageup.platform, pageup.org, pageup.job_id),
             ("pageup", "739", "574141"),
         )
+        self.assertEqual(
+            (pageup_cw_live.platform, pageup_cw_live.org, pageup_cw_live.job_id),
+            ("pageup", "968", "537012"),
+        )
 
         self.assertEqual(
             (rippling.platform, rippling.org, rippling.job_id),
             ("rippling", "rippling", "bda12f6a-6afc-45af-8e6a-b0056facf15c"),
+        )
+        self.assertEqual(
+            (rippling_tenant_live.platform, rippling_tenant_live.org, rippling_tenant_live.job_id),
+            (
+                "rippling",
+                "routeware-careers",
+                "8ef5cce4-e963-47f9-a8b8-2494a25af370",
+            ),
         )
         self.assertEqual(
             (dover.platform, dover.org, dover.job_id),
