@@ -50,6 +50,12 @@ jobs:
           for name, res in pat.findall(log):
               rows.setdefault(res, []).append(name)
 
+          # M2 Ran-0 guard: parse the trailing unittest footer
+          #   "Ran 27 tests in 1.234s". A run of zero tests means drift
+          # detection is DEAD and the cron must FAIL, not silently pass.
+          ran_match = re.search(r"^Ran (\d+) tests?\b", log, re.M)
+          ran_count = int(ran_match.group(1)) if ran_match else 0
+
           def fmt(res):
               xs = sorted(rows.get(res, []))
               return ", ".join(xs) if xs else "—"
@@ -57,6 +63,7 @@ jobs:
           out = ["## Live extractor drift tier",
                  "",
                  f"- **Exit status:** `{status}`",
+                 f"- **Ran:** {ran_count} test(s)",
                  f"- **Pass (ok):** {len(rows['ok'])}",
                  f"- **Skipped:** {len(rows['skipped'])}",
                  f"- **FAIL:** {len(rows['FAIL'])}",
@@ -71,8 +78,24 @@ jobs:
           out.append("_Each FAIL is a platform whose native extractor stopped "
                      "producing the chosen date — actionable drift. Skips are "
                      "inconclusive (job churn / blocked / removed) and are not failures._")
+          if ran_count == 0:
+              out.append("")
+              out.append("⚠️ **Ran 0 tests — drift detection is DEAD.** "
+                         "Forcing this step to fail even though `python -m "
+                         "unittest` exits 0 in that case. "
+                         "(`_direct_platform_first_urls()` likely returned "
+                         "[], or the test module failed to import.)")
+              open("/tmp/live_ran_zero", "w").close()
           sys.stdout.write("\n".join(out) + "\n")
           PY
+
+          # M2: if unittest ran zero tests, force a non-zero exit so the cron
+          # fails instead of staying green with drift detection dead. unittest
+          # itself exits 0 on `Ran 0 tests`, so this guard is the safety net.
+          if [ -f /tmp/live_ran_zero ]; then
+            echo "::error::Live tier ran 0 tests — drift detection is dead. Forcing failure."
+            status=1
+          fi
 
           # Also keep the full verbose log as a workflow artifact for debugging.
           exit "$status"
