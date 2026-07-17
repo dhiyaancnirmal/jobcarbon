@@ -172,7 +172,7 @@ PLATFORM_CAPABILITIES = {
         "supported": True,
         "integration": "direct",
         "detection": ["*.recruitee.com/o/{slug}"],
-        "notes": "Public `/api/offers/{slug}` endpoint exposes `published_at`, `created_at`, and `updated_at`.",
+        "notes": "Public list endpoint `/api/offers` exposes `published_at`, `created_at`, and `updated_at` per offer; the offer is resolved by slug (the former `/api/offers/{slug}` detail endpoint was removed and now 404s).",
     },
     "personio": {
         "display_name": "Personio",
@@ -671,6 +671,11 @@ class AnalysisAccumulator:
     warnings: list[str] = field(default_factory=list)
     all_dates: list[CandidateDate] = field(default_factory=list)
     hidden_insights: dict[str, Any] = field(default_factory=dict)
+    # Set by a platform's native extractor to break date ties in its favour:
+    # when the API and a page-level signal (JSON-LD/meta) report the same posted
+    # date, the native API should win because it is higher fidelity and because
+    # JSON-LD is not guaranteed to be present on every posting.
+    preferred_date_source: str | None = None
 
     def add_warning(self, message: str) -> None:
         if message not in self.warnings:
@@ -1796,6 +1801,7 @@ def extract_lever_api(
         accumulator.add_hidden("team", categories.get("team"))
         accumulator.add_hidden("department", categories.get("department"))
     accumulator.add_hidden("lever_hosted_url", payload.get("hostedUrl"))
+    accumulator.preferred_date_source = "lever.api"
     accumulator.add_date(
         payload.get("createdAt"),
         source="lever.api",
@@ -2523,6 +2529,7 @@ def extract_icims_api(
 
                 accumulator.set_preferred("title", data.get("title"))
                 accumulator.set_preferred("company", data.get("hiring_organization"))
+                accumulator.preferred_date_source = "icims.api"
                 accumulator.set_preferred(
                     "location", data.get("full_location") or data.get("location_name")
                 )
@@ -3314,21 +3321,99 @@ def extract_gem_job_board_api(
     )
 
 
+def _select_recruitee_offer(
+    offers: list[Any], url_slug: str
+) -> dict[str, Any] | None:
+    """Resolve one Recruitee offer from the `/api/offers` list for a URL slug.
+
+    The URL path slug (``/o/{slug}``) no longer equals the offer's API ``slug``
+    (Recruitee slugifies differently, e.g. ``electrical-engineer`` -> offer
+    slug ``seniorelectrical-engineer``), and ``careers_url`` is commonly null,
+    so a direct equality match is insufficient. Match precedence:
+
+    1. exact slug equality (the reliable case),
+    2. one slug contains the other,
+    3. token-overlap score, with a deterministic tiebreak on (position, id) so
+       fixture assertions are stable.
+    """
+    if not isinstance(offers, list) or not url_slug:
+        return None
+
+    normalised = url_slug.lower()
+    tokens = {token for token in re.split(r"[^a-z0-9]+", normalised) if token}
+
+    exact: dict[str, Any] | None = None
+    substring: list[tuple[str, dict[str, Any], int]] = []
+    scored: list[tuple[int, int, int, dict[str, Any]]] = []
+
+    for offer in offers:
+        if not isinstance(offer, dict):
+            continue
+        slug = str(offer.get("slug") or "").lower()
+        title = str(offer.get("title") or "").lower()
+        if slug == normalised:
+            exact = offer
+            break
+        if slug and (normalised in slug or slug in normalised):
+            # Track for the substring fallback below.
+            substring.append((slug, offer, len(slug)))
+        if tokens:
+            hay = f"{slug} {title}"
+            overlap = sum(1 for token in tokens if token and token in hay)
+            if overlap:
+                position = offer.get("position")
+                position_rank = position if isinstance(position, int) else 1_000_000
+                offer_id = offer.get("id")
+                id_rank = offer_id if isinstance(offer_id, int) else 0
+                scored.append((overlap, position_rank, id_rank, offer))
+
+    if exact is not None:
+        return exact
+    if substring:
+        # Largest (longest) matching slug = most specific.
+        substring.sort(key=lambda entry: (-entry[2], entry[0]))
+        return substring[0][1]
+    if scored:
+        # Highest overlap first; then smallest position, then smallest id for
+        # a stable, deterministic order.
+        scored.sort(key=lambda entry: (-entry[0], entry[1], entry[2]))
+        return scored[0][3]
+    return None
+
+
 def extract_recruitee_api(
-    accumulator: AnalysisAccumulator, session: Any, metadata: URLMetadata
+    accumulator: AnalysisAccumulator,
+    session: Any,
+    metadata: URLMetadata,
+    original_url: str,
 ) -> None:
     if not metadata.org or not metadata.job_id:
         return
 
-    api_url = f"https://{metadata.org}.recruitee.com/api/offers/{quote(metadata.job_id, safe='')}"
+    # The Recruitee *detail* endpoint (`/api/offers/{slug}`) was removed and now
+    # 404s. The public *list* endpoint (`/api/offers`) still works and returns a
+    # flat `offers` array with the same per-offer fields. We fetch the list and
+    # resolve the right offer, because the URL slug no longer equals the offer
+    # slug (Recruitee rewrites/slugs them differently, and `careers_url` is
+    # commonly null). Match precedence: exact slug, substring, then token
+    # overlap scoring with a stable deterministic tiebreak.
+    api_url = f"https://{metadata.org}.recruitee.com/api/offers"
     try:
         payload = fetch_json(session, api_url)
     except HTTPRequestError as exc:
         accumulator.add_warning(f"Recruitee API fallback failed: {exc}")
         return
 
-    offer = payload.get("offer") if isinstance(payload, dict) else None
+    offers = payload.get("offers") if isinstance(payload, dict) else None
+    if not isinstance(offers, list) or not offers:
+        return
+
+    offer = _select_recruitee_offer(offers, metadata.job_id)
     if not isinstance(offer, dict):
+        accumulator.add_warning(
+            "Recruitee API returned no offer matching the URL slug "
+            f"{metadata.job_id!r}."
+        )
         return
 
     accumulator.set_preferred("title", offer.get("title"))
@@ -3349,6 +3434,7 @@ def extract_recruitee_api(
     accumulator.add_hidden("category_code", offer.get("category_code"))
     accumulator.add_hidden("guid", offer.get("guid"))
 
+    accumulator.preferred_date_source = "recruitee.api"
     accumulator.add_date(
         offer.get("published_at"),
         source="recruitee.api",
@@ -3865,7 +3951,9 @@ def extract_wayback(accumulator: AnalysisAccumulator, session: Any) -> None:
     )
 
 
-def choose_best_date(all_dates: list[CandidateDate]) -> CandidateDate | None:
+def choose_best_date(
+    all_dates: list[CandidateDate], *, preferred_source: str | None = None
+) -> CandidateDate | None:
     credible = [
         candidate
         for candidate in all_dates
@@ -3873,10 +3961,14 @@ def choose_best_date(all_dates: list[CandidateDate]) -> CandidateDate | None:
         and candidate.reliability in {"high", "medium"}
     ]
     if credible:
+        # When two signals report the same posted date (e.g. a native ATS API
+        # and page-level JSON-LD), prefer the platform's native extractor: it is
+        # the higher-fidelity source and JSON-LD will not always be present.
         return sorted(
             credible,
             key=lambda item: (
                 item.date,
+                0 if item.source == preferred_source else 1,
                 RELIABILITY_PRIORITY[item.reliability],
                 SOURCE_PRIORITY.get(item.source, 99),
                 item.source,
@@ -3947,7 +4039,9 @@ def build_result(
             RELIABILITY_PRIORITY[item.reliability],
         ),
     )
-    best_date = choose_best_date(sorted_dates)
+    best_date = choose_best_date(
+        sorted_dates, preferred_source=accumulator.preferred_date_source
+    )
     reposted_likely = detect_repost(best_date, sorted_dates)
     confidence = best_date.reliability if best_date else "unknown"
     status = status_override or ("success" if best_date else "no_date")
@@ -4057,7 +4151,9 @@ def should_run_wayback_fallback(accumulator: AnalysisAccumulator) -> bool:
             RELIABILITY_PRIORITY[item.reliability],
         ),
     )
-    best_date = choose_best_date(sorted_dates)
+    best_date = choose_best_date(
+        sorted_dates, preferred_source=accumulator.preferred_date_source
+    )
 
     if best_date is None:
         return True
@@ -4267,6 +4363,7 @@ def analyze_url(
             accumulator,
             session_with_budget,
             metadata,
+            validated_url,
         )
     elif metadata.platform == "smartrecruiters":
         run_extraction_stage(

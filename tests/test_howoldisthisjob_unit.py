@@ -433,6 +433,81 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual(chosen.date, "2024-01-10")
         self.assertEqual(chosen.source, "jsonld.jobposting")
 
+    def test_choose_best_date_preferred_source_breaks_date_tie(self) -> None:
+        # A native ATS API and page-level JSON-LD report the same posted date.
+        # JSON-LD normally wins the SOURCE_PRIORITY tie (priority 0 < api 1),
+        # but when preferred_source names the native extractor it must win the
+        # tie, because the API is higher fidelity and JSON-LD is not guaranteed
+        # to be present on every posting.
+        api = howoldisthisjob.CandidateDate(
+            "2024-01-10", "lever.api", "createdAt", "posted", "high"
+        )
+        jsonld = howoldisthisjob.CandidateDate(
+            "2024-01-10", "jsonld.jobposting", "datePosted", "posted", "high"
+        )
+        dates = [jsonld, api]
+
+        without = howoldisthisjob.choose_best_date(dates)
+        self.assertEqual(without.source, "jsonld.jobposting")
+
+        with_pref = howoldisthisjob.choose_best_date(
+            dates, preferred_source="lever.api"
+        )
+        self.assertEqual(with_pref.source, "lever.api")
+        self.assertEqual(with_pref.date, "2024-01-10")
+
+    def test_choose_best_date_preferred_source_does_not_override_earlier_date(self) -> None:
+        # preferred_source only breaks ties on equal dates; it must NOT let a
+        # newer preferred signal beat an older credible posted date.
+        api = howoldisthisjob.CandidateDate(
+            "2024-02-01", "lever.api", "createdAt", "posted", "high"
+        )
+        jsonld = howoldisthisjob.CandidateDate(
+            "2024-01-10", "jsonld.jobposting", "datePosted", "posted", "high"
+        )
+
+        chosen = howoldisthisjob.choose_best_date(
+            [api, jsonld], preferred_source="lever.api"
+        )
+        self.assertEqual(chosen.date, "2024-01-10")
+        self.assertEqual(chosen.source, "jsonld.jobposting")
+
+    def test_select_recruitee_offer_matches_exact_slug(self) -> None:
+        offers = [
+            {"id": 1, "slug": "other-role", "title": "Other"},
+            {
+                "id": 769154,
+                "slug": "start-your-career-with-mcdugald-steele",
+                "title": "Start your Career",
+                "published_at": "2021-09-22 14:35:23 UTC",
+            },
+        ]
+        chosen = howoldisthisjob._select_recruitee_offer(
+            offers, "start-your-career-with-mcdugald-steele"
+        )
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen["id"], 769154)
+
+    def test_select_recruitee_offer_falls_back_to_token_overlap(self) -> None:
+        # URL slug "electrical-engineer" does not equal the offer slug
+        # "seniorelectrical-engineer" and careers_url is null; the resolver
+        # must still pick the right offer via token overlap.
+        offers = [
+            {"id": 1, "slug": "mechanical-lead", "title": "Mechanical Lead"},
+            {"id": 2402205, "slug": "seniorelectrical-engineer",
+             "title": "Senior/Electrical Engineer"},
+            {"id": 2, "slug": "plumber", "title": "Plumber"},
+        ]
+        chosen = howoldisthisjob._select_recruitee_offer(offers, "electrical-engineer")
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen["id"], 2402205)
+
+    def test_select_recruitee_offer_returns_none_when_no_match(self) -> None:
+        offers = [{"id": 1, "slug": "mechanical-lead", "title": "Mechanical Lead"}]
+        self.assertIsNone(
+            howoldisthisjob._select_recruitee_offer(offers, "underwater-basket-weaver")
+        )
+
     def test_detect_repost_flags_newer_refresh_signals(self) -> None:
         oldest = howoldisthisjob.CandidateDate(
             "2024-01-01", "jsonld.jobposting", "datePosted", "posted", "high"
