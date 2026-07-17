@@ -490,8 +490,11 @@ class JobcarbonUnitTests(unittest.TestCase):
 
     def test_select_recruitee_offer_falls_back_to_token_overlap(self) -> None:
         # URL slug "electrical-engineer" does not equal the offer slug
-        # "seniorelectrical-engineer" and careers_url is null; the resolver
-        # must still pick the right offer via token overlap.
+        # "seniorelectrical-engineer" (Recruitee fused the `senior`+`electrical`
+        # tokens by stripping the hyphen) and careers_url is null; the resolver
+        # must still pick the right offer via the bounded-containment tier
+        # (hyphen-stripped URL slug is a suffix of the hyphen-stripped offer
+        # slug). This is the documented live Sioux-board case.
         offers = [
             {"id": 1, "slug": "mechanical-lead", "title": "Mechanical Lead"},
             {"id": 2402205, "slug": "seniorelectrical-engineer",
@@ -507,6 +510,83 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertIsNone(
             howoldisthisjob._select_recruitee_offer(offers, "underwater-basket-weaver")
         )
+
+    # --- Review-finding regression matrix (substring false-match fix) -------
+    # The old substring rule (`normalised in slug or slug in normalised`)
+    # short-circuited before token-overlap and, combined with the longest-slug
+    # tiebreak, escalated a seniority ladder. These pin the new behaviour:
+    # bounded containment, refuse-to-guess on ties, token-bounded overlap.
+
+    def test_select_recruitee_offer_refuses_ambiguous_seniority_sibling(self) -> None:
+        # Acceptance case 1: `electrical-engineer` vs
+        # [senior-electrical-engineer, electrical-lead-engineer].
+        # BOTH offer slugs are token-supersets of {electrical, engineer} and
+        # neither fused-edge nor any URL-slug signal disambiguates them, so the
+        # resolver returns None rather than guessing (the caller then warns).
+        # Returning None + warning is strictly safer than reporting the wrong
+        # sibling's published_at as reliability="high". The old code wrongly
+        # returned senior-electrical-engineer via the longest-slug tiebreak.
+        offers = [
+            {"id": 10, "slug": "senior-electrical-engineer",
+             "title": "Senior Electrical Engineer"},
+            {"id": 11, "slug": "electrical-lead-engineer",
+             "title": "Electrical Lead Engineer"},
+        ]
+        self.assertIsNone(
+            howoldisthisjob._select_recruitee_offer(offers, "electrical-engineer")
+        )
+
+    def test_select_recruitee_offer_refuses_seniority_ladder(self) -> None:
+        # Acceptance case 3: a full seniority ladder
+        # [senior-, staff-, principal-]electrical-engineer. All three pass
+        # containment; the resolver must NOT silently escalate by length. None
+        # is the only acceptable deterministic outcome here.
+        offers = [
+            {"id": 20, "slug": "senior-electrical-engineer", "title": "Senior"},
+            {"id": 21, "slug": "staff-electrical-engineer", "title": "Staff"},
+            {"id": 22, "slug": "principal-electrical-engineer", "title": "Principal"},
+        ]
+        self.assertIsNone(
+            howoldisthisjob._select_recruitee_offer(offers, "electrical-engineer")
+        )
+
+    def test_select_recruitee_offer_exact_slug_beats_containment(self) -> None:
+        # Acceptance case 4: an exact match must win even when other offers
+        # would also pass containment (which previously could win via substring).
+        offers = [
+            {"id": 30, "slug": "senior-electrical-engineer", "title": "Senior"},
+            {"id": 31, "slug": "electrical-engineer", "title": "Electrical Engineer"},
+            {"id": 32, "slug": "electrical-lead-engineer", "title": "Lead"},
+        ]
+        chosen = howoldisthisjob._select_recruitee_offer(offers, "electrical-engineer")
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen["id"], 31)
+
+    def test_select_recruitee_offer_token_overlap_uses_set_membership(self) -> None:
+        # MINOR-2 regression: token-overlap must use set membership, not
+        # unbounded substring, so `engine` does NOT count as present inside
+        # `engineer` (and title text cannot rescue a weak slug). The old code
+        # matched `engine` inside `engineer` and returned id 9.
+        offers = [
+            {"id": 9, "slug": "software-engineer", "title": "Software Engineer"},
+        ]
+        self.assertIsNone(
+            howoldisthisjob._select_recruitee_offer(offers, "engine")
+        )
+
+    def test_select_recruitee_offer_token_overlap_full_coverage_still_works(self) -> None:
+        # Positive control for the token-overlap fallback (tier 3): when no
+        # offer passes containment, a single offer whose slug+title tokens
+        # fully cover the URL slug still resolves. Here `frontend-engineer`
+        # (tokens {frontend, engineer}) is matched by an offer whose slug is
+        # abbreviated `fe-engineer` but whose title supplies the full tokens.
+        offers = [
+            {"id": 1, "slug": "mechanical-lead", "title": "Mechanical Lead"},
+            {"id": 40, "slug": "fe-engineer", "title": "Frontend Engineer"},
+        ]
+        chosen = howoldisthisjob._select_recruitee_offer(offers, "frontend-engineer")
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen["id"], 40)
 
     def test_detect_repost_flags_newer_refresh_signals(self) -> None:
         oldest = howoldisthisjob.CandidateDate(
