@@ -32,9 +32,13 @@ Notes:
       the env var is unset (``python3 -m unittest discover -s tests``).
     * Assertions tolerate job churn: there are NO exact-date assertions. A job
       that has been filled/blocked/removed is treated as INCONCLUSIVE (skipped),
-      not a failure. The only hard failure is a *success* result whose chosen
-      source is NOT the platform's native extractor prefix — i.e. the native
-      extractor stopped working and we fell back to sitemap/wayback/generic meta.
+      not a failure. A *success* whose chosen source is a non-native fallback
+      that only wins when the live page gave the native extractor nothing
+      (wayback/sitemap/jina — see NON_NATIVE_FALLBACK_PREFIXES) is also a SKIP
+      (churn, not drift). The only hard failure is a *success* whose chosen
+      source is an on-page source (jsonld/meta/html) that is NOT the platform's
+      native extractor prefix — i.e. the native extractor stopped working while
+      generic parsers still date the page. That is drift.
 """
 
 from __future__ import annotations
@@ -79,10 +83,13 @@ EXPECTED_PLATFORMS: dict[str, tuple[str, ...]] = {
 # resolver falls back to sitemap / wayback.cdx / generic meta / jsonld sourced
 # from elsewhere, and the prefix check below FAILS — the drift signal.
 #
-# A handful of platforms do NOT have a dedicated extractor and natively rely on
-# a generic parser; for those the prefix is the generic source and we disambiguate
-# with NATIVE_FIELDS below (see teamtailor -> meta article:published_time). That
-# is a weaker drift signal by construction and is documented as such.
+# A handful of platforms do NOT have a dedicated extractor (teamtailor, taleo,
+# jazzhr) and natively rely on a generic parser (jsonld.jobposting /
+# open_graph / html.regex). For those the prefix is the generic source itself
+# and the signal is a generic-path health check — it cannot distinguish
+# platform-specific JSON-LD death from a generic parser regression. See the
+# per-entry comments below. NATIVE_FIELDS (further down) is reserved for the
+# stronger field-disambiguation variant but is currently empty.
 NATIVE_SOURCES: dict[str, tuple[str, ...]] = {
     "lever": ("lever.api",),
     "greenhouse": ("greenhouse.api", "greenhouse.html"),
@@ -96,14 +103,25 @@ NATIVE_SOURCES: dict[str, tuple[str, ...]] = {
     "dover": ("dover.api",),
     "bamboohr": ("bamboohr.api",),
     "jobvite": ("jobvite.xml",),
+    # No dedicated extractor; jsonld.jobposting is a generic-path health signal
+    # that can't distinguish taleo JSON-LD death from a generic parser regression.
     "taleo": ("jsonld.jobposting",),
     "brassring": ("brassring.html",),
     "successfactors": ("successfactors.rss",),
     "avature": ("avature.feed", "avature.sitemap"),
-    "teamtailor": ("meta",),
+    # B1: teamtailor has NO dedicated extractor. Healthy postings resolve via
+    # jsonld.jobposting (e.g. flower.teamtailor.com) or html.regex
+    # (unleash.teamtailor.com); article:published_time is emitted by
+    # extract_meta_and_open_graph with source="open_graph" (NOT "meta"), so the
+    # old ("meta",) + NATIVE_FIELDS="article:published_time" pairing was
+    # unsatisfiable and false-FAILed every cron. This is a generic-path health
+    # signal, not a platform-extractor death check.
+    "teamtailor": ("jsonld.jobposting", "open_graph", "html.regex"),
     "recruitee": ("recruitee.api",),
     "personio": ("personio.xml",),
     "breezy": ("breezy.embedded",),
+    # No dedicated extractor; jsonld.jobposting is a generic-path health signal
+    # that can't distinguish jazzhr JSON-LD death from a generic parser regression.
     "jazzhr": ("jsonld.jobposting",),
     "gem": ("gem.api",),
     "workday": ("workday.cxs",),
@@ -121,11 +139,28 @@ NATIVE_SOURCES: dict[str, tuple[str, ...]] = {
 }
 
 # Platforms whose native source prefix is a *generic* parser name and therefore
-# needs a field check to be a meaningful drift signal. Without this, a fallback
-# to plain <meta> would pass the prefix test for teamtailor.
-NATIVE_FIELDS: dict[str, str] = {
-    "teamtailor": "article:published_time",
-}
+# needs a field check to be a meaningful drift signal. Reserved for future use:
+# teamtailor previously lived here ("article:published_time") but was removed in
+# the B1 fix because that field is emitted with source="open_graph", making the
+# ("meta",) + field pairing unsatisfiable. Empty for now; the generic-prefix
+# entries in NATIVE_SOURCES are documented as weaker health signals instead.
+NATIVE_FIELDS: dict[str, str] = {}
+
+# M1: chosen_source["source"] prefixes for fallbacks that ONLY win when the live
+# page gave the native extractor nothing. A success sourced from one of these
+# means the posting is effectively gone and the date is an archive/freshness
+# echo — churn, not drift — so the live test skips instead of false-alarming.
+# The exact fallback source strings emitted by howoldisthisjob.py (grep them
+# there) are:
+#   "wayback.cdx"  (extract_wayback)
+#   "sitemap"      (extract_sitemap_dates)
+#   "jina.render"  (extract_jina_render)
+# NOTE "avature.sitemap" is a NATIVE avature source (in NATIVE_SOURCES above) and
+# is intentionally NOT matched here: it starts with "avature.", not "sitemap".
+# jsonld.jobposting / open_graph / meta / html.regex are generic parsers but are
+# NOT in this list — a success via one of those still reaches the native-prefix
+# assertion and FAILs if it is not the platform's native prefix (that is drift).
+NON_NATIVE_FALLBACK_PREFIXES: tuple[str, ...] = ("wayback.", "sitemap", "jina.")
 
 
 def _direct_platform_first_urls() -> list[tuple[str, str, str]]:
@@ -166,9 +201,14 @@ class TestLiveExtractors(unittest.TestCase):
           1. platform sanity check against EXPECTED_PLATFORMS.
           2. non-success statuses (blocked/unsupported/no_date/error or a
              network failure) are INCONCLUSIVE -> skipTest, not fail.
-          3. on success, the chosen source MUST come from the platform's native
-             extractor (NATIVE_SOURCES prefix match). A fallback to
-             sitemap/wayback/generic meta is a DRIFT FINDING and fails hard.
+          3. on success, if the chosen source is a non-native fallback that only
+             wins when the live page gave the native extractor nothing
+             (wayback.*/sitemap/jina.* — NON_NATIVE_FALLBACK_PREFIXES), that is
+             churn, not drift -> skipTest.
+          4. otherwise the chosen source MUST come from the platform's native
+             extractor (NATIVE_SOURCES prefix match). A fallback to a generic
+             on-page source (jsonld/meta/html) that is NOT native is a DRIFT
+             FINDING and fails hard.
         """
         # analyze_url can raise on total budget exhaustion / network failure;
         # treat any exception as inconclusive rather than a harness failure.
@@ -204,6 +244,20 @@ class TestLiveExtractors(unittest.TestCase):
             f"{platform} ({employer!r}) status=success but no chosen_source was set",
         )
         source = chosen.get("source")
+
+        # M1: a success whose date only comes from a non-native fallback
+        # (wayback/sitemap/jina) means the live page gave the native extractor
+        # nothing — the posting is gone and an archive/freshness echo dated it.
+        # That is churn, not drift, so skip. We keep the hard FAIL for a page
+        # whose native extractor stopped producing while other ON-PAGE sources
+        # (jsonld/meta/html) still date it — that reaches the prefix check below
+        # and is genuine drift.
+        if source.startswith(NON_NATIVE_FALLBACK_PREFIXES):
+            self.skipTest(
+                f"posting gone; rescued by {source!r} for {platform} "
+                f"({employer!r}) — churn, not drift. full chosen_source={chosen}"
+            )
+
         prefixes = NATIVE_SOURCES[platform]
         self.assertTrue(
             any(source.startswith(prefix) for prefix in prefixes),
@@ -214,7 +268,8 @@ class TestLiveExtractors(unittest.TestCase):
         )
 
         # Field-level disambiguation for platforms whose native source is a
-        # generic parser name (teamtailor -> meta article:published_time).
+        # generic parser name. Reserved for future use; currently empty (see
+        # NATIVE_FIELDS comment above for why teamtailor was removed).
         native_field = NATIVE_FIELDS.get(platform)
         if native_field is not None:
             field = chosen.get("field")
@@ -247,6 +302,68 @@ for _platform, _employer, _url in _direct_platform_first_urls():
         f"test_live_{_platform}",
         _make_test(_platform, _employer, _url),
     )
+
+
+class TestLiveMatrixIntegrity(unittest.TestCase):
+    """M2: hermetic, ALWAYS-ON guard against a silent-green live tier.
+
+    These tests are NOT env-gated and make NO network calls — they run in the
+    normal PR gate (``python3 -m unittest discover -s tests``). They exist so
+    that if ``_direct_platform_first_urls()`` ever returns ``[]`` (e.g.
+    PLATFORM_CAPABILITIES integration labels change, the import path breaks, or
+    MATRIX is reordered so no direct platform surfaces), the suite does not
+    silently report ``Ran 0 tests`` and exit 0 with drift detection dead.
+    Instead this guard FAILs in the PR and the cron's Ran-0 guard
+    (``.github/workflows/live-drift.yml``) is the second line of defence.
+    """
+
+    def test_direct_matrix_has_at_least_twenty_platforms(self) -> None:
+        """A healthy direct tier has ~27 platforms; 20 is a generous floor."""
+        urls = _direct_platform_first_urls()
+        self.assertGreaterEqual(
+            len(urls),
+            20,
+            f"_direct_platform_first_urls() returned only {len(urls)} platforms; "
+            f"the live drift tier would attach {len(urls)} methods and report "
+            f"'Ran {len(urls)} tests'. Investigate PLATFORM_CAPABILITIES / MATRIX.",
+        )
+
+    def test_native_sources_keys_match_direct_matrix(self) -> None:
+        """NATIVE_SOURCES must cover exactly the generated direct platforms.
+
+        Key parity in BOTH directions: a platform appearing in the generated
+        live tier but missing from NATIVE_SOURCES would raise KeyError at drift
+        time, and a stale NATIVE_SOURCES key would silently rot. This runs in
+        the PR gate, not only at live time.
+        """
+        direct_platforms = {p for p, _, _ in _direct_platform_first_urls()}
+        self.assertEqual(
+            set(NATIVE_SOURCES),
+            direct_platforms,
+            "NATIVE_SOURCES keys must equal the set of direct-integration "
+            "platforms. If you added/removed a platform, update BOTH "
+            "NATIVE_SOURCES and the MATRIX / PLATFORM_CAPABILITIES.",
+        )
+
+    def test_generated_live_methods_match_direct_matrix(self) -> None:
+        """The count of generated ``test_live_*`` methods must match the matrix.
+
+        Catches the exact M2 failure mode: the generation loop attaching zero
+        methods while the matrix is non-empty (e.g. an import or setattr bug).
+        """
+        direct_platforms = {p for p, _, _ in _direct_platform_first_urls()}
+        generated = {
+            attr[len("test_live_") :]
+            for attr in dir(TestLiveExtractors)
+            if attr.startswith("test_live_")
+        }
+        self.assertEqual(
+            generated,
+            direct_platforms,
+            "Generated test_live_* method set must equal the direct-integration "
+            "platform set. A mismatch means the generation loop did not attach a "
+            "method for every platform (or attached extras).",
+        )
 
 
 if __name__ == "__main__":

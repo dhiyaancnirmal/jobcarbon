@@ -81,9 +81,17 @@ MATRIX: list[tuple[str, str, str]] = [
     ("breezy", "Betclic Group", "https://betclic-group.breezy.hr/p/34f0c1c3981801-senior-hr-business-partner-f-m"),
     ("breezy", "Betclic Group", "https://betclic-group.breezy.hr/p/8bf5c2979a7601-senior-software-engineer-f-m"),
     ("breezy", "Betclic Group", "https://betclic-group.breezy.hr/p/e78310f01f5e01-ai-augmented-data-engineer-f-m"),
-    ("jazzhr", "Public Citizen", "https://publiccitizen.applytojob.com/apply/VZj90FMXn0/Democracy-Team-Manager"),
-    ("jazzhr", "Public Citizen", "https://publiccitizen.applytojob.com/apply/geaavJOBFs/Legal-Director"),
-    ("jazzhr", "Public Citizen", "https://publiccitizen.applytojob.com/apply/NO7zPVCUfT/Human-Resources-Assistant"),
+    # NOTE: the prior Public Citizen jazzhr rows (jobCodes VZj90FMXn0,
+    # geaavJOBFs, NO7zPVCUfT) were removed after all three postings were taken
+    # down and returned HTTP 410 Gone (geaavJOBFs was further Wayback-rescued to
+    # a status=success, which previously false-FAILed the live tier — see the
+    # NON_NATIVE_FALLBACK_PREFIXES fix in tests/live/test_live_extractors.py).
+    # Replaced with three verified-live postings across distinct employers:
+    # each returns HTTP 200 and is dated natively via jsonld.jobposting
+    # (analyze_url chosen_source.source == 'jsonld.jobposting').
+    ("jazzhr", "Landing", "https://landing.applytojob.com/apply/9584th3Ncy/Billing-Analyst"),
+    ("jazzhr", "The VA Group", "https://tvag.applytojob.com/apply/sLgZ8fTjhc/Executive-Assistant-To-CEO"),
+    ("jazzhr", "Career.io", "https://talentwwinc.applytojob.com/apply/uw2WjsGMur/Product-Engineer"),
     ("gem", "Gem", "https://jobs.gem.com/gem/4965519002"),
     ("gem", "Gem", "https://jobs.gem.com/gem/am9icG9zdDqDithvbhmHP-qlNqqexmro"),
     ("gem", "Gem", "https://jobs.gem.com/gem/am9icG9zdDr7_B0I_F2XWut73Lt3y18F"),
