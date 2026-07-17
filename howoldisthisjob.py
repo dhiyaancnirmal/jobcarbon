@@ -3339,6 +3339,41 @@ def extract_gem_job_board_api(
     )
 
 
+def _recruitee_slug_tokens(slug: str) -> set[str]:
+    """Lower-case ``slug`` split on non-alphanumerics, empties dropped."""
+    return {token for token in re.split(r"[^a-z0-9]+", slug.lower()) if token}
+
+
+def _recruitee_offer_contains_url_slug(
+    offer_slug: str, url_tokens: set[str], url_flat: str
+) -> bool:
+    """Token-bounded containment test between the URL slug and one offer slug.
+
+    Two ways an offer slug "contains" the URL slug, both bounded so they never
+    match a fragment of a token (no ``engine`` inside ``engineer``):
+
+    * **token superset** -- the offer slug's token set is a superset of the URL
+      slug's token set (``electrical-engineer`` -> ``senior-electrical-engineer``
+      or ``electrical-lead-engineer``).
+    * **fused boundary** -- Recruitee sometimes strips the hyphen joining two
+      words, producing a fused token the URL slug cannot match as a token:
+      ``electrical-engineer`` -> ``seniorelectrical-engineer``. The hyphen-stripped
+      URL slug must be an *edge* (prefix or suffix) of the hyphen-stripped offer
+      slug, which anchors the match to a token boundary even after the join.
+      ``electrical-lead-engineer`` flattens to ``electricalleadengineer`` and
+      neither starts nor ends with ``electricalengineer``, so it is not a false
+      positive here.
+    """
+    offer_tokens = _recruitee_slug_tokens(offer_slug)
+    if url_tokens and url_tokens.issubset(offer_tokens):
+        return True
+    if url_flat:
+        offer_flat = offer_slug.replace("-", "")
+        if offer_flat.startswith(url_flat) or offer_flat.endswith(url_flat):
+            return True
+    return False
+
+
 def _select_recruitee_offer(
     offers: list[Any], url_slug: str
 ) -> dict[str, Any] | None:
@@ -3349,53 +3384,65 @@ def _select_recruitee_offer(
     slug ``seniorelectrical-engineer``), and ``careers_url`` is commonly null,
     so a direct equality match is insufficient. Match precedence:
 
-    1. exact slug equality (the reliable case),
-    2. one slug contains the other,
-    3. token-overlap score, with a deterministic tiebreak on (position, id) so
-       fixture assertions are stable.
+    1. **exact slug equality** (the reliable case) -- first match wins.
+    2. **bounded containment** -- the URL slug's tokens are a subset of the
+       offer slug's tokens, OR the hyphen-stripped URL slug is an edge
+       (prefix/suffix) of the hyphen-stripped offer slug (handles fused tokens
+       like ``seniorelectrical``). Every passing offer is collected and the
+       resolver refuses to guess: if more than one offer passes containment it
+       returns ``None`` instead of picking the longest slug, because the old
+       "longest slug" tiebreak silently escalated a seniority ladder (senior ->
+       staff -> principal). ``None`` yields a no-match warning, which is strictly
+       safer than a confidently-wrong ``published_at``.
+    3. **token-overlap fallback** -- only when no offer passed containment. The
+       slug+title haystack is tokenised with the same splitter as the URL slug
+       and matched by *set* membership (so ``engine`` no longer counts as
+       present inside ``engineer``, and title text cannot rescue a weak slug).
+       A winner is returned only when a single offer covers *all* URL tokens;
+       a tie returns ``None``.
     """
     if not isinstance(offers, list) or not url_slug:
         return None
 
     normalised = url_slug.lower()
-    tokens = {token for token in re.split(r"[^a-z0-9]+", normalised) if token}
+    url_tokens = _recruitee_slug_tokens(normalised)
+    url_flat = normalised.replace("-", "")
 
-    exact: dict[str, Any] | None = None
-    substring: list[tuple[str, dict[str, Any], int]] = []
-    scored: list[tuple[int, int, int, dict[str, Any]]] = []
+    # 1. Exact slug equality -- first match wins.
+    for offer in offers:
+        if isinstance(offer, dict) and str(offer.get("slug") or "").lower() == normalised:
+            return offer
 
+    # 2. Bounded containment -- collect every match, refuse to guess on ties.
+    containing: list[dict[str, Any]] = []
     for offer in offers:
         if not isinstance(offer, dict):
             continue
-        slug = str(offer.get("slug") or "").lower()
-        title = str(offer.get("title") or "").lower()
-        if slug == normalised:
-            exact = offer
-            break
-        if slug and (normalised in slug or slug in normalised):
-            # Track for the substring fallback below.
-            substring.append((slug, offer, len(slug)))
-        if tokens:
-            hay = f"{slug} {title}"
-            overlap = sum(1 for token in tokens if token and token in hay)
-            if overlap:
-                position = offer.get("position")
-                position_rank = position if isinstance(position, int) else 1_000_000
-                offer_id = offer.get("id")
-                id_rank = offer_id if isinstance(offer_id, int) else 0
-                scored.append((overlap, position_rank, id_rank, offer))
+        offer_slug = str(offer.get("slug") or "").lower()
+        if not offer_slug:
+            continue
+        if _recruitee_offer_contains_url_slug(offer_slug, url_tokens, url_flat):
+            containing.append(offer)
+    if containing:
+        if len(containing) == 1:
+            return containing[0]
+        return None  # ambiguous: two offers both contain the URL slug.
 
-    if exact is not None:
-        return exact
-    if substring:
-        # Largest (longest) matching slug = most specific.
-        substring.sort(key=lambda entry: (-entry[2], entry[0]))
-        return substring[0][1]
-    if scored:
-        # Highest overlap first; then smallest position, then smallest id for
-        # a stable, deterministic order.
-        scored.sort(key=lambda entry: (-entry[0], entry[1], entry[2]))
-        return scored[0][3]
+    # 3. Token-overlap fallback -- token-bounded set membership, full coverage
+    #    required, single winner only.
+    if url_tokens:
+        full_coverage: list[dict[str, Any]] = []
+        for offer in offers:
+            if not isinstance(offer, dict):
+                continue
+            offer_slug = str(offer.get("slug") or "").lower()
+            title = str(offer.get("title") or "").lower()
+            hay_tokens = _recruitee_slug_tokens(f"{offer_slug} {title}")
+            if url_tokens.issubset(hay_tokens):
+                full_coverage.append(offer)
+        if len(full_coverage) == 1:
+            return full_coverage[0]
+
     return None
 
 
@@ -3413,8 +3460,10 @@ def extract_recruitee_api(
     # flat `offers` array with the same per-offer fields. We fetch the list and
     # resolve the right offer, because the URL slug no longer equals the offer
     # slug (Recruitee rewrites/slugs them differently, and `careers_url` is
-    # commonly null). Match precedence: exact slug, substring, then token
-    # overlap scoring with a stable deterministic tiebreak.
+    # commonly null). Match precedence (see `_select_recruitee_offer`): exact
+    # slug, then token-bounded containment, then token-overlap fallback; an
+    # ambiguous containment match (e.g. a seniority ladder) returns None so the
+    # caller warns rather than reporting a confidently-wrong published_at.
     api_url = f"https://{metadata.org}.recruitee.com/api/offers"
     try:
         payload = fetch_json(session, api_url)
