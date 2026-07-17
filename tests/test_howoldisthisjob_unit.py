@@ -399,6 +399,64 @@ class JobcarbonUnitTests(unittest.TestCase):
         self.assertEqual(postings[0]["datePosted"], "2024-01-02")
         self.assertEqual(postings[1]["datePosted"], "2024-02-03")
 
+    def test_select_breezy_posting_returns_none_when_no_friendly_id_and_multiple_dated(self) -> None:
+        # Finding 2 guard: when friendly_id is falsy AND more than one dated
+        # JobPosting exists, the selector must NOT guess (return None). A
+        # confidently wrong attribution at reliability="high" is worse than no
+        # date.
+        postings = [
+            {"@type": "JobPosting", "datePosted": "2026-01-01", "url": "https://jobs.breezy.hr/p/aaa-role-a"},
+            {"@type": "JobPosting", "datePosted": "2026-02-02", "url": "https://jobs.breezy.hr/p/bbb-role-b"},
+        ]
+        metadata = howoldisthisjob.URLMetadata(platform="breezy", org="acme", job_id=None)
+
+        self.assertIsNone(howoldisthisjob._select_breezy_posting(postings, metadata))
+
+    def test_select_breezy_posting_returns_single_dated_posting_when_no_friendly_id(self) -> None:
+        # Finding 2 carve-out: single dated posting with no friendly_id is
+        # unambiguous, so keep it (do not over-correct into None).
+        postings = [
+            {"@type": "JobPosting", "datePosted": "2026-03-03", "url": "https://jobs.breezy.hr/p/aaa-only"},
+        ]
+        metadata = howoldisthisjob.URLMetadata(platform="breezy", org="acme", job_id=None)
+
+        chosen = howoldisthisjob._select_breezy_posting(postings, metadata)
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen["datePosted"], "2026-03-03")
+
+    def test_select_breezy_posting_matches_posting_url_containing_friendly_id(self) -> None:
+        # Existing friendly-id-containment behavior: when the friendly_id appears
+        # in a posting's url, that posting is selected even among several dated
+        # postings (the multi-dated guard only triggers when friendly_id is
+        # falsy or matches nothing).
+        postings = [
+            {"@type": "JobPosting", "datePosted": "2026-01-01", "url": "https://jobs.breezy.hr/p/aaa-role-a"},
+            {"@type": "JobPosting", "datePosted": "2026-02-02", "url": "https://jobs.breezy.hr/p/bbb-role-b"},
+            {"@type": "JobPosting", "datePosted": "2026-03-03", "url": "https://jobs.breezy.hr/p/ccc-role-c"},
+        ]
+        metadata = howoldisthisjob.URLMetadata(
+            platform="breezy", org="acme", job_id="bbb-role-b"
+        )
+
+        chosen = howoldisthisjob._select_breezy_posting(postings, metadata)
+        self.assertIsNotNone(chosen)
+        self.assertEqual(chosen["url"], "https://jobs.breezy.hr/p/bbb-role-b")
+        self.assertEqual(chosen["datePosted"], "2026-02-02")
+
+    def test_select_breezy_posting_returns_none_when_friendly_id_matches_nothing_and_multiple_dated(self) -> None:
+        # Finding 2 extension: the multi-dated guard also fires when a friendly_id
+        # IS present but matches none of the postings (otherwise the stale
+        # first-dated fallback would silently attribute a wrong date).
+        postings = [
+            {"@type": "JobPosting", "datePosted": "2026-01-01", "url": "https://jobs.breezy.hr/p/aaa-role-a"},
+            {"@type": "JobPosting", "datePosted": "2026-02-02", "url": "https://jobs.breezy.hr/p/bbb-role-b"},
+        ]
+        metadata = howoldisthisjob.URLMetadata(
+            platform="breezy", org="acme", job_id="zzz-no-match"
+        )
+
+        self.assertIsNone(howoldisthisjob._select_breezy_posting(postings, metadata))
+
     def test_normalize_date_supports_multiple_formats(self) -> None:
         self.assertEqual(howoldisthisjob.normalize_date("2024-03-04T10:11:12Z"), "2024-03-04")
         self.assertEqual(howoldisthisjob.normalize_date(1710151200000), "2024-03-11")

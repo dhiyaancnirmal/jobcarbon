@@ -105,6 +105,17 @@ SOURCE_PRIORITY = {
     "adp.api": 1,
     "oracle_hcm.api": 1,
     "jobvite.xml": 0,
+    # Page-level JobPosting JSON-LD on a Jobvite detail page, surfaced by
+    # extract_jobvite_xml. At priority 0 it ties the generic jsonld.jobposting
+    # parse (priority 0) but wins the alphabetical `source` tie-break
+    # ("jobvite.jsonld" sorts before "jsonld.jobposting"), so the
+    # platform-specific path is chosen over the generic one for jobvite pages.
+    # The real XML feed (jobvite.xml, also priority 0) still wins over page
+    # JSON-LD on a date tie via the extract_jobvite_xml-set
+    # `preferred_date_source = "jobvite.xml"` tie-break (see choose_best_date),
+    # not via priority — without it, alphabetical ordering would wrongly let
+    # page JSON-LD outrank the authoritative feed.
+    "jobvite.jsonld": 0,
     "avature.feed": 1,
     "avature.sitemap": 1,
     "gem.api": 1,
@@ -2704,18 +2715,22 @@ def extract_jobvite_xml(
     metadata: URLMetadata,
     html: str,
 ) -> None:
-    # Authoritative posting date on the public Jobvite XML feed
-    # (CompanyJobs/Xml.aspx). The detail page also emits a JobPosting JSON-LD
-    # block whose `datePosted` is a schema.org mirror; we surface it under the
-    # same native source so a missing/stale XML entry still yields a credible
-    # date, and bump jobvite.xml to priority 0 so it outranks the generic
-    # jsonld.jobposting parse. When the XML feed is reachable it carries the
-    # true (typically later) posting date and wins the date-first sort.
+    # The detail page's JobPosting JSON-LD block mirrors the XML feed's posting
+    # date. We surface it under its own honest source label `jobvite.jsonld`
+    # (NOT `jobvite.xml`) so the two paths are distinguishable: `jobvite.xml`
+    # is reserved for the authoritative CompanyJobs/Xml.aspx feed below.
+    #
+    # This separation is load-bearing for the live drift tier
+    # (tests/live/test_live_extractors.py NATIVE_SOURCES["jobvite"]). That tier
+    # treats a `jobvite.xml`-sourced result as proof the XML *feed* is alive.
+    # If page JSON-LD were also labeled `jobvite.xml`, a platform-wide feed
+    # outage would be silently masked by surviving page JSON-LD and the drift
+    # test would stay green — defeating the entire point of the tier.
     if html:
         for posting in extract_job_postings_from_html(html):
             accumulator.add_date(
                 posting.get("datePosted"),
-                source="jobvite.xml",
+                source="jobvite.jsonld",
                 field="datePosted",
                 kind="posted",
                 reliability="high",
@@ -2745,6 +2760,13 @@ def extract_jobvite_xml(
         root = ET.fromstring(xml_text)
     except ET.ParseError:
         return
+
+    # The real XML feed is authoritative: when both the feed (`jobvite.xml`)
+    # and the page JSON-LD mirror (`jobvite.jsonld`, surfaced above) produce
+    # the same date, the feed must win. Both sit at SOURCE_PRIORITY 0, so we
+    # mark the feed as preferred and let choose_best_date's preferred-source
+    # tie-break resolve it (mirrors lever.api / recruitee.api).
+    accumulator.preferred_date_source = "jobvite.xml"
 
     accumulator.set_preferred("title", root.findtext("title"))
     accumulator.set_preferred("company", extract_jobvite_company_name(html))
@@ -3614,9 +3636,20 @@ def _select_breezy_posting(
         url = posting.get("url")
         if isinstance(url, str) and friendly_id and friendly_id in url:
             return posting
-    for posting in postings:
-        if isinstance(posting, dict) and posting.get("datePosted"):
-            return posting
+
+    # No friendly_id, or it matched nothing. We must NOT guess arbitrarily:
+    # returning the first dated JobPosting when several exist would attribute
+    # one posting's date to another at reliability="high". A confidently wrong
+    # date is worse than no date, so when more than one dated JobPosting is
+    # present we return None and let downstream fall back honestly. A single
+    # dated posting is unambiguous and is kept.
+    dated = [
+        posting
+        for posting in postings
+        if isinstance(posting, dict) and posting.get("datePosted")
+    ]
+    if len(dated) == 1:
+        return dated[0]
     return None
 
 

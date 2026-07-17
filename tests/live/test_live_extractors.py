@@ -95,7 +95,7 @@ NATIVE_SOURCES: dict[str, tuple[str, ...]] = {
     "icims": ("icims.api",),
     "dover": ("dover.api",),
     "bamboohr": ("bamboohr.api",),
-    "jobvite": ("jobvite.xml",),
+    "jobvite": ("jobvite.xml", "jobvite.jsonld"),
     "taleo": ("jsonld.jobposting",),
     "brassring": ("brassring.html",),
     "successfactors": ("successfactors.rss",),
@@ -125,6 +125,24 @@ NATIVE_SOURCES: dict[str, tuple[str, ...]] = {
 # to plain <meta> would pass the prefix test for teamtailor.
 NATIVE_FIELDS: dict[str, str] = {
     "teamtailor": "article:published_time",
+}
+
+# Per-platform extra drift checks beyond "chosen source is native".
+#
+# jobvite: the live page's JobPosting JSON-LD (`jobvite.jsonld`) is often an
+# OLDER posted date than the XML feed's `<date>` and legitimately wins the
+# date-first sort, so the chosen source can be `jobvite.jsonld` even when the
+# real XML feed is perfectly healthy. A chosen-source prefix check on its own
+# therefore cannot detect a dead feed — it would be masked by surviving page
+# JSON-LD (the exact defect from Finding 1 of the adversarial review). The
+# un-maskable signal is "a `jobvite.xml`-sourced candidate exists at all": if
+# the XML feed (CompanyJobs/Xml.aspx) dies platform-wide, no `jobvite.xml`
+# candidate is produced even though `jobvite.jsonld` keeps surfacing. Asserting
+# its presence here restores the strict feed-alive drift signal.
+# Confirmed alive as of 2026-07: CompanyJobs/Xml.aspx?c=qBTaVfwj&j=oynrAfwG
+# returns 200 + valid XML with <date>7/14/2026</date> for a live Versa posting.
+STRICT_NATIVE_CANDIDATES: dict[str, str] = {
+    "jobvite": "jobvite.xml",
 }
 
 
@@ -224,6 +242,26 @@ class TestLiveExtractors(unittest.TestCase):
                 f"DRIFT: {platform} ({employer!r}) native source matched "
                 f"({source!r}) but field was {field!r}, expected "
                 f"{native_field!r}. full chosen_source={chosen}",
+            )
+
+        # Strict per-platform native-candidate presence check. For jobvite the
+        # XML feed (`jobvite.xml`) can legitimately lose the date-first sort to
+        # an older page-JSON-LD date (`jobvite.jsonld`), so chosen-source alone
+        # is not the un-maskable feed-alive signal — we additionally require a
+        # `jobvite.xml`-sourced candidate to exist. See STRICT_NATIVE_CANDIDATES.
+        strict_candidate = STRICT_NATIVE_CANDIDATES.get(platform)
+        if strict_candidate is not None:
+            all_dates = result.get("all_dates") or []
+            present = any(
+                isinstance(d, dict) and d.get("source") == strict_candidate
+                for d in all_dates
+            )
+            self.assertTrue(
+                present,
+                f"DRIFT: {platform} ({employer!r}) native candidate "
+                f"{strict_candidate!r} is missing from all_dates; the "
+                f"{strict_candidate.split('.')[0]} feed is likely dead (the "
+                f"page-JSON-LD path can mask this). all_dates={all_dates}",
             )
 
 

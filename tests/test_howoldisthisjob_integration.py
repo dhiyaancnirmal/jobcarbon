@@ -842,11 +842,12 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
     def test_jobvite_xml_feed_returns_posted_date_and_metadata(self) -> None:
         # Current Jobvite detail pages emit a JobPosting JSON-LD block that
-        # mirrors the XML feed. We surface it under the same native source label
-        # (jobvite.xml) so the platform's native parse always wins over the
-        # generic jsonld.jobposting stage, and a missing/stale XML entry still
-        # yields a credible date. Here both agree on 2017-10-05; the XML feed's
-        # `date` field wins the source/field tie-break.
+        # mirrors the XML feed. We surface page JSON-LD under its own label
+        # `jobvite.jsonld` (distinct from the real `jobvite.xml` feed) so a
+        # platform-wide feed outage is not masked in the live drift tier. Here
+        # both agree on 2017-10-05; the XML feed's `date` field wins via the
+        # extract_jobvite_xml-set `preferred_date_source = "jobvite.xml"`
+        # tie-break (both sources sit at SOURCE_PRIORITY 0).
         target_url = "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
         session = FakeSession(
             {
@@ -905,8 +906,10 @@ class JobcarbonIntegrationTests(unittest.TestCase):
 
     def test_jobvite_xml_falls_back_to_page_jsonld_when_feed_missing(self) -> None:
         # When the XML feed is unreachable (removed job / 404), the page's
-        # JobPosting JSON-LD datePosted must still be surfaced under the native
-        # jobvite.xml source so we never drift to wayback for a reachable page.
+        # JobPosting JSON-LD datePosted must still be surfaced, now under its
+        # own honest `jobvite.jsonld` source label (distinct from the real
+        # `jobvite.xml` feed) so the live drift tier can tell the two apart
+        # and a dead feed is not masked by surviving page JSON-LD.
         target_url = "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
         session = FakeSession(
             {
@@ -937,7 +940,7 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         )
 
         self.assertEqual(result["likely_posted_date"], "2017-10-01")
-        self.assertEqual(result["chosen_source"]["source"], "jobvite.xml")
+        self.assertEqual(result["chosen_source"]["source"], "jobvite.jsonld")
         self.assertEqual(result["chosen_source"]["field"], "datePosted")
 
     def test_brassring_html_returns_dc_date_and_company(self) -> None:
