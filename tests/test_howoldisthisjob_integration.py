@@ -841,6 +841,12 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["compensation"]["currency"], "CAD")
 
     def test_jobvite_xml_feed_returns_posted_date_and_metadata(self) -> None:
+        # Current Jobvite detail pages emit a JobPosting JSON-LD block that
+        # mirrors the XML feed. We surface it under the same native source label
+        # (jobvite.xml) so the platform's native parse always wins over the
+        # generic jsonld.jobposting stage, and a missing/stale XML entry still
+        # yields a credible date. Here both agree on 2017-10-05; the XML feed's
+        # `date` field wins the source/field tie-break.
         target_url = "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
         session = FakeSession(
             {
@@ -849,6 +855,11 @@ class JobcarbonIntegrationTests(unittest.TestCase):
                         "<html><head>"
                         "<title>Clinch Careers - Rails Engineer (Jobvite)</title>"
                         "<meta property='og:title' content='Clinch is looking for Rails Engineer (Jobvite).'/>"
+                        '<script type="application/ld+json">'
+                        "{\"@context\":\"https://schema.org/\",\"@type\":\"JobPosting\","
+                        "\"url\":\"https://jobs.jobvite.com/clinch/job/oD2D4fw6\","
+                        "\"title\":\"Rails Engineer (Jobvite)\",\"datePosted\":\"2017-10-05\"}"
+                        "</script>"
                         "</head><body><script>"
                         "window.jobviteSettings = { companyEId: 'q0oaVfwd', jobId: 'oD2D4fw6' };"
                         "</script></body></html>"
@@ -887,9 +898,47 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["employment_type"], "Full-Time")
         self.assertEqual(result["likely_posted_date"], "2017-10-05")
         self.assertEqual(result["chosen_source"]["source"], "jobvite.xml")
+        self.assertEqual(result["chosen_source"]["field"], "date")
         self.assertEqual(result["hidden_insights"]["category"], "Computers/Software")
         self.assertEqual(result["hidden_insights"]["requisition_id"], "RE1234")
         self.assertEqual(result["hidden_insights"]["jobvite_company_eid"], "q0oaVfwd")
+
+    def test_jobvite_xml_falls_back_to_page_jsonld_when_feed_missing(self) -> None:
+        # When the XML feed is unreachable (removed job / 404), the page's
+        # JobPosting JSON-LD datePosted must still be surfaced under the native
+        # jobvite.xml source so we never drift to wayback for a reachable page.
+        target_url = "https://jobs.jobvite.com/clinch/job/oD2D4fw6"
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        '<script type="application/ld+json">'
+                        "{\"@context\":\"https://schema.org/\",\"@type\":\"JobPosting\","
+                        "\"title\":\"Rails Engineer\",\"datePosted\":\"2017-10-01\"}"
+                        "</script>"
+                        "</head><body><script>"
+                        "window.jobviteSettings = { companyEId: 'q0oaVfwd', jobId: 'oD2D4fw6' };"
+                        "</script></body></html>"
+                    )
+                ),
+                "https://jobs.jobvite.com/CompanyJobs/Xml.aspx?c=q0oaVfwd&j=oD2D4fw6": FakeResponse(
+                    status_code=404
+                ),
+                "https://jobs.jobvite.com/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.jobvite.com%2Fclinch%2Fjob%2FoD2D4fw6&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = howoldisthisjob.analyze_url(
+            target_url, session=session, today=howoldisthisjob.date(2026, 4, 14)
+        )
+
+        self.assertEqual(result["likely_posted_date"], "2017-10-01")
+        self.assertEqual(result["chosen_source"]["source"], "jobvite.xml")
+        self.assertEqual(result["chosen_source"]["field"], "datePosted")
 
     def test_brassring_html_returns_dc_date_and_company(self) -> None:
         target_url = "https://sjobs.brassring.com/TGnewUI/Search/home/HomeWithPreLoad?PageType=JobDetails&jobid=2244127&partnerid=25633&siteid=5439"
@@ -1432,6 +1481,8 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["hidden_insights"]["department"], "Engineering")
 
     def test_breezy_embedded_payload_returns_first_publish_date(self) -> None:
+        # Legacy path: older/custom Breezy portals still embed a `data-position`
+        # JSON blob with first_publish_date / last_publish_date.
         target_url = (
             "https://jobs.breezy.hr/p/865698971aa0-customer-success-agent/apply"
         )
@@ -1475,6 +1526,89 @@ class JobcarbonIntegrationTests(unittest.TestCase):
         self.assertEqual(result["likely_posted_date"], "2025-01-07")
         self.assertEqual(result["chosen_source"]["source"], "breezy.embedded")
         self.assertEqual(result["hidden_insights"]["department"], "Customer Success")
+
+    def test_breezy_jsonld_returns_dateposted_from_career_page(self) -> None:
+        # Current Breezy portal (2025+): JobPosting JSON-LD with datePosted.
+        # Trimmed capture of a real public Breezy career page lives in
+        # tests/fixtures/breezy_job_page.html (structure preserved, PII/bulk
+        # trimmed). The native extractor must surface it as breezy.embedded.
+        target_url = (
+            "https://immersive-technologies.breezy.hr/p/"
+            "27e6ce63faef-advisor-business-improvement-and-integration"
+        )
+        session = FakeSession(
+            {
+                target_url: FakeResponse(text=load_text("breezy_job_page.html")),
+                "https://immersive-technologies.breezy.hr/sitemap.xml": FakeResponse(
+                    status_code=404
+                ),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fimmersive-technologies.breezy.hr%2Fp%2F27e6ce63faef-advisor-business-improvement-and-integration&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = howoldisthisjob.analyze_url(
+            target_url, session=session, today=howoldisthisjob.date(2026, 7, 1)
+        )
+
+        self.assertEqual(result["platform"], "breezy")
+        self.assertEqual(result["company"], "Immersive Technologies")
+        self.assertEqual(result["employment_type"], "Full-Time")
+        self.assertEqual(result["location"], "Tucson, AZ, US")
+        self.assertEqual(result["likely_posted_date"], "2026-02-02")
+        self.assertEqual(result["chosen_source"]["source"], "breezy.embedded")
+        self.assertEqual(result["chosen_source"]["field"], "datePosted")
+        self.assertEqual(result["status"], "success")
+
+    def test_breezy_jsonld_beats_generic_jsonld_source_label(self) -> None:
+        # Regression guard: the generic extract_jsonld stage also parses the
+        # JobPosting block and would emit jsonld.jobposting (priority 0). The
+        # breezy extractor must win the date-first tie-break so the platform's
+        # native source label is what's chosen.
+        target_url = "https://jobs.breezy.hr/p/aabbcc-some-role"
+        posting = {
+            "@context": "https://schema.org/",
+            "@type": "JobPosting",
+            "url": "https://jobs.breezy.hr/p/aabbcc-some-role",
+            "title": "Some Role",
+            "description": "<p>desc</p>",
+            "employmentType": "FULL_TIME",
+            "datePosted": "2026-03-10",
+            "hiringOrganization": {"@type": "Organization", "name": "Demo Co"},
+            "jobLocation": {
+                "@type": "Place",
+                "address": {"@type": "PostalAddress", "addressLocality": "Remote"},
+            },
+        }
+        session = FakeSession(
+            {
+                target_url: FakeResponse(
+                    text=(
+                        "<html><head>"
+                        f'<script type="application/ld+json">{json.dumps(posting)}</script>'
+                        "</head><body></body></html>"
+                    )
+                ),
+                "https://jobs.breezy.hr/sitemap.xml": FakeResponse(status_code=404),
+                "https://web.archive.org/cdx/search/cdx?url=https%3A%2F%2Fjobs.breezy.hr%2Fp%2Faabbcc-some-role&limit=1&output=json&fl=timestamp,original&filter=statuscode:200&sort=ascending": FakeResponse(
+                    json_data=[["timestamp", "original"]]
+                ),
+            }
+        )
+
+        result = howoldisthisjob.analyze_url(
+            target_url, session=session, today=howoldisthisjob.date(2026, 7, 1)
+        )
+
+        self.assertEqual(result["chosen_source"]["source"], "breezy.embedded")
+        self.assertTrue(
+            any(
+                d["source"] == "jsonld.jobposting"
+                for d in result["all_dates"]
+            ),
+            "generic jsonld parse should still be present as a comparison candidate",
+        )
 
     def test_jazzhr_jobposting_jsonld_supports_platform(self) -> None:
         target_url = "https://publiccitizen.applytojob.com/apply/VZj90FMXn0/Democracy-Team-Manager"
