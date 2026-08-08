@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import { Inter, JetBrains_Mono } from "next/font/google"
 import Script from "next/script"
-import { Analytics } from "@vercel/analytics/next"
 import { FooterNav } from "@/components/footer-nav"
 import { PageTransition } from "@/components/page-transition"
 import "./globals.css"
@@ -86,7 +85,6 @@ export default function RootLayout({
         </Script>
         <PageTransition>{children}</PageTransition>
         <FooterNav />
-        <Analytics />
       </body>
     </html>
   )
