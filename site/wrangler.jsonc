@@ -15,10 +15,10 @@
     }
   ],
   "assets": {
-    "directory": "./out",
+    "directory": "./dist",
     "binding": "ASSETS",
     "run_worker_first": true,
-    "html_handling": "force-trailing-slash",
+    "html_handling": "none",
     "not_found_handling": "404-page"
   }
 }

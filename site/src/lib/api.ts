@@ -88,11 +88,11 @@ export type BatchEstimateResponse = {
 const DEFAULT_PROD_API_BASES = ["https://api.howoldisthisjob.com"]
 
 const API_BASES = (() => {
-  if (process.env.NODE_ENV === "development") {
+  if (import.meta.env.DEV) {
     return ["http://localhost:8000"]
   }
 
-  const configured = process.env.NEXT_PUBLIC_HOWOLDISTHISJOB_API?.trim()
+  const configured = import.meta.env.VITE_HOWOLDISTHISJOB_API?.trim()
   if (!configured) return DEFAULT_PROD_API_BASES
 
   return Array.from(new Set([...DEFAULT_PROD_API_BASES, configured]))

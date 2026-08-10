@@ -6,16 +6,39 @@ const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
 }
 
+const APP_ROUTES = new Set(["/", "/about", "/changelog", "/cli", "/extension"])
+
+function appRoutePathname(pathname) {
+  return pathname === "/" ? pathname : pathname.replace(/\/+$/, "")
+}
+
+function withSecurityHeaders(response) {
+  const secured = new Response(response.body, response)
+
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    secured.headers.set(name, value)
+  }
+
+  return secured
+}
+
 const worker = {
   async fetch(request, env) {
-    const response = await env.ASSETS.fetch(request)
-    const secured = new Response(response.body, response)
+    const url = new URL(request.url)
+    const appPath = appRoutePathname(url.pathname)
 
-    for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
-      secured.headers.set(name, value)
+    if ((request.method === "GET" || request.method === "HEAD") && APP_ROUTES.has(appPath)) {
+      const canonicalPath = appPath === "/" ? "/" : `${appPath}/`
+      if (url.pathname !== canonicalPath) {
+        url.pathname = canonicalPath
+        return withSecurityHeaders(Response.redirect(url, 308))
+      }
+
+      const indexUrl = new URL("/index.html", request.url)
+      return withSecurityHeaders(await env.ASSETS.fetch(new Request(indexUrl, request)))
     }
 
-    return secured
+    return withSecurityHeaders(await env.ASSETS.fetch(request))
   },
 }
 

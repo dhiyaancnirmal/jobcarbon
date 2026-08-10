@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" class="h-full antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Paste any job posting URL and find out when it was really posted. Detect ghost jobs, reposts, and stale listings across Greenhouse, Lever, Ashby, Workday, and 23+ more ATS platforms."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://howoldisthisjob.com" />
+    <meta property="og:site_name" content="How Old Is This Job?" />
+    <meta property="og:title" content="How Old Is This Job? - Find the real posting date" />
+    <meta
+      property="og:description"
+      content="Paste any job posting URL and find out when it was really posted."
+    />
+    <meta name="twitter:card" content="summary" />
+    <title>How Old Is This Job? - Find the real posting date</title>
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <script>
+      try {
+        var storedTheme = window.localStorage.getItem("howoldisthisjob-theme");
+        var theme = storedTheme === "dark" || storedTheme === "light"
+          ? storedTheme
+          : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.classList.toggle("dark", theme === "dark");
+        document.documentElement.style.colorScheme = theme;
+      } catch {}
+    </script>
+  </head>
+  <body class="flex min-h-svh flex-col bg-white text-neutral-950 transition-colors dark:bg-black dark:text-neutral-50">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

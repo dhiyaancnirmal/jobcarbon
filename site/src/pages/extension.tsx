@@ -1,11 +1,4 @@
-import type { Metadata } from "next"
 import { Logo } from "@/components/logo"
-
-export const metadata: Metadata = {
-  title: "Chrome Extension",
-  description:
-    "Install the How Old Is This Job? Chrome extension to badge ATS job links and scan supported job pages.",
-}
 
 const STEPS = [
   "Download and unzip the extension.",

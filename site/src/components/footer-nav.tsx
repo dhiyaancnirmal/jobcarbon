@@ -1,7 +1,4 @@
-"use client"
-
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { NavLink, useLocation } from "react-router-dom"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 
@@ -18,7 +15,7 @@ function isActive(pathname: string, href: string) {
 }
 
 export function FooterNav() {
-  const pathname = usePathname()
+  const { pathname } = useLocation()
 
   return (
     <footer className="site-footer-nav mx-auto mt-auto w-full max-w-4xl px-6 pb-5 pt-2 text-[11px] text-neutral-600 transition-colors dark:text-neutral-400">
@@ -29,8 +26,8 @@ export function FooterNav() {
               {index > 0 && (
                 <span className="text-neutral-400 dark:text-neutral-600">·</span>
               )}
-              <Link
-                href={link.href}
+              <NavLink
+                to={link.href}
                 aria-current={isActive(pathname, link.href) ? "page" : undefined}
                 className={cn(
                   "footer-link transition-colors hover:text-neutral-800 dark:hover:text-neutral-200",
@@ -38,14 +35,14 @@ export function FooterNav() {
                 )}
               >
                 {link.label}
-              </Link>
+              </NavLink>
             </span>
           ))}
           <span className="text-neutral-400 dark:text-neutral-600">·</span>
           <ThemeToggle />
         </div>
-        <Link
-          href="/changelog"
+        <NavLink
+          to="/changelog"
           aria-current={isActive(pathname, "/changelog") ? "page" : undefined}
           className={cn(
             "footer-link transition-colors hover:text-neutral-800 dark:hover:text-neutral-200",
@@ -53,7 +50,7 @@ export function FooterNav() {
           )}
         >
           v0.1.3
-        </Link>
+        </NavLink>
       </div>
     </footer>
   )

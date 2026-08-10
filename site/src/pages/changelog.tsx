@@ -1,9 +1,3 @@
-import type { Metadata } from "next"
-export const metadata: Metadata = {
-  title: "Changelog",
-  description: "Version history for How Old Is This Job?",
-}
-
 const ENTRIES = [
   {
     version: "v0.1.3",

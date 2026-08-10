@@ -1,5 +1,3 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+# Static Vite frontend
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
+This site is a Vite and React browser application. Keep it portable: static assets are served by `cloudflare-worker.js`, while `api.howoldisthisjob.com` owns the separate API Worker, container, and D1 data path. Do not add server-side rendering or frontend API routes.

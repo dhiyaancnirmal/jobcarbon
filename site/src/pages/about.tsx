@@ -1,13 +1,6 @@
-import type { Metadata } from "next"
-import Link from "next/link"
+import { Link } from "react-router-dom"
 import { Logo } from "@/components/logo"
 import { SUPPORTED_PLATFORMS } from "@/lib/supported-platforms"
-
-export const metadata: Metadata = {
-  title: 'About "How Old Is This Job?"',
-  description:
-    "How Old Is This Job? finds the real posting date of a job listing using platform records, page metadata, and archive signals.",
-}
 
 const SIGNALS = [
   {
@@ -86,7 +79,7 @@ const FAQ = [
   },
   {
     q: "Do you store any data?",
-    a: "Search history is tied to a session cookie so the app can show your recent checks. The site also uses lightweight analytics and error monitoring to keep the product working.",
+    a: "Search history is tied to a session cookie so the app can show your recent checks.",
   },
 ]
 
@@ -101,7 +94,7 @@ export default function About() {
           </h1>
           <div>
             <Link
-              href="/"
+              to="/"
               className="gel-btn gel-btn--sm gel-btn--save no-underline"
             >
               Check a job posting

@@ -1,6 +1,6 @@
 # howoldisthisjob site
 
-Next.js frontend for `howoldisthisjob.com`.
+Vite and React frontend for `howoldisthisjob.com`.
 
 ## Local development
 
@@ -9,14 +9,14 @@ npm install
 npm run dev
 ```
 
-The app runs on `http://localhost:3000` by default.
+The app runs on `http://localhost:5173` by default.
 
 API base:
 
-- `NEXT_PUBLIC_HOWOLDISTHISJOB_API` when set
+- `VITE_HOWOLDISTHISJOB_API` when set at build time
 - otherwise `https://api.howoldisthisjob.com`
 
 ## Production
 
-- Frontend: Vercel
+- Frontend: Cloudflare Worker static assets / `howoldisthisjob-site`
 - API: Cloudflare Worker + container / `api.howoldisthisjob.com`

@@ -4,6 +4,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+#root {
+  display: contents;
+}
+
 /* Move main content to top when history exists or check is in progress.
    Keyed off html[data-has-history] managed by the client UI. */
 html[data-has-history] main {

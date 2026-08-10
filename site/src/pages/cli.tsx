@@ -1,12 +1,5 @@
-import type { Metadata } from "next"
 import { CopyCommandButton } from "@/components/copy-command-button"
 import { Logo } from "@/components/logo"
-
-export const metadata: Metadata = {
-  title: "CLI",
-  description:
-    "Use the How Old Is This Job? CLI from npm to check job posting ages from your terminal or local scripts.",
-}
 
 const COMMANDS = [
   {

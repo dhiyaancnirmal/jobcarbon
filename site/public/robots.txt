@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /monitoring
+Disallow: /api/
+
+Sitemap: https://howoldisthisjob.com/sitemap.xml

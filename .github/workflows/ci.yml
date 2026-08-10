@@ -24,3 +24,18 @@ jobs:
 
       - name: Run test suite
         run: python -m unittest discover -s tests -v
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Check site
+        working-directory: site
+        run: npm run typecheck && npm run lint && npm run build && npx wrangler deploy --dry-run
